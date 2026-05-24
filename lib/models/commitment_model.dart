@@ -1,3 +1,4 @@
+// Modelo que representa cada bloque de compromiso (Misión, Visión, Objetivo)
 import 'package:flutter/material.dart';
 
 class CommitmentModel {

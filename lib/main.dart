@@ -16,13 +16,11 @@ class SamanGoApp extends StatelessWidget {
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
         useMaterial3: true,
-        // Color semilla naranja #FC6707
         colorScheme: ColorScheme.fromSeed(
           seedColor: const Color(0xFFFC6707),
           primary: const Color(0xFFFC6707),
           surface: const Color(0xFFF5F5F5),
         ),
-        // Tipografía global de la aplicación usando Google Fonts
         textTheme: GoogleFonts.outfitTextTheme(
           Theme.of(context).textTheme,
         ),

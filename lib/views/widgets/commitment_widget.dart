@@ -1,3 +1,4 @@
+// Sección Misión, Visión, Objetivo 
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../models/commitment_model.dart';
@@ -17,7 +18,6 @@ class CommitmentWidget extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // Título de la sección
         Text(
           'Nuestro Compromiso',
           style: GoogleFonts.outfit(
@@ -27,71 +27,45 @@ class CommitmentWidget extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 18),
-        // Layout Responsivo para las Tarjetas
         if (isMobile)
           Column(
-            children: commitments.map((c) => _buildCard(c, isMobile: true)).toList(),
+            children: commitments.asMap().entries.map((entry) {
+              return Padding(
+                padding: EdgeInsets.only(bottom: entry.key != commitments.length - 1 ? 20 : 0),
+                child: _buildCard(entry.value),
+              );
+            }).toList(),
           )
         else
           Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: commitments
-                .map((c) => Expanded(child: _buildCard(c, isMobile: false)))
-                .toList(),
+            children: commitments.map((c) => Expanded(child: _buildCard(c))).toList(),
           ),
       ],
     );
   }
 
-  // Constructor individual para cada una de las tarjetas Misión, Visión y Objetivo
-  Widget _buildCard(CommitmentModel commitment, {required bool isMobile}) {
+  Widget _buildCard(CommitmentModel commitment) {
     return Container(
-      margin: EdgeInsets.only(
-        bottom: isMobile ? 12 : 0,
-        right: !isMobile && commitment != commitments.last ? 16 : 0,
-      ),
+      margin: const EdgeInsets.only(right: 16),
       padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 24),
       decoration: BoxDecoration(
-        color: commitment.backgroundColor, // #FDDBB3
+        color: commitment.backgroundColor,
         borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.03),
-            offset: const Offset(0, 4),
-            blurRadius: 8,
-          ),
-        ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          // Icono decorativo sutil según el tipo
-          Icon(
-            _getIconForTitle(commitment.title),
-            color: commitment.titleColor,
-            size: 26,
-          ),
+          Icon(_getIconForTitle(commitment.title), color: commitment.titleColor, size: 26),
           const SizedBox(height: 10),
-          // Título de la tarjeta (Misión/Visión/Objetivo)
           Text(
             commitment.title,
-            style: GoogleFonts.outfit(
-              fontSize: 20,
-              fontWeight: FontWeight.bold,
-              color: commitment.titleColor, // #FC6707
-            ),
+            style: GoogleFonts.outfit(fontSize: 20, fontWeight: FontWeight.bold, color: commitment.titleColor),
           ),
           const SizedBox(height: 12),
-          // Contenido de la tarjeta
           Text(
             commitment.description,
             textAlign: TextAlign.center,
-            style: GoogleFonts.outfit(
-              fontSize: 14,
-              fontWeight: FontWeight.w500,
-              color: const Color(0xFF4A4A4A),
-              height: 1.45,
-            ),
+            style: GoogleFonts.outfit(fontSize: 14, fontWeight: FontWeight.w500, color: const Color(0xFF4A4A4A), height: 1.45),
           ),
         ],
       ),
@@ -100,14 +74,10 @@ class CommitmentWidget extends StatelessWidget {
 
   IconData _getIconForTitle(String title) {
     switch (title.toLowerCase()) {
-      case 'misión':
-        return Icons.rocket_launch_rounded;
-      case 'visión':
-        return Icons.visibility_rounded;
-      case 'objetivo':
-        return Icons.track_changes_rounded;
-      default:
-        return Icons.star_rounded;
+      case 'misión': return Icons.rocket_launch_rounded;
+      case 'visión': return Icons.visibility_rounded;
+      case 'objetivo': return Icons.track_changes_rounded;
+      default: return Icons.star_rounded;
     }
   }
 }
