@@ -1,4 +1,4 @@
-// Plantilla base para todas las pantallas (Template Method)
+// Plantilla base para todas las pantallas usando Template Method
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'header_widget.dart';
@@ -49,35 +49,41 @@ class BaseScaffold extends StatelessWidget {
       ),
       endDrawer: isMobile ? _buildMobileDrawer(context) : null,
       body: SafeArea(
-        child: SingleChildScrollView(
-          padding: EdgeInsets.symmetric(horizontal: isMobile ? 16 : 40),
-          child: Column(
-            children: [
-              body,
-              const SizedBox(height: 48),
-              Container(
-                width: double.infinity,
-                padding: const EdgeInsets.symmetric(vertical: 20),
-                decoration: const BoxDecoration(
-                  color: Color(0xFFFC6707),
-                  borderRadius: BorderRadius.only(
-                    topLeft: Radius.circular(16),
-                    topRight: Radius.circular(16),
+        child: NotificationListener<OverscrollIndicatorNotification>(
+          onNotification: (overscroll) {
+            overscroll.disallowIndicator();
+            return true;
+          },
+          child: SingleChildScrollView(
+            padding: EdgeInsets.symmetric(horizontal: isMobile ? 16 : 40),
+            child: Column(
+              children: [
+                body,
+                const SizedBox(height: 48),
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.symmetric(vertical: 20),
+                  decoration: const BoxDecoration(
+                    color: Color(0xFFFC6707),
+                    borderRadius: BorderRadius.only(
+                      topLeft: Radius.circular(16),
+                      topRight: Radius.circular(16),
+                    ),
                   ),
-                ),
-                child: Center(
-                  child: Text(
-                    '© 2026 SamanGo. Todos los derechos reservados. Comunidad UNIMET.',
-                    textAlign: TextAlign.center,
-                    style: GoogleFonts.outfit(
-                      fontSize: 12,
-                      color: Colors.white,
-                      fontWeight: FontWeight.w500,
+                  child: Center(
+                    child: Text(
+                      '© 2026 SamanGo. Todos los derechos reservados. Comunidad UNIMET.',
+                      textAlign: TextAlign.center,
+                      style: GoogleFonts.outfit(
+                        fontSize: 12,
+                        color: Colors.white,
+                        fontWeight: FontWeight.w500,
+                      ),
                     ),
                   ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
       ),
@@ -87,53 +93,69 @@ class BaseScaffold extends StatelessWidget {
   Widget _buildMobileDrawer(BuildContext context) {
     return Drawer(
       backgroundColor: Colors.white,
+      width: MediaQuery.of(context).size.width * 0.8, 
       child: SafeArea(
-        child: Column(
-          children: [
-            Padding(
-              padding: const EdgeInsets.all(24),
-              child: Row(
-                children: [
-                  Transform.scale(
-                    scale: 1.3,
-                    child: Image.asset('assets/images/logo.png', width: 40, height: 40),
-                  ),
-                  const SizedBox(width: 8),
-                  Image.asset('assets/images/Nombre.png', height: 22),
-                ],
-              ),
-            ),
-            const Divider(),
-            _buildDrawerItem('Inicio', context),
-            _buildDrawerItem('Sobre Nosotros', context),
-            _buildDrawerItem('Destinos', context),
-            _buildDrawerItem('Contacto', context),
-            const Spacer(),
-            Padding(
-              padding: const EdgeInsets.all(24),
-              child: Column(
-                children: [
-                  OutlinedButton(
-                    onPressed: onLoginPressed,
-                    style: OutlinedButton.styleFrom(
-                      side: const BorderSide(color: Color(0xFFFC6707), width: 1.5),
-                      minimumSize: const Size(double.infinity, 45),
+        child: SingleChildScrollView( 
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Padding(
+                padding: const EdgeInsets.all(24),
+                child: Row(
+                  children: [
+                    Transform.scale(
+                      scale: 1.5,
+                      child: Image.asset(
+                        'assets/images/logo.png',
+                        width: 45,
+                        height: 45,
+                      ),
                     ),
-                    child: Text('Iniciar Sesión', style: GoogleFonts.outfit(color: const Color(0xFFFC6707))),
-                  ),
-                  const SizedBox(height: 12),
-                  ElevatedButton(
-                    onPressed: onRegisterPressed,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFFFC6707),
-                      minimumSize: const Size(double.infinity, 45),
+                    const SizedBox(width: 8),
+                    Padding(
+                      padding: const EdgeInsets.only(top: 8),
+                      child: Image.asset(
+                        'assets/images/Nombre.png',
+                        height: 22,
+                        fit: BoxFit.contain,
+                      ),
                     ),
-                    child: Text('Registrarse', style: GoogleFonts.outfit(color: Colors.white)),
-                  ),
-                ],
+                  ],
+                ),
               ),
-            ),
-          ],
+              const Divider(),
+              _buildDrawerItem('Inicio', context),
+              _buildDrawerItem('Sobre Nosotros', context),
+              _buildDrawerItem('Destinos', context),
+              _buildDrawerItem('Contacto', context),
+              const SizedBox(height: 24),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 24),
+                child: Column(
+                  children: [
+                    OutlinedButton(
+                      onPressed: onLoginPressed,
+                      style: OutlinedButton.styleFrom(
+                        side: const BorderSide(color: Color(0xFFFC6707), width: 1.5),
+                        minimumSize: const Size(double.infinity, 45),
+                      ),
+                      child: Text('Iniciar Sesión', style: GoogleFonts.outfit(color: const Color(0xFFFC6707))),
+                    ),
+                    const SizedBox(height: 12),
+                    ElevatedButton(
+                      onPressed: onRegisterPressed,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFFFC6707),
+                        minimumSize: const Size(double.infinity, 45),
+                      ),
+                      child: Text('Registrarse', style: GoogleFonts.outfit(color: Colors.white)),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 24),
+            ],
+          ),
         ),
       ),
     );

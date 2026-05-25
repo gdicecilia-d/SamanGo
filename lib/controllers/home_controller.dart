@@ -4,6 +4,8 @@ import 'package:flutter/material.dart';
 import '../models/commitment_model.dart';
 import '../models/feature_model.dart';
 import '../models/destination_model.dart';
+import '../views/auth/login_view.dart'; 
+import '../views/auth/select_role_view.dart';
 
 class HomeController extends ChangeNotifier {
   // Keys para las secciones usadas para scroll
@@ -58,32 +60,26 @@ class HomeController extends ChangeNotifier {
 
   // Acciones de botones
   void handleLogin(BuildContext context) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Iniciar Sesión - Próximamente'),
-        backgroundColor: Color(0xFFFC6707),
-        duration: Duration(seconds: 2),
-      ),
+    // Navegar a la pantalla de Login
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (_) => const LoginView()),
     );
   }
 
   void handleRegister(BuildContext context) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Registrarse - Próximamente'),
-        backgroundColor: Color(0xFFFC6707),
-        duration: Duration(seconds: 2),
-      ),
+    // Navegar a la pantalla de selección de rol (Estudiante/Operador)
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (_) => const SelectRoleView()),
     );
   }
 
   void handleStartAdventure(BuildContext context) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('¡Comienza tu viaje UNIMET!'),
-        backgroundColor: Color(0xFFFC6707),
-        duration: Duration(seconds: 2),
-      ),
+    // Navegar a la pantalla de Login 
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (_) => const LoginView()),
     );
   }
 }

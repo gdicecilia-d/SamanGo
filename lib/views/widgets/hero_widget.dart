@@ -139,7 +139,7 @@ class HeroWidget extends StatelessWidget {
       height: double.infinity,
       decoration: BoxDecoration(
         image: const DecorationImage(
-          image: AssetImage('assets/images/unimet.png'),
+          image: AssetImage('assets/images/unimet_campus1.png'),
           fit: BoxFit.cover,
         ),
       ),

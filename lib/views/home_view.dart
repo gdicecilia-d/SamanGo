@@ -58,50 +58,56 @@ class _HomeViewState extends State<HomeView> {
                 }
               },
               activeMenu: _activeMenu,
-              body: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  Container(
-                    key: _controller.sectionInicioKey,
-                    child: HeroWidget(
-                      isMobile: isMobile,
-                      onStartAdventurePressed: () => _controller.handleStartAdventure(context),
+              body: NotificationListener<OverscrollIndicatorNotification>(
+                onNotification: (overscroll) {
+                  overscroll.disallowIndicator();
+                  return true;
+                },
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Container(
+                      key: _controller.sectionInicioKey,
+                      child: HeroWidget(
+                        isMobile: isMobile,
+                        onStartAdventurePressed: () => _controller.handleStartAdventure(context),
+                      ),
                     ),
-                  ),
-                  const SizedBox(height: 48),
-                  Container(
-                    key: _controller.sectionSobreNosotrosKey,
-                    child: isMobile
-                        ? Column(
-                            children: [
-                              CommitmentWidget(commitments: _controller.commitments, isMobile: true),
-                              const SizedBox(height: 32),
-                              FeaturesWidget(features: _controller.features, isMobile: true),
-                            ],
-                          )
-                        : Row(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Expanded(flex: 7, child: CommitmentWidget(commitments: _controller.commitments, isMobile: false)),
-                              const SizedBox(width: 32),
-                              Expanded(flex: 3, child: FeaturesWidget(features: _controller.features, isMobile: false)),
-                            ],
-                          ),
-                  ),
-                  const SizedBox(height: 64),
-                  Container(
-                    key: _controller.sectionDestinosKey,
-                    child: DestinationsWidget(
-                      destinations: _controller.destinations,
-                      isMobile: isMobile,
+                    const SizedBox(height: 48),
+                    Container(
+                      key: _controller.sectionSobreNosotrosKey,
+                      child: isMobile
+                          ? Column(
+                              children: [
+                                CommitmentWidget(commitments: _controller.commitments, isMobile: true),
+                                const SizedBox(height: 32),
+                                FeaturesWidget(features: _controller.features, isMobile: true),
+                              ],
+                            )
+                          : Row(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Expanded(flex: 7, child: CommitmentWidget(commitments: _controller.commitments, isMobile: false)),
+                                const SizedBox(width: 32),
+                                Expanded(flex: 3, child: FeaturesWidget(features: _controller.features, isMobile: false)),
+                              ],
+                            ),
                     ),
-                  ),
-                  const SizedBox(height: 64),
-                  Container(
-                    key: _controller.sectionContactoKey,
-                    child: ContactWidget(isMobile: isMobile),
-                  ),
-                ],
+                    const SizedBox(height: 64),
+                    Container(
+                      key: _controller.sectionDestinosKey,
+                      child: DestinationsWidget(
+                        destinations: _controller.destinations,
+                        isMobile: isMobile,
+                      ),
+                    ),
+                    const SizedBox(height: 64),
+                    Container(
+                      key: _controller.sectionContactoKey,
+                      child: ContactWidget(isMobile: isMobile),
+                    ),
+                  ],
+                ),
               ),
             );
           },

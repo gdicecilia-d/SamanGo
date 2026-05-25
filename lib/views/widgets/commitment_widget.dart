@@ -32,21 +32,24 @@ class CommitmentWidget extends StatelessWidget {
             children: commitments.asMap().entries.map((entry) {
               return Padding(
                 padding: EdgeInsets.only(bottom: entry.key != commitments.length - 1 ? 20 : 0),
-                child: _buildCard(entry.value),
+                child: Center(
+                  child: _buildCard(entry.value, isMobile: true),
+                ),
               );
             }).toList(),
           )
         else
           Row(
-            children: commitments.map((c) => Expanded(child: _buildCard(c))).toList(),
+            children: commitments.map((c) => Expanded(child: _buildCard(c, isMobile: false))).toList(),
           ),
       ],
     );
   }
 
-  Widget _buildCard(CommitmentModel commitment) {
+  Widget _buildCard(CommitmentModel commitment, {required bool isMobile}) {
     return Container(
-      margin: const EdgeInsets.only(right: 16),
+      width: isMobile ? double.infinity : null, 
+      margin: isMobile ? EdgeInsets.zero : const EdgeInsets.only(right: 16),
       padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 24),
       decoration: BoxDecoration(
         color: commitment.backgroundColor,

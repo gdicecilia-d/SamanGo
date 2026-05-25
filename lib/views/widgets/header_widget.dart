@@ -46,10 +46,13 @@ class _HeaderWidgetState extends State<HeaderWidget> {
                   ),
                 ),
                 const SizedBox(width: 4),
-                Image.asset(
-                  'assets/images/Nombre.png',
-                  height: 25,
-                  fit: BoxFit.contain,
+                Padding(
+                  padding: const EdgeInsets.only(top: 8), 
+                  child: Image.asset(
+                    'assets/images/Nombre.png',
+                    height: 25,
+                    fit: BoxFit.contain,
+                  ),
                 ),
               ],
             ),
