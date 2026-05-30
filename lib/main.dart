@@ -1,19 +1,29 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:provider/provider.dart';
 import 'firebase_options.dart';
+import 'controllers/auth_controller.dart';
 import 'views/home_view.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   
-  // Inicializar Firebase
+  // Inicializar Firebase con credenciales reales del proyecto "samango"
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
   );
   
-  runApp(const SamanGoApp());
+  runApp(
+    // ChangeNotifierProvider inyecta el AuthController en toda la app
+    // Patrón Observer (Hito 2): todos los widgets que escuchen se reconstruyen al cambiar el estado
+    ChangeNotifierProvider(
+      create: (_) => AuthController()..tryAutoLogin(),
+      child: const SamanGoApp(),
+    ),
+  );
 }
+
 
 class SamanGoApp extends StatelessWidget {
   const SamanGoApp({super.key});

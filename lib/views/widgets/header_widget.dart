@@ -1,6 +1,8 @@
 // Componente del encabezado con logo y menú de navegación
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:provider/provider.dart';
+import '../../controllers/auth_controller.dart';
 
 class HeaderWidget extends StatefulWidget {
   final bool isMobile;
@@ -70,32 +72,70 @@ class _HeaderWidgetState extends State<HeaderWidget> {
                 _buildNavLink('Contacto'),
               ],
             ),
-            Row(
-              children: [
-                OutlinedButton(
-                  onPressed: widget.onLoginPressed,
-                  style: OutlinedButton.styleFrom(
-                    side: const BorderSide(color: Color(0xFFFC6707), width: 1.5),
-                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                  ),
-                  child: Text(
-                    'Iniciar Sesión',
-                    style: GoogleFonts.outfit(color: const Color(0xFFFC6707), fontWeight: FontWeight.w600),
-                  ),
-                ),
-                const SizedBox(width: 12),
-                ElevatedButton(
-                  onPressed: widget.onRegisterPressed,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFFFC6707),
-                    foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                  ),
-                  child: Text('Registrarse', style: GoogleFonts.outfit(fontWeight: FontWeight.w600)),
-                ),
-              ],
+            // Consumer<AuthController> — Patrón Observer (Hito 2)
+            // Si hay sesión activa muestra nombre + Cerrar Sesión
+            // Si no hay sesión muestra los botones originales
+            Consumer<AuthController>(
+              builder: (context, auth, _) {
+                if (auth.isLoggedIn) {
+                  return Row(
+                    children: [
+                      Text(
+                        'Hola, ${auth.currentUser.nombre}',
+                        style: GoogleFonts.outfit(
+                          color: const Color(0xFF333333),
+                          fontWeight: FontWeight.w600,
+                          fontSize: 15,
+                        ),
+                      ),
+                      const SizedBox(width: 16),
+                      OutlinedButton(
+                        onPressed: () => context.read<AuthController>().logout(),
+                        style: OutlinedButton.styleFrom(
+                          side: const BorderSide(color: Color(0xFFFC6707), width: 1.5),
+                          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                        ),
+                        child: Text(
+                          'Cerrar Sesión',
+                          style: GoogleFonts.outfit(
+                            color: const Color(0xFFFC6707),
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
+                    ],
+                  );
+                }
+                // Sin sesión → botones originales intactos
+                return Row(
+                  children: [
+                    OutlinedButton(
+                      onPressed: widget.onLoginPressed,
+                      style: OutlinedButton.styleFrom(
+                        side: const BorderSide(color: Color(0xFFFC6707), width: 1.5),
+                        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                      ),
+                      child: Text(
+                        'Iniciar Sesión',
+                        style: GoogleFonts.outfit(color: const Color(0xFFFC6707), fontWeight: FontWeight.w600),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    ElevatedButton(
+                      onPressed: widget.onRegisterPressed,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFFFC6707),
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                      ),
+                      child: Text('Registrarse', style: GoogleFonts.outfit(fontWeight: FontWeight.w600)),
+                    ),
+                  ],
+                );
+              },
             ),
           ],
           // Menú móvil

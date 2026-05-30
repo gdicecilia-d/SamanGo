@@ -1,6 +1,9 @@
-// registro operador 
+// registro operador
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:provider/provider.dart';
+import '../../controllers/auth_controller.dart';
+import '../../controllers/licencia_controller.dart';
 import 'auth_base_view.dart';
 import 'login_view.dart';
 import 'select_role_view.dart';
@@ -18,7 +21,12 @@ class _RegisterOperatorViewState extends State<RegisterOperatorView> {
 
   @override
   Widget build(BuildContext context) {
-    return AuthBaseView(
+    // LicenciaController es LOCAL a esta pantalla (ChangeNotifierProvider local)
+    return ChangeNotifierProvider(
+      create: (_) => LicenciaController(),
+      child: Consumer<LicenciaController>(
+        builder: (context, licenciaCtrl, _) {
+          return AuthBaseView(
       onBackPressed: () {
         Navigator.pop(context); // Vuelve a SelectRoleView
       },
@@ -344,7 +352,7 @@ class _RegisterOperatorViewState extends State<RegisterOperatorView> {
             ),
             const SizedBox(height: 16),
 
-            // Subir Licencia de Turismo
+            // Subir Licencia de Turismo — conectado a Firebase Storage real
             Align(
               alignment: Alignment.centerLeft,
               child: Text(
@@ -358,9 +366,12 @@ class _RegisterOperatorViewState extends State<RegisterOperatorView> {
             ),
             const SizedBox(height: 8),
             GestureDetector(
-              onTap: () {
-                print('Seleccionar archivo');
-              },
+              onTap: licenciaCtrl.isUploading
+                  ? null
+                  : () {
+                      final auth = context.read<AuthController>();
+                      licenciaCtrl.pickAndUploadLicencia(auth);
+                    },
               child: Container(
                 width: double.infinity,
                 padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
@@ -371,19 +382,55 @@ class _RegisterOperatorViewState extends State<RegisterOperatorView> {
                 ),
                 child: Row(
                   children: [
-                    const Icon(Icons.upload_file, color: Color(0xFFFC6707), size: 20),
+                    Icon(
+                      licenciaCtrl.isUploading ? Icons.cloud_upload : Icons.upload_file,
+                      color: const Color(0xFFFC6707),
+                      size: 20,
+                    ),
                     const SizedBox(width: 12),
-                    Text(
-                      'Seleccionar Archivos',
-                      style: GoogleFonts.outfit(
-                        fontSize: 14,
-                        color: const Color(0xFF666666),
+                    Expanded(
+                      child: Text(
+                        licenciaCtrl.selectedFileName ?? 'Seleccionar Archivos',
+                        style: GoogleFonts.outfit(
+                          fontSize: 14,
+                          color: const Color(0xFF666666),
+                        ),
+                        overflow: TextOverflow.ellipsis,
                       ),
                     ),
                   ],
                 ),
               ),
             ),
+            // Barra de progreso y mensajes de estado
+            if (licenciaCtrl.isUploading) ...[
+              const SizedBox(height: 8),
+              ClipRRect(
+                borderRadius: BorderRadius.circular(4),
+                child: LinearProgressIndicator(
+                  value: licenciaCtrl.uploadProgress,
+                  backgroundColor: const Color(0xFFFFDDBB),
+                  valueColor: const AlwaysStoppedAnimation<Color>(Color(0xFFFC6707)),
+                  minHeight: 6,
+                ),
+              ),
+            ],
+            if (licenciaCtrl.successMessage != null)
+              Padding(
+                padding: const EdgeInsets.only(top: 6),
+                child: Text(
+                  licenciaCtrl.successMessage!,
+                  style: GoogleFonts.outfit(color: Colors.green.shade700, fontSize: 12),
+                ),
+              ),
+            if (licenciaCtrl.errorMessage != null)
+              Padding(
+                padding: const EdgeInsets.only(top: 6),
+                child: Text(
+                  licenciaCtrl.errorMessage!,
+                  style: GoogleFonts.outfit(color: Colors.red.shade700, fontSize: 12),
+                ),
+              ),
             const SizedBox(height: 16),
 
             // Checkbox Términos y Condiciones
@@ -450,6 +497,9 @@ class _RegisterOperatorViewState extends State<RegisterOperatorView> {
             ),
           ],
         ),
+      ),
+          );
+        },
       ),
     );
   }

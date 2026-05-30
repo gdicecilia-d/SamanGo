@@ -40,6 +40,18 @@ dependencies:
   firebase_auth: ^6.5.1
   cloud_firestore: ^6.4.1
 
+  # --- Gestión de estado global ---
+  provider: ^6.1.2
+
+  # --- Persistencia de sesión Web (localStorage) ---
+  shared_preferences: ^2.3.2
+
+  # --- Firebase Storage ---
+  firebase_storage: ^13.4.1
+
+  # --- Selección de archivos en Web (PDF/imagen) ---
+  file_picker: ^8.3.7
+
 dev_dependencies:
   flutter_test:
     sdk: flutter
