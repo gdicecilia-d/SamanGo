@@ -11,38 +11,38 @@ class FormValidators {
     return null;
   }
 
-  // 2. Validación de Carnet UNIMET
+  // 2. Validación de Carnet UNIMET (Permite 7 u 8 dígitos)
   static String? validarCarnet(String? value) {
     if (value == null || value.isEmpty) {
       return 'El carnet es obligatorio';
     }
-    final regex = RegExp(r'^\d{8}$');
+    final regex = RegExp(r'^\d{7,8}$');
     if (!regex.hasMatch(value)) {
-      return 'El carnet debe contener exactamente 8 números';
+      return 'El carnet debe contener entre 7 y 8 números';
     }
     return null;
   }
 
-  // 3. Validación de Teléfono (Formato Venezolano)
+  // 3. Validación de Teléfono (Guion opcional)
   static String? validarTelefono(String? value) {
     if (value == null || value.isEmpty) {
       return 'El teléfono es obligatorio';
     }
-    final regex = RegExp(r'^(0414|0424|0412|0416|0426|0212)-\d{7}$');
+    final regex = RegExp(r'^(0414|0424|0412|0416|0426|0212)-?\d{7}$');
     if (!regex.hasMatch(value)) {
-      return 'Formato inválido. Ejemplo: 0412-1234567';
+      return 'Formato inválido. Ejemplo: 04121234567 o 0412-1234567';
     }
     return null;
   }
 
-  // 4. Validación de RIF Venezolano
+  // 4. Validación de RIF Venezolano (Guiones opcionales)
   static String? validarRif(String? value) {
     if (value == null || value.isEmpty) {
       return 'El RIF es obligatorio';
     }
-    final regex = RegExp(r'^[JVEGP]-\d{8}-\d{1}$');
+    final regex = RegExp(r'^[JVEGP]-?\d{8}-?\d{1}$');
     if (!regex.hasMatch(value.toUpperCase())) {
-      return 'Formato de RIF inválido. Ejemplo: J-12345678-9';
+      return 'Formato de RIF inválido. Ejemplo: J123456789 o J-12345678-9';
     }
     return null;
   }
