@@ -34,4 +34,16 @@ class FormValidators {
     }
     return null;
   }
+
+  // 4. Validación de RIF Venezolano
+  static String? validarRif(String? value) {
+    if (value == null || value.isEmpty) {
+      return 'El RIF es obligatorio';
+    }
+    final regex = RegExp(r'^[JVEGP]-\d{8}-\d{1}$');
+    if (!regex.hasMatch(value.toUpperCase())) {
+      return 'Formato de RIF inválido. Ejemplo: J-12345678-9';
+    }
+    return null;
+  }
 }
