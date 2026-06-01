@@ -22,4 +22,16 @@ class FormValidators {
     }
     return null;
   }
+
+  // 3. Validación de Teléfono (Formato Venezolano)
+  static String? validarTelefono(String? value) {
+    if (value == null || value.isEmpty) {
+      return 'El teléfono es obligatorio';
+    }
+    final regex = RegExp(r'^(0414|0424|0412|0416|0426|0212)-\d{7}$');
+    if (!regex.hasMatch(value)) {
+      return 'Formato inválido. Ejemplo: 0412-1234567';
+    }
+    return null;
+  }
 }
