@@ -10,4 +10,16 @@ class FormValidators {
     }
     return null;
   }
+
+  // 2. Validación de Carnet UNIMET
+  static String? validarCarnet(String? value) {
+    if (value == null || value.isEmpty) {
+      return 'El carnet es obligatorio';
+    }
+    final regex = RegExp(r'^\d{8}$');
+    if (!regex.hasMatch(value)) {
+      return 'El carnet debe contener exactamente 8 números';
+    }
+    return null;
+  }
 }
