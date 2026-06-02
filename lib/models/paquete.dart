@@ -1,14 +1,11 @@
-// lib/models/paquete_turistico_model.dart
-// Clase: PaqueteTuristico — diagrama de clases Hito 1 SamanGo
-// Atributos del diagrama: id, vendedorId, precio, capacidad, locacion
-// Método del diagrama: publicar() — se implementa en su controlador
-
+// Modelo Paquete Turístico
+// Creado y gestionado por Operadores
 class PaqueteTuristico {
-  final String id;          // +id del diagrama
-  final String vendedorId;  // +vendedorId — uid del Operador
-  final double precio;      // +precio del diagrama
-  final int capacidad;      // +capacidad (cupos disponibles)
-  final String locacion;    // +locacion del diagrama
+  final String id;
+  final String vendedorId;
+  final double precio;
+  final int capacidad;
+  final String locacion;
 
   const PaqueteTuristico({
     required this.id,
@@ -36,6 +33,4 @@ class PaqueteTuristico {
       'locacion': locacion,
     };
   }
-
-  // +publicar() del diagrama — implementado en PaqueteController
 }

@@ -1,13 +1,10 @@
-// lib/models/log_auditoria_model.dart
-// Clase: LogAuditoria — diagrama de clases Hito 1 SamanGo
-// Atributos del diagrama: id, accionRealizada, fechaHora
-// Relación del diagrama: Usuario (1) registra (*) LogAuditoria
-
+// Modelo Log de Auditoría
+// Registra acciones importantes de los usuarios
 class LogAuditoria {
-  final String id;                // +id del diagrama
-  final String accionRealizada;   // +accionRealizada: 'login' | 'logout' | 'upload_licencia'
-  final DateTime fechaHora;       // +fechaHora del diagrama
-  final String usuarioId;         // FK hacia Usuario (para la relación 'registra')
+  final String id;
+  final String accionRealizada;
+  final DateTime fechaHora;
+  final String usuarioId;
 
   const LogAuditoria({
     required this.id,

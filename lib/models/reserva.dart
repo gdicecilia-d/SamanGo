@@ -1,15 +1,12 @@
-// lib/models/reserva_model.dart
-// Clase: Reserva — diagrama de clases Hito 1 SamanGo
-// Atributos del diagrama: id, estudianteId, paqueteId, estadoActual
-// Métodos del diagrama: simularPago(), actualizarEstado() — en ReservaController
-
+// Modelo Reserva
+// Relaciona un Estudiante con un Paquete Turístico
 import 'estado_reserva.dart';
 
 class Reserva {
-  final String id;                  // +id del diagrama
-  final String estudianteId;        // +estudianteId — uid del Estudiante
-  final String paqueteId;           // +paqueteId — id del PaqueteTuristico
-  final EstadoReserva estadoActual; // +estadoActual — enum EstadoReserva
+  final String id;
+  final String estudianteId;
+  final String paqueteId;
+  final EstadoReserva estadoActual;
 
   const Reserva({
     required this.id,
@@ -36,9 +33,6 @@ class Reserva {
       'estadoActual': estadoActual.toMap(),
     };
   }
-
-  // +simularPago() → transición aceptado → pagado (implementado en ReservaController)
-  // +actualizarEstado() → actualiza estadoActual en Firestore (implementado en ReservaController)
 
   Reserva copyWith({EstadoReserva? estadoActual}) {
     return Reserva(

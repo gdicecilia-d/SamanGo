@@ -1,22 +1,15 @@
-// lib/services/storage_service.dart
-// Servicio de Firebase Storage — encapsula la subida de archivos
-// Ruta en Storage: /licencias/{uid}.{ext}
-
+// Servicio de Firebase Storage
+// Sube archivos (licencias, imágenes de destinos) y devuelve la URL de descarga
 import 'dart:typed_data';
 import 'package:firebase_storage/firebase_storage.dart';
 
 class StorageService {
   final FirebaseStorage _storage = FirebaseStorage.instance;
 
-  /// Sube la licencia de turismo del Operador a Firebase Storage.
-  /// Usa el UID como nombre de archivo para sobreescribir si se vuelve a subir.
-  ///
-  /// Parámetros:
-  ///   uid       — id del Usuario (campo +id del diagrama)
-  ///   fileBytes — bytes del archivo (FilePicker con withData: true para Web)
-  ///   fileName  — nombre original para extraer la extensión
-  ///
-  /// Retorna: URL de descarga del archivo subido
+  // Sube la licencia de turismo del operador
+  // uid: ID del usuario
+  // fileBytes: bytes del archivo seleccionado
+  // fileName: nombre original del archivo
   Future<String> uploadLicencia({
     required String uid,
     required Uint8List fileBytes,
@@ -25,17 +18,21 @@ class StorageService {
     final extension = fileName.split('.').last.toLowerCase();
     final ref = _storage.ref().child('licencias/$uid.$extension');
     final metadata = SettableMetadata(contentType: _getContentType(extension));
-    final uploadTask = await ref.putData(fileBytes, metadata);
-    return await uploadTask.ref.getDownloadURL();
+    await ref.putData(fileBytes, metadata);
+    return await ref.getDownloadURL();
   }
 
   String _getContentType(String extension) {
     switch (extension) {
-      case 'pdf':  return 'application/pdf';
+      case 'pdf':
+        return 'application/pdf';
       case 'jpg':
-      case 'jpeg': return 'image/jpeg';
-      case 'png':  return 'image/png';
-      default:     return 'application/octet-stream';
+      case 'jpeg':
+        return 'image/jpeg';
+      case 'png':
+        return 'image/png';
+      default:
+        return 'application/octet-stream';
     }
   }
 }
