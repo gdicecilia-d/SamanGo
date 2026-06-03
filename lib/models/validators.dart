@@ -25,6 +25,20 @@ class FormValidators {
     return null;
   }
 
+  // AGREGADO PARA CUMPLIR EL PATRÓN DE RIF
+
+  static String? validarRifCompleto(String? value) {
+    if (value == null || value.isEmpty) {
+      return 'El RIF es obligatorio';
+    }
+    // Valida estrictamente el patrón J-XXXXXXXX-X
+    final regex = RegExp(r'^J-\d{8}-\d$');
+    if (!regex.hasMatch(value)) {
+      return 'Formato de RIF inválido. Use el patrón J-XXXXXXXX-X';
+    }
+    return null;
+  }
+
   // Validación de representante legal
   static String? validarRepresentante(String? value) {
     if (value == null || value.isEmpty) {
@@ -44,6 +58,20 @@ class FormValidators {
     final regex = RegExp(r'^\d{7}$');
     if (!regex.hasMatch(value)) {
       return 'Debe tener 7 dígitos (ej: 1234567)';
+    }
+    return null;
+  }
+
+  // AGREGADO PARA TELÉFONO COMPLETO DE 11 DÍGITOS
+
+  static String? validarTelefonoCompleto(String? value) {
+    if (value == null || value.isEmpty) {
+      return 'El número de teléfono es obligatorio';
+    }
+    // Valida que sean exactamente 11 números (ej: 04121234567)
+    final regex = RegExp(r'^\d{11}$');
+    if (!regex.hasMatch(value)) {
+      return 'Debe tener 11 dígitos (ej: 04241234567)';
     }
     return null;
   }

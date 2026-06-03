@@ -122,7 +122,10 @@ class _LoginViewState extends State<LoginView> {
             controller: _emailController,
             decoration: InputDecoration(
               hintText: 'ejemplo@correo.unimet.edu.ve',
-              hintStyle: GoogleFonts.outfit(fontSize: 14, color: const Color(0xFF999999)),
+              hintStyle: GoogleFonts.outfit(
+                fontSize: 14,
+                color: const Color(0xFF999999),
+              ),
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(12),
                 borderSide: BorderSide.none,
@@ -137,7 +140,10 @@ class _LoginViewState extends State<LoginView> {
               ),
               filled: true,
               fillColor: const Color(0xFFF5F5F5),
-              contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+              contentPadding: const EdgeInsets.symmetric(
+                horizontal: 16,
+                vertical: 16,
+              ),
             ),
           ),
           const SizedBox(height: 16),
@@ -147,7 +153,11 @@ class _LoginViewState extends State<LoginView> {
             alignment: Alignment.centerLeft,
             child: Text(
               'Contraseña',
-              style: GoogleFonts.outfit(fontSize: 14, fontWeight: FontWeight.w500, color: const Color(0xFF333333)),
+              style: GoogleFonts.outfit(
+                fontSize: 14,
+                fontWeight: FontWeight.w500,
+                color: const Color(0xFF333333),
+              ),
             ),
           ),
           const SizedBox(height: 8),
@@ -156,7 +166,10 @@ class _LoginViewState extends State<LoginView> {
             obscureText: _obscurePassword,
             decoration: InputDecoration(
               hintText: 'Ingrese su contraseña',
-              hintStyle: GoogleFonts.outfit(fontSize: 14, color: const Color(0xFF999999)),
+              hintStyle: GoogleFonts.outfit(
+                fontSize: 14,
+                color: const Color(0xFF999999),
+              ),
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(12),
                 borderSide: BorderSide.none,
@@ -171,10 +184,17 @@ class _LoginViewState extends State<LoginView> {
               ),
               filled: true,
               fillColor: const Color(0xFFF5F5F5),
-              contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+              contentPadding: const EdgeInsets.symmetric(
+                horizontal: 16,
+                vertical: 16,
+              ),
               suffixIcon: IconButton(
-                icon: Icon(_obscurePassword ? Icons.visibility_off : Icons.visibility, color: const Color(0xFF999999)),
-                onPressed: () => setState(() => _obscurePassword = !_obscurePassword),
+                icon: Icon(
+                  _obscurePassword ? Icons.visibility_off : Icons.visibility,
+                  color: const Color(0xFF999999),
+                ),
+                onPressed: () =>
+                    setState(() => _obscurePassword = !_obscurePassword),
               ),
             ),
           ),
@@ -189,7 +209,9 @@ class _LoginViewState extends State<LoginView> {
                 onPressed: () {
                   Navigator.push(
                     context,
-                    MaterialPageRoute(builder: (_) => const ForgotPasswordView()),
+                    MaterialPageRoute(
+                      builder: (_) => const ForgotPasswordView(),
+                    ),
                   );
                 },
                 style: TextButton.styleFrom(
@@ -199,7 +221,11 @@ class _LoginViewState extends State<LoginView> {
                 ),
                 child: Text(
                   '¿Olvidaste tu contraseña?',
-                  style: GoogleFonts.outfit(fontSize: 13, color: const Color(0xFF666666), fontWeight: FontWeight.w500),
+                  style: GoogleFonts.outfit(
+                    fontSize: 13,
+                    color: const Color(0xFF666666),
+                    fontWeight: FontWeight.w500,
+                  ),
                 ),
               ),
             ),
@@ -212,7 +238,10 @@ class _LoginViewState extends State<LoginView> {
               padding: const EdgeInsets.only(bottom: 12),
               child: Text(
                 _errorMessage!,
-                style: GoogleFonts.outfit(color: Colors.red.shade700, fontSize: 13),
+                style: GoogleFonts.outfit(
+                  color: Colors.red.shade700,
+                  fontSize: 13,
+                ),
               ),
             ),
 
@@ -225,11 +254,26 @@ class _LoginViewState extends State<LoginView> {
                 backgroundColor: const Color(0xFFFC6707),
                 foregroundColor: Colors.white,
                 padding: const EdgeInsets.symmetric(vertical: 16),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
               ),
               child: _isLoading
-                  ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
-                  : Text('Iniciar Sesión', style: GoogleFonts.outfit(fontSize: 16, fontWeight: FontWeight.bold)),
+                  ? const SizedBox(
+                      height: 20,
+                      width: 20,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: Colors.white,
+                      ),
+                    )
+                  : Text(
+                      'Iniciar Sesión',
+                      style: GoogleFonts.outfit(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
             ),
           ),
           const SizedBox(height: 12),
@@ -241,14 +285,19 @@ class _LoginViewState extends State<LoginView> {
               onPressed: () {
                 // TODO: Google Sign-in
                 ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Google Sign-in - Próximamente'), backgroundColor: Color(0xFFFC6707)),
+                  const SnackBar(
+                    content: Text('Google Sign-in - Próximamente'),
+                    backgroundColor: Color(0xFFFC6707),
+                  ),
                 );
               },
               style: OutlinedButton.styleFrom(
                 backgroundColor: const Color(0xFFFDDBB3),
                 side: BorderSide.none,
                 padding: const EdgeInsets.symmetric(vertical: 16),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
               ),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.center,
@@ -257,12 +306,17 @@ class _LoginViewState extends State<LoginView> {
                     'assets/images/google_logo.png',
                     height: 20,
                     width: 20,
-                    errorBuilder: (_, __, ___) => const Icon(Icons.g_mobiledata, size: 20),
+                    errorBuilder: (_, __, ___) =>
+                        const Icon(Icons.g_mobiledata, size: 20),
                   ),
                   const SizedBox(width: 12),
                   Text(
                     'Continuar con Google',
-                    style: GoogleFonts.outfit(fontSize: 16, fontWeight: FontWeight.bold, color: const Color(0xFF333333)),
+                    style: GoogleFonts.outfit(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                      color: const Color(0xFF333333),
+                    ),
                   ),
                 ],
               ),
