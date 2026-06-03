@@ -25,20 +25,6 @@ class FormValidators {
     return null;
   }
 
-  // AGREGADO PARA CUMPLIR EL PATRÓN DE RIF
-
-  static String? validarRifCompleto(String? value) {
-    if (value == null || value.isEmpty) {
-      return 'El RIF es obligatorio';
-    }
-    // Valida estrictamente el patrón J-XXXXXXXX-X
-    final regex = RegExp(r'^J-\d{8}-\d$');
-    if (!regex.hasMatch(value)) {
-      return 'Formato de RIF inválido. Use el patrón J-XXXXXXXX-X';
-    }
-    return null;
-  }
-
   // Validación de representante legal
   static String? validarRepresentante(String? value) {
     if (value == null || value.isEmpty) {
@@ -62,26 +48,11 @@ class FormValidators {
     return null;
   }
 
-  // AGREGADO PARA TELÉFONO COMPLETO DE 11 DÍGITOS
-
-  static String? validarTelefonoCompleto(String? value) {
-    if (value == null || value.isEmpty) {
-      return 'El número de teléfono es obligatorio';
-    }
-    // Valida que sean exactamente 11 números (ej: 04121234567)
-    final regex = RegExp(r'^\d{11}$');
-    if (!regex.hasMatch(value)) {
-      return 'Debe tener 11 dígitos (ej: 04241234567)';
-    }
-    return null;
-  }
-
   // Validación de email para OPERADOR (cualquier dominio válido)
   static String? validarEmail(String? value) {
     if (value == null || value.isEmpty) {
       return 'El email es obligatorio';
     }
-    // Acepta cualquier email con formato válido: ejemplo@cualquier-dominio.com
     final regex = RegExp(r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$');
     if (!regex.hasMatch(value)) {
       return 'Formato de email inválido (ejemplo@dominio.com)';
@@ -131,14 +102,14 @@ class FormValidators {
     return null;
   }
 
-  // Validación de carnet UNIMET (solo números, 7-8 dígitos)
+  // Validación de carnet UNIMET (solo números, 7-11 dígitos)
   static String? validarCarnet(String? value) {
     if (value == null || value.isEmpty) {
       return 'El carnet es obligatorio';
     }
-    final regex = RegExp(r'^\d{7,8}$');
+    final regex = RegExp(r'^\d{7,11}$');
     if (!regex.hasMatch(value)) {
-      return 'El carnet debe tener 7 u 8 números (solo dígitos)';
+      return 'El carnet debe tener entre 7 y 11 números (solo dígitos)';
     }
     return null;
   }

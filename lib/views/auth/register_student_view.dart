@@ -1,5 +1,6 @@
 // registro de estudiantes
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'auth_base_view.dart';
 import 'login_view.dart';
@@ -13,14 +14,55 @@ class RegisterStudentView extends StatefulWidget {
 }
 
 class _RegisterStudentViewState extends State<RegisterStudentView> {
+  final TextEditingController _nombreController = TextEditingController();
+  final TextEditingController _carnetController = TextEditingController();
+  final TextEditingController _emailController = TextEditingController();
+  final TextEditingController _passwordController = TextEditingController();
+
   bool _obscurePassword = true;
   bool _acceptTerms = false;
+
+  bool get _isFormValid {
+    return _nombreController.text.isNotEmpty &&
+        _nombreController.text.length >= 3 &&
+        _carnetController.text.isNotEmpty &&
+        RegExp(r'^\d{7,11}$').hasMatch(_carnetController.text) &&
+        _emailController.text.isNotEmpty &&
+        _emailController.text.endsWith('@correo.unimet.edu.ve') &&
+        _passwordController.text.isNotEmpty &&
+        _passwordController.text.length >= 6 &&
+        _acceptTerms;
+  }
+
+  void _submitForm() {
+    if (!_isFormValid) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Por favor completa todos los campos correctamente'),
+          backgroundColor: Color(0xFFFC6707),
+        ),
+      );
+      return;
+    }
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Registro exitoso. Ahora inicia sesión.'),
+        backgroundColor: Color(0xFFFC6707),
+      ),
+    );
+    Navigator.pushAndRemoveUntil(
+      context,
+      MaterialPageRoute(builder: (_) => const LoginView()),
+      (route) => false,
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
     return AuthBaseView(
       onBackPressed: () {
-        Navigator.pop(context); // Simple: vuelve a la pantalla anterior
+        Navigator.pop(context);
       },
       bottomText: '¿Ya tienes cuenta? ',
       bottomLinkText: 'Inicia Sesión',
@@ -68,28 +110,15 @@ class _RegisterStudentViewState extends State<RegisterStudentView> {
             ),
           ),
           const SizedBox(height: 8),
-          TextField(
-            decoration: InputDecoration(
-              hintText: 'Ej: Juan Davíd Pérez Díaz',
-              hintStyle: GoogleFonts.outfit(
-                fontSize: 14,
-                color: const Color(0xFF999999),
-              ),
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
-                borderSide: BorderSide.none,
-              ),
-              focusedBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
-                borderSide: const BorderSide(color: Colors.transparent),
-              ),
-              enabledBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
-                borderSide: BorderSide.none,
-              ),
-              filled: true,
-              fillColor: const Color(0xFFF5F5F5),
-              contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+          TextFormField(
+            controller: _nombreController,
+            onChanged: (_) => setState(() {}),
+            style: GoogleFonts.outfit(fontSize: 14),
+            decoration: _inputDecoration(
+              hint: 'Ej: Juan David Pérez Díaz',
+              errorText: _nombreController.text.isNotEmpty && _nombreController.text.length < 3
+                  ? 'El nombre debe tener al menos 3 caracteres'
+                  : null,
             ),
           ),
           const SizedBox(height: 16),
@@ -107,29 +136,17 @@ class _RegisterStudentViewState extends State<RegisterStudentView> {
             ),
           ),
           const SizedBox(height: 8),
-          TextField(
+          TextFormField(
+            controller: _carnetController,
+            onChanged: (_) => setState(() {}),
             keyboardType: TextInputType.number,
-            decoration: InputDecoration(
-              hintText: 'Ej: 2025123456',
-              hintStyle: GoogleFonts.outfit(
-                fontSize: 14,
-                color: const Color(0xFF999999),
-              ),
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
-                borderSide: BorderSide.none,
-              ),
-              focusedBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
-                borderSide: const BorderSide(color: Colors.transparent),
-              ),
-              enabledBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
-                borderSide: BorderSide.none,
-              ),
-              filled: true,
-              fillColor: const Color(0xFFF5F5F5),
-              contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+            inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+            style: GoogleFonts.outfit(fontSize: 14),
+            decoration: _inputDecoration(
+              hint: 'Ej: 20251234567',
+              errorText: _carnetController.text.isNotEmpty && !RegExp(r'^\d{7,11}$').hasMatch(_carnetController.text)
+                  ? 'El carnet debe tener entre 7 y 11 números'
+                  : null,
             ),
           ),
           const SizedBox(height: 16),
@@ -147,29 +164,16 @@ class _RegisterStudentViewState extends State<RegisterStudentView> {
             ),
           ),
           const SizedBox(height: 8),
-          TextField(
+          TextFormField(
+            controller: _emailController,
+            onChanged: (_) => setState(() {}),
             keyboardType: TextInputType.emailAddress,
-            decoration: InputDecoration(
-              hintText: 'ejemplo@correo.unimet.edu.ve',
-              hintStyle: GoogleFonts.outfit(
-                fontSize: 14,
-                color: const Color(0xFF999999),
-              ),
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
-                borderSide: BorderSide.none,
-              ),
-              focusedBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
-                borderSide: const BorderSide(color: Colors.transparent),
-              ),
-              enabledBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
-                borderSide: BorderSide.none,
-              ),
-              filled: true,
-              fillColor: const Color(0xFFF5F5F5),
-              contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+            style: GoogleFonts.outfit(fontSize: 14),
+            decoration: _inputDecoration(
+              hint: 'ejemplo@correo.unimet.edu.ve',
+              errorText: _emailController.text.isNotEmpty && !_emailController.text.endsWith('@correo.unimet.edu.ve')
+                  ? 'Debe ser un correo UNIMET válido'
+                  : null,
             ),
           ),
           const SizedBox(height: 16),
@@ -187,59 +191,58 @@ class _RegisterStudentViewState extends State<RegisterStudentView> {
             ),
           ),
           const SizedBox(height: 8),
-          TextField(
+          TextFormField(
+            controller: _passwordController,
+            onChanged: (_) => setState(() {}),
             obscureText: _obscurePassword,
+            style: GoogleFonts.outfit(fontSize: 14),
             decoration: InputDecoration(
-              hintText: 'Ingrese su contraseña',
-              hintStyle: GoogleFonts.outfit(
-                fontSize: 14,
-                color: const Color(0xFF999999),
-              ),
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
-                borderSide: BorderSide.none,
-              ),
-              focusedBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
-                borderSide: const BorderSide(color: Colors.transparent),
-              ),
-              enabledBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
-                borderSide: BorderSide.none,
-              ),
+              hintText: 'Ingrese su contraseña (mínimo 6 caracteres)',
+              hintStyle: GoogleFonts.outfit(fontSize: 14, color: const Color(0xFF999999)),
+              border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+              focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: Colors.transparent)),
+              enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+              errorBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: Color(0xFFFC6707), width: 1.5)),
+              focusedErrorBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: Color(0xFFFC6707), width: 1.5)),
+              errorStyle: GoogleFonts.outfit(color: const Color(0xFFFC6707), fontSize: 12),
               filled: true,
               fillColor: const Color(0xFFF5F5F5),
               contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
               suffixIcon: IconButton(
-                icon: Icon(
-                  _obscurePassword ? Icons.visibility_off : Icons.visibility,
-                  color: const Color(0xFF999999),
-                ),
-                onPressed: () {
-                  setState(() {
-                    _obscurePassword = !_obscurePassword;
-                  });
-                },
+                icon: Icon(_obscurePassword ? Icons.visibility_off : Icons.visibility, color: const Color(0xFF999999)),
+                onPressed: () => setState(() => _obscurePassword = !_obscurePassword),
               ),
             ),
           ),
+          if (_passwordController.text.isNotEmpty && _passwordController.text.length < 6)
+            Padding(
+              padding: const EdgeInsets.only(top: 4, left: 16),
+              child: Align(
+                alignment: Alignment.centerLeft,
+                child: Text(
+                  'Mínimo 6 caracteres',
+                  style: GoogleFonts.outfit(color: const Color(0xFFFC6707), fontSize: 12),
+                ),
+              ),
+            ),
           const SizedBox(height: 16),
 
           // Checkbox Términos y Condiciones
           Row(
             children: [
-              SizedBox(
-                width: 24,
-                height: 24,
-                child: Checkbox(
-                  value: _acceptTerms,
-                  onChanged: (value) {
-                    setState(() {
-                      _acceptTerms = value ?? false;
-                    });
-                  },
-                  activeColor: const Color(0xFFFC6707),
-                  side: const BorderSide(color: Color(0xFFE0E0E0)),
+              GestureDetector(
+                onTap: () => setState(() => _acceptTerms = !_acceptTerms),
+                child: Container(
+                  width: 22,
+                  height: 22,
+                  decoration: BoxDecoration(
+                    color: _acceptTerms ? const Color(0xFFFC6707) : const Color(0xFFFDDBB3),
+                    borderRadius: BorderRadius.circular(4),
+                    border: Border.all(color: Colors.transparent),
+                  ),
+                  child: _acceptTerms
+                      ? const Icon(Icons.check, size: 16, color: Colors.white)
+                      : null,
                 ),
               ),
               const SizedBox(width: 8),
@@ -260,46 +263,39 @@ class _RegisterStudentViewState extends State<RegisterStudentView> {
           // Botón Registrarse
           SizedBox(
             width: double.infinity,
-            child: MouseRegion(
-              cursor: _acceptTerms ? SystemMouseCursors.click : SystemMouseCursors.basic,
-              child: ElevatedButton(
-                onPressed: _acceptTerms
-                    ? () {
-                        print('Registrar Estudiante');
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text('Registro exitoso. Ahora inicia sesión.'),
-                            backgroundColor: Color(0xFFFC6707),
-                          ),
-                        );
-                        Navigator.pushAndRemoveUntil(
-                          context,
-                          MaterialPageRoute(builder: (_) => const LoginView()),
-                          (route) => false,
-                        );
-                      }
-                    : null,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFFFC6707),
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(vertical: 16),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  disabledBackgroundColor: const Color(0xFFFDDBB3),
-                ),
-                child: Text(
-                  'Registrarse',
-                  style: GoogleFonts.outfit(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
+            child: TextButton(
+              onPressed: _isFormValid ? _submitForm : null,
+              style: TextButton.styleFrom(
+                backgroundColor: _isFormValid ? const Color(0xFFFC6707) : const Color(0xFFFDDBB3),
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(vertical: 16),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              ),
+              child: Text(
+                'Registrarse',
+                style: GoogleFonts.outfit(fontSize: 16, fontWeight: FontWeight.bold),
               ),
             ),
           ),
         ],
       ),
+    );
+  }
+
+  InputDecoration _inputDecoration({required String hint, String? errorText}) {
+    return InputDecoration(
+      hintText: hint,
+      hintStyle: GoogleFonts.outfit(fontSize: 14, color: const Color(0xFF999999)),
+      errorText: errorText,
+      errorStyle: GoogleFonts.outfit(color: const Color(0xFFFC6707), fontSize: 12),
+      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+      focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: Colors.transparent)),
+      enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+      errorBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: Color(0xFFFC6707), width: 1.5)),
+      focusedErrorBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: Color(0xFFFC6707), width: 1.5)),
+      filled: true,
+      fillColor: const Color(0xFFF5F5F5),
+      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
     );
   }
 }

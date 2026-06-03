@@ -1,4 +1,4 @@
-// Header para usuarios autenticados (Estudiante, Operador, Admin)
+/// Header universal para usuarios autenticados (Estudiante, Operador, Admin)
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
