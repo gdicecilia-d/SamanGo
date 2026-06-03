@@ -8,9 +8,47 @@ import 'widgets/categories.dart';
 import 'widgets/offers.dart';
 import 'widgets/notifications_panel.dart';
 import 'widgets/trending_chart.dart';
+import '../auth/login_view.dart';
+import 'edit_profile_view.dart';
 
 class StudentHomeView extends StatelessWidget {
   const StudentHomeView({super.key});
+
+  void _handleMenuSelected(String menu, BuildContext context) {
+    if (menu == 'Mis Viajes') {
+      // TODO: Navegar a Mis Viajes
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Mis Viajes - Próximamente'),
+          backgroundColor: Color(0xFFFC6707),
+        ),
+      );
+    } else if (menu == 'Favoritos') {
+      // TODO: Navegar a Favoritos
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Favoritos - Próximamente'),
+          backgroundColor: Color(0xFFFC6707),
+        ),
+      );
+    }
+  }
+
+  void _handleEditProfile(BuildContext context) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (_) => const EditProfileView()),
+    );
+  }
+
+  void _handleLogout(BuildContext context) {
+    // Navegar directamente al LoginView
+    // El diálogo de confirmación ya se muestra en UserHeader
+    Navigator.pushReplacement(
+      context,
+      MaterialPageRoute(builder: (_) => const LoginView()),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -18,7 +56,13 @@ class StudentHomeView extends StatelessWidget {
       backgroundColor: Colors.white,
       body: Column(
         children: [
-          const StudentHeader(),
+          UserHeader(
+            activeMenu: 'Inicio',
+            onMenuSelected: (menu) => _handleMenuSelected(menu, context),
+            onEditProfile: () => _handleEditProfile(context),
+            onLogout: () => _handleLogout(context),
+            menuItems: const ['Inicio', 'Mis Viajes', 'Favoritos'],
+          ),
           Expanded(
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.start,

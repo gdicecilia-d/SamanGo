@@ -43,13 +43,6 @@ class _RegisterOperatorViewState extends State<RegisterOperatorView> {
   String _selectedRifLetra = 'J';
   final List<String> _rifOpciones = ['J', 'V', 'E', 'G', 'P'];
 
-  // Validar todo el formulario y archivo
-  bool get _isFormValid {
-    return _formKey.currentState?.validate() == true &&
-        FormValidators.validarArchivo(_selectedFileName) == null &&
-        _acceptTerms;
-  }
-
   // Seleccionar archivo
   Future<void> _pickFile() async {
     setState(() {
@@ -58,7 +51,8 @@ class _RegisterOperatorViewState extends State<RegisterOperatorView> {
     });
 
     try {
-      final result = await FilePicker.platform.pickFiles(
+      // Usar FilePicker sin .platform
+      FilePickerResult? result = await FilePicker.pickFiles(
         type: FileType.custom,
         allowedExtensions: ['pdf', 'jpg', 'jpeg', 'png'],
         withData: true,
