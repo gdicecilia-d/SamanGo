@@ -5,6 +5,7 @@ class Usuario {
   final String correo;
   final String rol;
   final String? licenciaUrl;
+  final String? carnet;
 
   const Usuario({
     required this.id,
@@ -12,6 +13,7 @@ class Usuario {
     required this.correo,
     required this.rol,
     this.licenciaUrl,
+    this.carnet,
   });
 
   factory Usuario.fromMap(String uid, Map<String, dynamic> map) {
@@ -21,15 +23,18 @@ class Usuario {
       correo: map['correo'] as String? ?? '',
       rol: map['rol'] as String? ?? 'estudiante',
       licenciaUrl: map['licenciaUrl'] as String?,
+      carnet: map['carnet'] as String?,
     );
   }
 
   Map<String, dynamic> toMap() {
     return {
+      'id': id,
       'nombre': nombre,
       'correo': correo,
       'rol': rol,
       if (licenciaUrl != null) 'licenciaUrl': licenciaUrl,
+      if (carnet != null) 'carnet': carnet,
     };
   }
 

@@ -355,7 +355,7 @@ class _EditProfileViewState extends State<EditProfileView> {
           children: [
             Expanded(child: _buildDisabledField('Fecha de Nacimiento', value: '01/01/2000')), // Placeholder si no está en BD
             const SizedBox(width: 16),
-            Expanded(child: _buildDisabledField('Carnet', value: 'Registrado')), // Podría leerse de Firestore si se carga
+            Expanded(child: _buildDisabledField('Carnet', value: user?.carnet ?? 'No registrado')),
           ],
         ),
         const SizedBox(height: 16),

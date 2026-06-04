@@ -51,9 +51,9 @@ class AuthService {
         nombre: nombre,
         correo: email,
         rol: 'estudiante',
+        carnet: carnet,
       );
       await _db.collection('users').doc(uid).set(usuario.toMap());
-      await _db.collection('users').doc(uid).update({'carnet': carnet});
       return usuario;
     } on FirebaseAuthException catch (e) {
       print('Error de registro: ${e.code}');
