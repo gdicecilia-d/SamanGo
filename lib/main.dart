@@ -5,10 +5,22 @@ import 'package:google_fonts/google_fonts.dart';
 import 'firebase_options.dart';
 import 'views/home_view.dart';
 
+import 'package:provider/provider.dart';
+import 'controllers/auth_controller.dart';
+import 'controllers/profile_controller.dart';
+
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
-  runApp(const SamanGoApp());
+  runApp(
+    MultiProvider(
+      providers: [
+        ChangeNotifierProvider(create: (_) => AuthController()),
+        ChangeNotifierProvider(create: (_) => ProfileController()),
+      ],
+      child: const SamanGoApp(),
+    ),
+  );
 }
 
 class SamanGoApp extends StatelessWidget {

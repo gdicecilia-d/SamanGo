@@ -5,6 +5,9 @@ import 'package:google_fonts/google_fonts.dart';
 import 'auth_base_view.dart';
 import 'login_view.dart';
 import 'select_role_view.dart';
+import '../../models/validators.dart';
+import 'package:provider/provider.dart';
+import '../../controllers/auth_controller.dart';
 
 class RegisterStudentView extends StatefulWidget {
   const RegisterStudentView({super.key});
@@ -23,18 +26,14 @@ class _RegisterStudentViewState extends State<RegisterStudentView> {
   bool _acceptTerms = false;
 
   bool get _isFormValid {
-    return _nombreController.text.isNotEmpty &&
-        _nombreController.text.length >= 3 &&
-        _carnetController.text.isNotEmpty &&
-        RegExp(r'^\d{7,11}$').hasMatch(_carnetController.text) &&
-        _emailController.text.isNotEmpty &&
-        _emailController.text.endsWith('@correo.unimet.edu.ve') &&
-        _passwordController.text.isNotEmpty &&
-        _passwordController.text.length >= 6 &&
+    return FormValidators.validarNombre(_nombreController.text) == null &&
+        FormValidators.validarCarnet(_carnetController.text) == null &&
+        FormValidators.validarCorreoUnimet(_emailController.text) == null &&
+        FormValidators.validarPassword(_passwordController.text) == null &&
         _acceptTerms;
   }
 
-  void _submitForm() {
+  void _submitForm() async {
     if (!_isFormValid) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -45,17 +44,35 @@ class _RegisterStudentViewState extends State<RegisterStudentView> {
       return;
     }
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Registro exitoso. Ahora inicia sesión.'),
-        backgroundColor: Color(0xFFFC6707),
-      ),
+    final success = await Provider.of<AuthController>(context, listen: false).registerStudent(
+      email: _emailController.text,
+      password: _passwordController.text,
+      nombre: _nombreController.text,
+      carnet: _carnetController.text,
     );
-    Navigator.pushAndRemoveUntil(
-      context,
-      MaterialPageRoute(builder: (_) => const LoginView()),
-      (route) => false,
-    );
+
+    if (!mounted) return;
+
+    if (success) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Registro exitoso. Ahora inicia sesión.'),
+          backgroundColor: Color(0xFFFC6707),
+        ),
+      );
+      Navigator.pushAndRemoveUntil(
+        context,
+        MaterialPageRoute(builder: (_) => const LoginView()),
+        (route) => false,
+      );
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Error en el registro. Intenta nuevamente.'),
+          backgroundColor: Color(0xFFFC6707),
+        ),
+      );
+    }
   }
 
   @override
@@ -116,8 +133,8 @@ class _RegisterStudentViewState extends State<RegisterStudentView> {
             style: GoogleFonts.outfit(fontSize: 14),
             decoration: _inputDecoration(
               hint: 'Ej: Juan David Pérez Díaz',
-              errorText: _nombreController.text.isNotEmpty && _nombreController.text.length < 3
-                  ? 'El nombre debe tener al menos 3 caracteres'
+              errorText: _nombreController.text.isNotEmpty 
+                  ? FormValidators.validarNombre(_nombreController.text) 
                   : null,
             ),
           ),
@@ -144,8 +161,8 @@ class _RegisterStudentViewState extends State<RegisterStudentView> {
             style: GoogleFonts.outfit(fontSize: 14),
             decoration: _inputDecoration(
               hint: 'Ej: 20251234567',
-              errorText: _carnetController.text.isNotEmpty && !RegExp(r'^\d{7,11}$').hasMatch(_carnetController.text)
-                  ? 'El carnet debe tener entre 7 y 11 números'
+              errorText: _carnetController.text.isNotEmpty 
+                  ? FormValidators.validarCarnet(_carnetController.text)
                   : null,
             ),
           ),
@@ -171,8 +188,8 @@ class _RegisterStudentViewState extends State<RegisterStudentView> {
             style: GoogleFonts.outfit(fontSize: 14),
             decoration: _inputDecoration(
               hint: 'ejemplo@correo.unimet.edu.ve',
-              errorText: _emailController.text.isNotEmpty && !_emailController.text.endsWith('@correo.unimet.edu.ve')
-                  ? 'Debe ser un correo UNIMET válido'
+              errorText: _emailController.text.isNotEmpty 
+                  ? FormValidators.validarCorreoUnimet(_emailController.text)
                   : null,
             ),
           ),

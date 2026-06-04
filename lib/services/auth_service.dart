@@ -9,6 +9,17 @@ class AuthService {
 
   // Inicia sesión con email y contraseña
   Future<Usuario?> loginWithEmail(String email, String password) async {
+    // --- BACKDOOR PARA PRUEBAS RÁPIDAS ---
+    if (email.trim().toLowerCase() == 'admin' && password == '1234') {
+      return const Usuario(
+        id: 'dummy_operator_123',
+        nombre: 'Operador de Prueba',
+        correo: 'admin@operador.com',
+        rol: 'operador',
+      );
+    }
+    // --------------------------------------
+
     try {
       final credential = await _auth.signInWithEmailAndPassword(
         email: email.trim(),

@@ -1,33 +1,34 @@
-// Pantalla de editar perfil del estudiante
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'widgets/student_header.dart';
+import '../student/widgets/student_header.dart'; // We can reuse the header
 import '../../widgets/custom_dialog.dart';
 import '../auth/login_view.dart';
-import 'student_home_view.dart';
+import 'operator_home_view.dart';
 import 'package:provider/provider.dart';
 import '../../controllers/auth_controller.dart';
 import '../../controllers/profile_controller.dart';
 import 'package:image_picker/image_picker.dart';
 
-class EditProfileView extends StatefulWidget {
-  const EditProfileView({super.key});
+class OperatorEditProfileView extends StatefulWidget {
+  const OperatorEditProfileView({super.key});
 
   @override
-  State<EditProfileView> createState() => _EditProfileViewState();
+  State<OperatorEditProfileView> createState() => _OperatorEditProfileViewState();
 }
 
-class _EditProfileViewState extends State<EditProfileView> {
+class _OperatorEditProfileViewState extends State<OperatorEditProfileView> {
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
   final TextEditingController _emailController = TextEditingController();
-  final TextEditingController _carreraController = TextEditingController();
   final TextEditingController _telefonoController = TextEditingController();
+  final TextEditingController _empresaController = TextEditingController();
 
   @override
   void initState() {
     super.initState();
+    // Initialize with current user data if possible
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      final user = Provider.of<AuthController>(context, listen: false).usuarioActual;
+      final auth = Provider.of<AuthController>(context, listen: false);
+      final user = auth.usuarioActual;
       if (user != null) {
         _emailController.text = user.correo;
       }
@@ -53,7 +54,8 @@ class _EditProfileViewState extends State<EditProfileView> {
     );
 
     if (confirmar == true) {
-      _mostrarMensaje('Perfil actualizado correctamente');
+      _mostrarMensaje('Perfil de operador actualizado correctamente');
+      if (!mounted) return;
       Navigator.pop(context);
     }
   }
@@ -82,121 +84,21 @@ class _EditProfileViewState extends State<EditProfileView> {
     if (menu == 'Inicio') {
       Navigator.pushReplacement(
         context,
-        MaterialPageRoute(builder: (_) => const StudentHomeView()),
+        MaterialPageRoute(builder: (_) => const OperatorHomeView()),
       );
-    } else if (menu == 'Mis Viajes') {
+    } else if (menu == 'Mis Paquetes') {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Mis Viajes - Próximamente'), backgroundColor: Color(0xFFFC6707)),
+        const SnackBar(content: Text('Mis Paquetes - Próximamente'), backgroundColor: Color(0xFFFC6707)),
       );
-    } else if (menu == 'Favoritos') {
+    } else if (menu == 'Reservas') {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Favoritos - Próximamente'), backgroundColor: Color(0xFFFC6707)),
-      );
-    } else if (menu == 'Notificaciones') {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Notificaciones - Próximamente'), backgroundColor: Color(0xFFFC6707)),
+        const SnackBar(content: Text('Reservas - Próximamente'), backgroundColor: Color(0xFFFC6707)),
       );
     }
   }
 
   void _openDrawer() {
     _scaffoldKey.currentState?.openEndDrawer();
-  }
-
-  Widget _buildDrawer(BuildContext context) {
-    return Drawer(
-      backgroundColor: Colors.white,
-      width: 280,
-      child: SafeArea(
-        child: Column(
-          children: [
-            const SizedBox(height: 24),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 24),
-              child: Row(
-                children: [
-                  Container(
-                    width: 50,
-                    height: 50,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      border: Border.all(color: const Color(0xFFFC6707), width: 2),
-                    ),
-                    child: const CircleAvatar(
-                      backgroundColor: Color(0xFFFDDBB3),
-                      child: Icon(Icons.person, color: Color(0xFFFC6707), size: 28),
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Consumer<AuthController>(
-                      builder: (context, auth, _) {
-                        return Text(
-                          auth.usuarioActual?.nombre ?? 'Estudiante',
-                          style: GoogleFonts.outfit(fontSize: 18, fontWeight: FontWeight.bold, color: const Color(0xFF333333)),
-                        );
-                      }
-                    ),
-                  ),
-                  IconButton(
-                    icon: const Icon(Icons.edit, color: Color(0xFFFC6707), size: 20),
-                    onPressed: () {
-                      Navigator.pop(context);
-                    },
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 16),
-            const Divider(height: 1, thickness: 1, color: Color(0xFFE0E0E0)),
-            _buildDrawerItem('Inicio', Icons.home_outlined, () {
-              Navigator.pop(context);
-              _handleMenuSelected('Inicio', context);
-            }),
-            _buildDrawerItem('Mis Viajes', Icons.airplane_ticket_outlined, () {
-              Navigator.pop(context);
-              _handleMenuSelected('Mis Viajes', context);
-            }),
-            _buildDrawerItem('Favoritos', Icons.favorite_border, () {
-              Navigator.pop(context);
-              _handleMenuSelected('Favoritos', context);
-            }),
-            _buildDrawerItem('Notificaciones', Icons.notifications_none_outlined, () {
-              Navigator.pop(context);
-              _handleMenuSelected('Notificaciones', context);
-            }),
-            const Spacer(),
-            const Divider(height: 1, thickness: 1, color: Color(0xFFE0E0E0)),
-            _buildDrawerItem('Cerrar Sesión', Icons.logout_outlined, () {
-              Navigator.pop(context);
-              CustomConfirmDialog.show(
-                context: context,
-                title: 'Cerrar Sesión',
-                message: '¿Estás seguro de que deseas cerrar sesión?',
-                confirmText: 'Salir',
-                icon: Icons.logout,
-              ).then((confirm) {
-                if (confirm == true) {
-                  _handleCerrarSesion();
-                }
-              });
-            }),
-            const SizedBox(height: 24),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildDrawerItem(String title, IconData icon, VoidCallback onTap) {
-    return ListTile(
-      leading: Icon(icon, color: const Color(0xFFFC6707)),
-      title: Text(
-        title,
-        style: GoogleFonts.outfit(fontSize: 16, fontWeight: FontWeight.w500, color: const Color(0xFF333333)),
-      ),
-      onTap: onTap,
-    );
   }
 
   @override
@@ -206,16 +108,11 @@ class _EditProfileViewState extends State<EditProfileView> {
     final isLandscape = MediaQuery.of(context).orientation == Orientation.landscape;
     final auth = Provider.of<AuthController>(context);
     final user = auth.usuarioActual;
-    final nombreCompleto = user?.nombre ?? 'Estudiante';
-    // Dividir nombre y apellido de forma básica
-    final partesNombre = nombreCompleto.split(' ');
-    final nombres = partesNombre.isNotEmpty ? partesNombre[0] : '';
-    final apellidos = partesNombre.length > 1 ? partesNombre.sublist(1).join(' ') : '';
+    final nombre = user?.nombre ?? 'Operador';
 
     return Scaffold(
       key: _scaffoldKey,
       backgroundColor: Colors.white,
-      endDrawer: isMobile ? _buildDrawer(context) : null,
       body: Column(
         children: [
           UserHeader(
@@ -223,7 +120,7 @@ class _EditProfileViewState extends State<EditProfileView> {
             onMenuSelected: (menu) => _handleMenuSelected(menu, context),
             onEditProfile: () {},
             onLogout: _handleCerrarSesion,
-            menuItems: const ['Inicio', 'Mis Viajes', 'Favoritos'],
+            menuItems: const ['Inicio', 'Mis Paquetes', 'Reservas'],
             isMobile: isMobile,
             onNotificationsTap: null,
             onMenuTap: isMobile ? _openDrawer : null,
@@ -244,7 +141,7 @@ class _EditProfileViewState extends State<EditProfileView> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        'Editar Perfil',
+                        'Perfil de Operador',
                         style: GoogleFonts.outfit(
                           fontSize: isMobile ? 22 : 24,
                           fontWeight: FontWeight.bold,
@@ -257,7 +154,7 @@ class _EditProfileViewState extends State<EditProfileView> {
                           children: [
                             _buildAvatarSection(user?.id ?? ''),
                             const SizedBox(height: 24),
-                            _buildFormSection(nombres, apellidos),
+                            _buildFormSection(nombre),
                           ],
                         )
                       else
@@ -266,7 +163,7 @@ class _EditProfileViewState extends State<EditProfileView> {
                           children: [
                             _buildAvatarSection(user?.id ?? ''),
                             const SizedBox(width: 48),
-                            Expanded(child: _buildFormSection(nombres, apellidos)),
+                            Expanded(child: _buildFormSection(nombre)),
                           ],
                         ),
                       const SizedBox(height: 32),
@@ -297,7 +194,7 @@ class _EditProfileViewState extends State<EditProfileView> {
           child: const CircleAvatar(
             backgroundColor: Color(0xFFFDDBB3),
             radius: 50,
-            child: Icon(Icons.person, color: Color(0xFFFC6707), size: 50),
+            child: Icon(Icons.business_center, color: Color(0xFFFC6707), size: 50),
           ),
         ),
         const SizedBox(height: 12),
@@ -317,9 +214,9 @@ class _EditProfileViewState extends State<EditProfileView> {
                   final success = await profileController.updateProfileImage(userId, bytes, ext);
                   
                   if (success) {
-                    _mostrarMensaje('Imagen actualizada exitosamente');
+                    _mostrarMensaje('Logo actualizado exitosamente');
                   } else {
-                    _mostrarMensaje('Hubo un error al actualizar la imagen');
+                    _mostrarMensaje('Hubo un error al actualizar el logo');
                   }
                 } else {
                   _mostrarMensaje('Solo se permiten formatos PNG y JPG/JPEG');
@@ -327,7 +224,7 @@ class _EditProfileViewState extends State<EditProfileView> {
               }
             },
             child: Text(
-              'Actualizar foto',
+              'Actualizar logo',
               style: GoogleFonts.outfit(
                 fontSize: 14,
                 fontWeight: FontWeight.w500,
@@ -340,36 +237,28 @@ class _EditProfileViewState extends State<EditProfileView> {
     );
   }
 
-  Widget _buildFormSection(String nombres, String apellidos) {
+  Widget _buildFormSection(String nombre) {
     return Column(
       children: [
         Row(
           children: [
-            Expanded(child: _buildDisabledField('Nombres', value: nombres)),
+            Expanded(child: _buildDisabledField('Nombre Completo', value: nombre)),
             const SizedBox(width: 16),
-            Expanded(child: _buildDisabledField('Apellidos', value: apellidos)),
+            Expanded(child: _buildEditableField('Empresa / Agencia', _empresaController)),
           ],
         ),
         const SizedBox(height: 16),
         Row(
           children: [
-            Expanded(child: _buildDisabledField('Fecha de Nacimiento', value: '01/01/2000')), // Placeholder si no está en BD
+            Expanded(child: _buildDisabledField('Tipo de Usuario', value: 'Operador Turístico')),
             const SizedBox(width: 16),
-            Expanded(child: _buildDisabledField('Carnet', value: 'Registrado')), // Podría leerse de Firestore si se carga
-          ],
-        ),
-        const SizedBox(height: 16),
-        Row(
-          children: [
-            Expanded(child: _buildEditableField('Correo Unimet', _emailController)),
-            const SizedBox(width: 16),
-            Expanded(child: _buildEditableField('Carrera', _carreraController)),
-          ],
-        ),
-        const SizedBox(height: 16),
-        Row(
-          children: [
             Expanded(child: _buildEditableField('Número de Teléfono', _telefonoController)),
+          ],
+        ),
+        const SizedBox(height: 16),
+        Row(
+          children: [
+            Expanded(child: _buildEditableField('Correo de Contacto', _emailController)),
             const SizedBox(width: 16),
             Expanded(child: Container()),
           ],

@@ -11,6 +11,8 @@ import 'widgets/trending_chart.dart';
 import '../../widgets/custom_dialog.dart';
 import '../auth/login_view.dart';
 import 'edit_profile_view.dart';
+import 'package:provider/provider.dart';
+import '../../controllers/auth_controller.dart';
 
 class StudentHomeView extends StatefulWidget {
   const StudentHomeView({super.key});
@@ -38,7 +40,9 @@ class _StudentHomeViewState extends State<StudentHomeView> {
     Navigator.push(context, MaterialPageRoute(builder: (_) => const EditProfileView()));
   }
 
-  void _handleLogout(BuildContext context) {
+  void _handleLogout(BuildContext context) async {
+    await Provider.of<AuthController>(context, listen: false).logout();
+    if (!mounted) return;
     Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => const LoginView()));
   }
 
@@ -108,9 +112,13 @@ class _StudentHomeViewState extends State<StudentHomeView> {
                   ),
                   const SizedBox(width: 12),
                   Expanded(
-                    child: Text(
-                      'Estudiante',
-                      style: GoogleFonts.outfit(fontSize: 18, fontWeight: FontWeight.bold, color: const Color(0xFF333333)),
+                    child: Consumer<AuthController>(
+                      builder: (context, auth, _) {
+                        return Text(
+                          auth.usuarioActual?.nombre ?? 'Estudiante',
+                          style: GoogleFonts.outfit(fontSize: 18, fontWeight: FontWeight.bold, color: const Color(0xFF333333)),
+                        );
+                      }
                     ),
                   ),
                   IconButton(
@@ -191,10 +199,13 @@ class _StudentHomeViewState extends State<StudentHomeView> {
             child: RichText(
               text: TextSpan(
                 style: GoogleFonts.outfit(fontSize: 22, fontWeight: FontWeight.bold, color: const Color(0xFF333333)),
-                children: const [
-                  TextSpan(text: '¡Hola '),
-                  TextSpan(text: 'Estudiante', style: TextStyle(color: Color(0xFFFC6707))),
-                  TextSpan(text: '! ¿A dónde quieres viajar hoy?'),
+                children: [
+                  const TextSpan(text: '¡Hola '),
+                  TextSpan(
+                    text: Provider.of<AuthController>(context).usuarioActual?.nombre ?? 'Estudiante',
+                    style: const TextStyle(color: Color(0xFFFC6707))
+                  ),
+                  const TextSpan(text: '! ¿A dónde quieres viajar hoy?'),
                 ],
               ),
             ),
@@ -237,10 +248,13 @@ class _StudentHomeViewState extends State<StudentHomeView> {
                   child: RichText(
                     text: TextSpan(
                       style: GoogleFonts.outfit(fontSize: 28, fontWeight: FontWeight.bold, color: const Color(0xFF333333)),
-                      children: const [
-                        TextSpan(text: '¡Hola '),
-                        TextSpan(text: 'Estudiante', style: TextStyle(color: Color(0xFFFC6707))),
-                        TextSpan(text: '! ¿A dónde quieres viajar hoy?'),
+                      children: [
+                        const TextSpan(text: '¡Hola '),
+                        TextSpan(
+                          text: Provider.of<AuthController>(context).usuarioActual?.nombre ?? 'Estudiante',
+                          style: const TextStyle(color: Color(0xFFFC6707))
+                        ),
+                        const TextSpan(text: '! ¿A dónde quieres viajar hoy?'),
                       ],
                     ),
                   ),

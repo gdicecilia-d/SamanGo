@@ -6,6 +6,9 @@ import 'auth_base_view.dart';
 import 'forgot_password_view.dart';
 import 'select_role_view.dart';
 import '../student/student_home_view.dart';
+import '../operator/operator_home_view.dart';
+import '../../controllers/auth_controller.dart';
+import 'package:provider/provider.dart';
 
 class LoginView extends StatefulWidget {
   const LoginView({super.key});
@@ -41,8 +44,8 @@ class _LoginViewState extends State<LoginView> {
       _errorMessage = null;
     });
 
-    final authService = AuthService();
-    final usuario = await authService.loginWithEmail(
+    final authController = Provider.of<AuthController>(context, listen: false);
+    final success = await authController.login(
       _emailController.text,
       _passwordController.text,
     );
@@ -53,16 +56,22 @@ class _LoginViewState extends State<LoginView> {
       _isLoading = false;
     });
 
-    if (usuario != null) {
+    if (success) {
+      final usuario = authController.usuarioActual!;
       if (usuario.isEstudiante) {
         Navigator.pushReplacement(
           context,
           MaterialPageRoute(builder: (_) => const StudentHomeView()),
         );
+      } else if (usuario.isOperador) {
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (_) => const OperatorHomeView()),
+        );
       } else {
         Navigator.pushReplacement(
           context,
-          MaterialPageRoute(builder: (_) => const StudentHomeView()),
+          MaterialPageRoute(builder: (_) => const StudentHomeView()), // Admin u otro
         );
       }
     } else {

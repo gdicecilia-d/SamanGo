@@ -22,6 +22,18 @@ class StorageService {
     return await ref.getDownloadURL();
   }
 
+  // Sube la imagen de perfil del usuario
+  Future<String> uploadProfileImage({
+    required String uid,
+    required Uint8List fileBytes,
+    required String extension,
+  }) async {
+    final ref = _storage.ref().child('perfiles/$uid.$extension');
+    final metadata = SettableMetadata(contentType: _getContentType(extension));
+    await ref.putData(fileBytes, metadata);
+    return await ref.getDownloadURL();
+  }
+
   String _getContentType(String extension) {
     switch (extension) {
       case 'pdf':
