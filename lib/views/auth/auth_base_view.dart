@@ -76,18 +76,21 @@ class AuthBaseView extends StatelessWidget {
 
   Widget _buildDesktopLayout(BuildContext context) {
     final screenWidth = MediaQuery.of(context).size.width;
-    final double scaleFactor = (screenWidth / 1200).clamp(0.9, 1.6);
+    // Escala base: tu medida original para un ancho de referencia de 1200px
+    final double scaleFactor = (screenWidth / 1200).clamp(0.8, 1.3);
     
-    // Medidas base (sin escalar, el Transform.scale se encargará)
-    final double baseFormWidth = 460; 
-    final double circleSize = 500 * scaleFactor; // Círculo más pequeño que 650
-    final double leftOffset = -80 * scaleFactor; // Ajustado
+    // Tus medidas escaladas
+    final double formWidth = 480 * scaleFactor;
+    final double circleSize = 470 * scaleFactor; // Cambiado de 450 a 470
+    final double leftOffset = -75 * scaleFactor; // Ajustado proporcionalmente
     final double logoScale = 2.0;
     final double logoWidth = 65;
     final double nombreHeight = 35;
     final double topPadding = 20;
     final int leftFlex = 6;
     final int rightFlex = 4;
+    final double leftPadding = 30 * scaleFactor;
+    final double rightPadding = 50 * scaleFactor;
 
     return Scaffold(
       backgroundColor: Colors.white,
@@ -98,16 +101,11 @@ class AuthBaseView extends StatelessWidget {
               Expanded(
                 flex: leftFlex,
                 child: SingleChildScrollView(
-                  padding: const EdgeInsets.symmetric(vertical: 40),
+                  padding: EdgeInsets.only(left: leftPadding, right: rightPadding, top: 40, bottom: 40),
                   child: Center(
                     child: SizedBox(
-                      width: baseFormWidth * scaleFactor,
-                      child: MediaQuery(
-                        data: MediaQuery.of(context).copyWith(
-                          textScaler: TextScaler.linear(scaleFactor),
-                        ),
-                        child: _buildFormCard(context, isMobile: false, customScale: scaleFactor),
-                      ),
+                      width: formWidth,
+                      child: _buildFormCard(context, isMobile: false),
                     ),
                   ),
                 ),
@@ -162,23 +160,20 @@ class AuthBaseView extends StatelessWidget {
     );
   }
 
-  Widget _buildFormCard(BuildContext context, {required bool isMobile, double customScale = 1.0}) {
-    final double logoScaleValue = isMobile ? 1.5 : (2.0 * customScale);
-    final double logoWidthValue = isMobile ? 60 : (65 * customScale);
-    final double nombreHeightValue = isMobile ? 30 : (35 * customScale);
-    final double topPaddingValue = isMobile ? 12 : (20 * customScale);
-    final double spacing = isMobile ? 20 : (28 * customScale);
+  Widget _buildFormCard(BuildContext context, {required bool isMobile}) {
+    final double logoScaleValue = isMobile ? 1.5 : 2.0;
+    final double logoWidthValue = isMobile ? 60 : 65;
+    final double nombreHeightValue = isMobile ? 30 : 35;
+    final double topPaddingValue = isMobile ? 12 : 20;
+    final double spacing = isMobile ? 20 : 28;
 
     return Container(
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(24 * customScale),
-        border: Border.all(color: const Color(0xFFE0E0E0), width: 1.2 * customScale),
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(color: const Color(0xFFE0E0E0), width: 1.2),
       ),
-      padding: EdgeInsets.symmetric(
-        horizontal: isMobile ? 24 : (32 * customScale),
-        vertical: isMobile ? 32 : (56 * customScale), 
-      ),
+      padding: EdgeInsets.all(isMobile ? 24 : 32),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
