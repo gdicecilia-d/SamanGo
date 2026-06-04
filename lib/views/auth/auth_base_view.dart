@@ -80,9 +80,9 @@ class AuthBaseView extends StatelessWidget {
     final double scaleFactor = (screenWidth / 1200).clamp(0.9, 1.4);
     
     // Tus medidas escaladas
-    final double formWidth = 500 * scaleFactor; 
-    final double circleSize = 470 * scaleFactor; 
-    final double leftOffset = -75 * scaleFactor; 
+    final double formWidth = 500 * scaleFactor; // Un pelín más ancho
+    final double circleSize = 650 * scaleFactor; // Círculo gigante de vuelta
+    final double leftOffset = -150 * scaleFactor; // Ajuste para el círculo gigante
     final double logoScale = 2.0;
     final double logoWidth = 65;
     final double nombreHeight = 35;
@@ -173,7 +173,10 @@ class AuthBaseView extends StatelessWidget {
         borderRadius: BorderRadius.circular(24),
         border: Border.all(color: const Color(0xFFE0E0E0), width: 1.2),
       ),
-      padding: EdgeInsets.all(isMobile ? 24 : 32),
+      padding: EdgeInsets.symmetric(
+        horizontal: isMobile ? 24 : 32,
+        vertical: isMobile ? 32 : 56, // Padding vertical mucho mayor para que sea más largo
+      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
