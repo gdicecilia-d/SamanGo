@@ -1,6 +1,7 @@
+// Pantalla de editar perfil del operador 
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import '../student/widgets/student_header.dart'; // We can reuse the header
+import '../student/widgets/student_header.dart';
 import '../../widgets/custom_dialog.dart';
 import '../auth/login_view.dart';
 import 'operator_home_view.dart';
@@ -25,7 +26,6 @@ class _OperatorEditProfileViewState extends State<OperatorEditProfileView> {
   @override
   void initState() {
     super.initState();
-    // Initialize with current user data if possible
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final auth = Provider.of<AuthController>(context, listen: false);
       final user = auth.usuarioActual;
@@ -169,7 +169,7 @@ class _OperatorEditProfileViewState extends State<OperatorEditProfileView> {
                       const SizedBox(height: 32),
                       const Divider(color: Color(0xFFE0E0E0)),
                       const SizedBox(height: 24),
-                      _buildButtonsSection(),
+                      _buildButtonsSection(isMobile),
                     ],
                   ),
                 ),
@@ -267,27 +267,29 @@ class _OperatorEditProfileViewState extends State<OperatorEditProfileView> {
     );
   }
 
-  Widget _buildButtonsSection() {
-    return Wrap(
-      spacing: 12,
-      runSpacing: 12,
-      alignment: WrapAlignment.center,
+  Widget _buildButtonsSection(bool isMobile) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.center,
       children: [
         SizedBox(
-          width: 140,
+          width: isMobile ? 140 : 180,
           child: ElevatedButton(
             onPressed: _guardarCambios,
             style: ElevatedButton.styleFrom(
               backgroundColor: const Color(0xFFFC6707),
               foregroundColor: Colors.white,
-              padding: const EdgeInsets.symmetric(vertical: 10),
+              padding: EdgeInsets.symmetric(vertical: isMobile ? 10 : 14),
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
             ),
-            child: Text('Actualizar', style: GoogleFonts.outfit(fontSize: 14, fontWeight: FontWeight.bold)),
+            child: Text(
+              'Actualizar',
+              style: GoogleFonts.outfit(fontSize: isMobile ? 14 : 16, fontWeight: FontWeight.bold),
+            ),
           ),
         ),
+        SizedBox(width: 16),
         SizedBox(
-          width: 140,
+          width: isMobile ? 140 : 180,
           child: ElevatedButton(
             onPressed: () {
               Navigator.pop(context);
@@ -295,11 +297,14 @@ class _OperatorEditProfileViewState extends State<OperatorEditProfileView> {
             style: ElevatedButton.styleFrom(
               backgroundColor: const Color(0xFFFDDBB3),
               foregroundColor: const Color(0xFFFC6707),
-              padding: const EdgeInsets.symmetric(vertical: 10),
+              padding: EdgeInsets.symmetric(vertical: isMobile ? 10 : 14),
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
               elevation: 0,
             ),
-            child: Text('Descartar', style: GoogleFonts.outfit(fontSize: 14, fontWeight: FontWeight.bold)),
+            child: Text(
+              'Descartar',
+              style: GoogleFonts.outfit(fontSize: isMobile ? 14 : 16, fontWeight: FontWeight.bold),
+            ),
           ),
         ),
       ],

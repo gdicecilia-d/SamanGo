@@ -207,7 +207,6 @@ class _EditProfileViewState extends State<EditProfileView> {
     final auth = Provider.of<AuthController>(context);
     final user = auth.usuarioActual;
     final nombreCompleto = user?.nombre ?? 'Estudiante';
-    // Dividir nombre y apellido de forma básica
     final partesNombre = nombreCompleto.split(' ');
     final nombres = partesNombre.isNotEmpty ? partesNombre[0] : '';
     final apellidos = partesNombre.length > 1 ? partesNombre.sublist(1).join(' ') : '';
@@ -272,7 +271,7 @@ class _EditProfileViewState extends State<EditProfileView> {
                       const SizedBox(height: 32),
                       const Divider(color: Color(0xFFE0E0E0)),
                       const SizedBox(height: 24),
-                      _buildButtonsSection(),
+                      _buildButtonsSection(isMobile),
                     ],
                   ),
                 ),
@@ -353,7 +352,7 @@ class _EditProfileViewState extends State<EditProfileView> {
         const SizedBox(height: 16),
         Row(
           children: [
-            Expanded(child: _buildDisabledField('Fecha de Nacimiento', value: '01/01/2000')), // Placeholder si no está en BD
+            Expanded(child: _buildDisabledField('Fecha de Nacimiento', value: '01/01/2000')),
             const SizedBox(width: 16),
             Expanded(child: _buildDisabledField('Carnet', value: carnet ?? 'No registrado')),
           ],
@@ -378,27 +377,29 @@ class _EditProfileViewState extends State<EditProfileView> {
     );
   }
 
-  Widget _buildButtonsSection() {
-    return Wrap(
-      spacing: 12,
-      runSpacing: 12,
-      alignment: WrapAlignment.center,
+  Widget _buildButtonsSection(bool isMobile) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.center,
       children: [
         SizedBox(
-          width: 140,
+          width: isMobile ? 140 : 180,
           child: ElevatedButton(
             onPressed: _guardarCambios,
             style: ElevatedButton.styleFrom(
               backgroundColor: const Color(0xFFFC6707),
               foregroundColor: Colors.white,
-              padding: const EdgeInsets.symmetric(vertical: 10),
+              padding: EdgeInsets.symmetric(vertical: isMobile ? 10 : 14),
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
             ),
-            child: Text('Actualizar', style: GoogleFonts.outfit(fontSize: 14, fontWeight: FontWeight.bold)),
+            child: Text(
+              'Actualizar',
+              style: GoogleFonts.outfit(fontSize: isMobile ? 14 : 16, fontWeight: FontWeight.bold),
+            ),
           ),
         ),
+        SizedBox(width: 16),
         SizedBox(
-          width: 140,
+          width: isMobile ? 140 : 180,
           child: ElevatedButton(
             onPressed: () {
               Navigator.pop(context);
@@ -406,11 +407,14 @@ class _EditProfileViewState extends State<EditProfileView> {
             style: ElevatedButton.styleFrom(
               backgroundColor: const Color(0xFFFDDBB3),
               foregroundColor: const Color(0xFFFC6707),
-              padding: const EdgeInsets.symmetric(vertical: 10),
+              padding: EdgeInsets.symmetric(vertical: isMobile ? 10 : 14),
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
               elevation: 0,
             ),
-            child: Text('Descartar', style: GoogleFonts.outfit(fontSize: 14, fontWeight: FontWeight.bold)),
+            child: Text(
+              'Descartar',
+              style: GoogleFonts.outfit(fontSize: isMobile ? 14 : 16, fontWeight: FontWeight.bold),
+            ),
           ),
         ),
       ],

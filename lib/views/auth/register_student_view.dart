@@ -1,4 +1,4 @@
-// registro de estudiantes
+// registro de estudiantes 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -17,7 +17,8 @@ class RegisterStudentView extends StatefulWidget {
 }
 
 class _RegisterStudentViewState extends State<RegisterStudentView> {
-  final TextEditingController _nombreController = TextEditingController();
+  final TextEditingController _nombresController = TextEditingController();
+  final TextEditingController _apellidosController = TextEditingController();
   final TextEditingController _carnetController = TextEditingController();
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
@@ -26,7 +27,8 @@ class _RegisterStudentViewState extends State<RegisterStudentView> {
   bool _acceptTerms = false;
 
   bool get _isFormValid {
-    return FormValidators.validarNombre(_nombreController.text) == null &&
+    return FormValidators.validarNombre(_nombresController.text) == null &&
+        FormValidators.validarNombre(_apellidosController.text) == null &&
         FormValidators.validarCarnet(_carnetController.text) == null &&
         FormValidators.validarCorreoUnimet(_emailController.text) == null &&
         FormValidators.validarPassword(_passwordController.text) == null &&
@@ -44,10 +46,12 @@ class _RegisterStudentViewState extends State<RegisterStudentView> {
       return;
     }
 
+    final nombreCompleto = '${_nombresController.text} ${_apellidosController.text}';
+
     final success = await Provider.of<AuthController>(context, listen: false).registerStudent(
       email: _emailController.text,
       password: _passwordController.text,
-      nombre: _nombreController.text,
+      nombre: nombreCompleto,
       carnet: _carnetController.text,
     );
 
@@ -114,33 +118,69 @@ class _RegisterStudentViewState extends State<RegisterStudentView> {
           ),
           const SizedBox(height: 28),
 
-          // Campo Nombre Completo
-          Align(
-            alignment: Alignment.centerLeft,
-            child: Text(
-              'Nombre Completo',
-              style: GoogleFonts.outfit(
-                fontSize: 14,
-                fontWeight: FontWeight.w500,
-                color: const Color(0xFF333333),
+          // Nombres y Apellidos en la misma fila
+          Row(
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Nombres',
+                      style: GoogleFonts.outfit(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w500,
+                        color: const Color(0xFF333333),
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    TextFormField(
+                      controller: _nombresController,
+                      onChanged: (_) => setState(() {}),
+                      style: GoogleFonts.outfit(fontSize: 14),
+                      decoration: _inputDecoration(
+                        hint: 'Ej: Juan David',
+                        errorText: _nombresController.text.isNotEmpty 
+                            ? FormValidators.validarNombre(_nombresController.text) 
+                            : null,
+                      ),
+                    ),
+                  ],
+                ),
               ),
-            ),
-          ),
-          const SizedBox(height: 8),
-          TextFormField(
-            controller: _nombreController,
-            onChanged: (_) => setState(() {}),
-            style: GoogleFonts.outfit(fontSize: 14),
-            decoration: _inputDecoration(
-              hint: 'Ej: Juan David Pérez Díaz',
-              errorText: _nombreController.text.isNotEmpty 
-                  ? FormValidators.validarNombre(_nombreController.text) 
-                  : null,
-            ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Apellidos',
+                      style: GoogleFonts.outfit(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w500,
+                        color: const Color(0xFF333333),
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    TextFormField(
+                      controller: _apellidosController,
+                      onChanged: (_) => setState(() {}),
+                      style: GoogleFonts.outfit(fontSize: 14),
+                      decoration: _inputDecoration(
+                        hint: 'Ej: Pérez Díaz',
+                        errorText: _apellidosController.text.isNotEmpty 
+                            ? FormValidators.validarNombre(_apellidosController.text) 
+                            : null,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
           ),
           const SizedBox(height: 16),
 
-          // Campo Número de Carnet
+          // Número de Carnet
           Align(
             alignment: Alignment.centerLeft,
             child: Text(
@@ -168,7 +208,7 @@ class _RegisterStudentViewState extends State<RegisterStudentView> {
           ),
           const SizedBox(height: 16),
 
-          // Campo Correo Institucional
+          // Correo Institucional
           Align(
             alignment: Alignment.centerLeft,
             child: Text(
@@ -195,7 +235,7 @@ class _RegisterStudentViewState extends State<RegisterStudentView> {
           ),
           const SizedBox(height: 16),
 
-          // Campo Contraseña
+          // Contraseña
           Align(
             alignment: Alignment.centerLeft,
             child: Text(

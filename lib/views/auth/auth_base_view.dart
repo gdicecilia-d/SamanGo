@@ -75,6 +75,23 @@ class AuthBaseView extends StatelessWidget {
   }
 
   Widget _buildDesktopLayout(BuildContext context) {
+    final screenWidth = MediaQuery.of(context).size.width;
+    // Escala base: tu medida original para un ancho de referencia de 1200px
+    final double scaleFactor = (screenWidth / 1200).clamp(0.8, 1.3);
+    
+    // Tus medidas escaladas
+    final double formWidth = 480 * scaleFactor;
+    final double circleSize = 470 * scaleFactor; // Cambiado de 450 a 470
+    final double leftOffset = -75 * scaleFactor; // Ajustado proporcionalmente
+    final double logoScale = 2.0;
+    final double logoWidth = 65;
+    final double nombreHeight = 35;
+    final double topPadding = 20;
+    final int leftFlex = 6;
+    final int rightFlex = 4;
+    final double leftPadding = 30 * scaleFactor;
+    final double rightPadding = 50 * scaleFactor;
+
     return Scaffold(
       backgroundColor: Colors.white,
       body: Stack(
@@ -82,20 +99,20 @@ class AuthBaseView extends StatelessWidget {
           Row(
             children: [
               Expanded(
-                flex: 6,
+                flex: leftFlex,
                 child: SingleChildScrollView(
-                  padding: const EdgeInsets.only(left: 30, right: 50, top: 40, bottom: 40),
+                  padding: EdgeInsets.only(left: leftPadding, right: rightPadding, top: 40, bottom: 40),
                   child: Center(
                     child: SizedBox(
-                      width: 480,
+                      width: formWidth,
                       child: _buildFormCard(context, isMobile: false),
                     ),
                   ),
                 ),
               ),
               Expanded(
-                flex: 4,
-                child: _buildRightSection(),
+                flex: rightFlex,
+                child: _buildRightSection(circleSize: circleSize, leftOffset: leftOffset),
               ),
             ],
           ),
@@ -144,6 +161,12 @@ class AuthBaseView extends StatelessWidget {
   }
 
   Widget _buildFormCard(BuildContext context, {required bool isMobile}) {
+    final double logoScaleValue = isMobile ? 1.5 : 2.0;
+    final double logoWidthValue = isMobile ? 60 : 65;
+    final double nombreHeightValue = isMobile ? 30 : 35;
+    final double topPaddingValue = isMobile ? 12 : 20;
+    final double spacing = isMobile ? 20 : 28;
+
     return Container(
       decoration: BoxDecoration(
         color: Colors.white,
@@ -171,7 +194,7 @@ class AuthBaseView extends StatelessWidget {
                 children: isMobile
                     ? [
                         Transform.scale(
-                          scale: 1.5,
+                          scale: logoScaleValue,
                           child: Image.asset(
                             'assets/images/logo.png',
                             width: 60,
@@ -190,19 +213,19 @@ class AuthBaseView extends StatelessWidget {
                       ]
                     : [
                         Transform.scale(
-                          scale: 2.0,
+                          scale: logoScaleValue,
                           child: Image.asset(
                             'assets/images/logo.png',
-                            width: 65,
-                            height: 65,
+                            width: logoWidthValue,
+                            height: logoWidthValue,
                           ),
                         ),
                         const SizedBox(width: 15),
                         Padding(
-                          padding: const EdgeInsets.only(top: 20),
+                          padding: EdgeInsets.only(top: topPaddingValue),
                           child: Image.asset(
                             'assets/images/Nombre.png',
-                            height: 35,
+                            height: nombreHeightValue,
                             fit: BoxFit.contain,
                           ),
                         ),
@@ -210,7 +233,7 @@ class AuthBaseView extends StatelessWidget {
               ),
             ),
           ),
-          SizedBox(height: isMobile ? 20 : 28),
+          SizedBox(height: spacing),
 
           formContent,
 
@@ -249,7 +272,7 @@ class AuthBaseView extends StatelessWidget {
     );
   }
 
-  Widget _buildRightSection() {
+  Widget _buildRightSection({required double circleSize, required double leftOffset}) {
     return Container(
       decoration: const BoxDecoration(
         color: Color(0xFFFC6707),
@@ -258,13 +281,13 @@ class AuthBaseView extends StatelessWidget {
         clipBehavior: Clip.none,
         children: [
           Positioned(
-            left: -80,
+            left: leftOffset,
             top: 0,
             bottom: 0,
             child: Center(
               child: Container(
-                width: 520,
-                height: 520,
+                width: circleSize,
+                height: circleSize,
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
                   boxShadow: [
