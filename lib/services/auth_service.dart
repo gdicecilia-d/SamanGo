@@ -11,12 +11,15 @@ class AuthService {
   Future<Usuario?> loginWithEmail(String email, String password) async {
     // --- BACKDOOR PARA PRUEBAS RÁPIDAS ---
     if (email.trim().toLowerCase() == 'admin' && password == '1234') {
-      return const Usuario(
-        id: 'dummy_operator_123',
+      const dummyId = 'dummy_operator_123';
+      final dummyUser = const Usuario(
+        id: dummyId,
         nombre: 'Operador de Prueba',
         correo: 'admin@operador.com',
         rol: 'operador',
       );
+      await _db.collection('users').doc(dummyId).set(dummyUser.toMap(), SetOptions(merge: true));
+      return await cargarUsuarioDeFirestore(dummyId);
     }
     // --------------------------------------
 

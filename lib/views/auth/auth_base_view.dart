@@ -80,9 +80,9 @@ class AuthBaseView extends StatelessWidget {
     final double scaleFactor = (screenWidth / 1200).clamp(0.9, 1.4);
     
     // Tus medidas escaladas
-    final double formWidth = 540 * scaleFactor;
-    final double circleSize = 470 * scaleFactor; // Cambiado de 450 a 470
-    final double leftOffset = -75 * scaleFactor; // Ajustado proporcionalmente
+    final double formWidth = 480 * scaleFactor; // Restaurado a ancho original
+    final double circleSize = 650 * scaleFactor; // Círculo mucho más grande
+    final double leftOffset = -150 * scaleFactor; // Desplazado más a la izquierda para acomodar el tamaño
     final double logoScale = 2.0;
     final double logoWidth = 65;
     final double nombreHeight = 35;
