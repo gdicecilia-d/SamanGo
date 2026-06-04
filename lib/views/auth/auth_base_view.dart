@@ -88,8 +88,6 @@ class AuthBaseView extends StatelessWidget {
     final double topPadding = 20;
     final int leftFlex = 6;
     final int rightFlex = 4;
-    // Añadimos padding vertical extra para compensar el Transform.scale en el layout
-    final double verticalPadding = 80 * scaleFactor;
 
     return Scaffold(
       backgroundColor: Colors.white,
@@ -99,14 +97,17 @@ class AuthBaseView extends StatelessWidget {
             children: [
               Expanded(
                 flex: leftFlex,
-                child: SingleChildScrollView(
-                  padding: EdgeInsets.symmetric(vertical: verticalPadding),
-                  child: Center(
-                    child: Transform.scale(
-                      scale: scaleFactor,
-                      child: SizedBox(
-                        width: baseFormWidth,
-                        child: _buildFormCard(context, isMobile: false),
+                child: Center(
+                  child: Transform.scale(
+                    scale: scaleFactor,
+                    child: SizedBox(
+                      width: baseFormWidth,
+                      height: MediaQuery.of(context).size.height / scaleFactor,
+                      child: SingleChildScrollView(
+                        padding: const EdgeInsets.symmetric(vertical: 40),
+                        child: Center(
+                          child: _buildFormCard(context, isMobile: false),
+                        ),
                       ),
                     ),
                   ),
