@@ -1,4 +1,4 @@
-// Sección Explorar por Categorías 
+// Sección Explorar por Categorías - Responsive
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
@@ -7,45 +7,60 @@ class CategoriesSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final screenWidth = MediaQuery.of(context).size.width;
+    final isMobile = screenWidth < 850;
+
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 24),
+      padding: EdgeInsets.symmetric(horizontal: isMobile ? 16 : 24),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
             'Explorar por Categorías',
             style: GoogleFonts.outfit(
-              fontSize: 22,
+              fontSize: isMobile ? 22 : 28,
               fontWeight: FontWeight.bold,
               color: const Color(0xFF333333),
             ),
           ),
           const SizedBox(height: 16),
-          Row(
-            children: [
-              Expanded(child: _buildCategoryCard('Playas / Cayos', 'assets/images/playas_cayos.png')),
-              const SizedBox(width: 16),
-              Expanded(child: _buildCategoryCard('Montañas / Trekking', 'assets/images/montañas_trekking.png')),
-              const SizedBox(width: 16),
-              Expanded(child: _buildCategoryCard('Aventura / Ríos', 'assets/images/aventuras_rios.png')),
-              const SizedBox(width: 16),
-              Expanded(child: _buildCategoryCard('Cultura / Ciudades', 'assets/images/cultura_ciudades.png')),
-            ],
-          ),
+          if (isMobile)
+            Column(
+              children: [
+                _buildCategoryCard('Playas / Cayos', 'assets/images/playas_cayos.png', isMobile),
+                const SizedBox(height: 16),
+                _buildCategoryCard('Montañas / Trekking', 'assets/images/montañas_trekking.png', isMobile),
+                const SizedBox(height: 16),
+                _buildCategoryCard('Aventura / Ríos', 'assets/images/aventuras_rios.png', isMobile),
+                const SizedBox(height: 16),
+                _buildCategoryCard('Cultura / Ciudades', 'assets/images/cultura_ciudades.png', isMobile),
+              ],
+            )
+          else
+            Row(
+              children: [
+                Expanded(child: _buildCategoryCard('Playas / Cayos', 'assets/images/playas_cayos.png', isMobile)),
+                const SizedBox(width: 16),
+                Expanded(child: _buildCategoryCard('Montañas / Trekking', 'assets/images/montañas_trekking.png', isMobile)),
+                const SizedBox(width: 16),
+                Expanded(child: _buildCategoryCard('Aventura / Ríos', 'assets/images/aventuras_rios.png', isMobile)),
+                const SizedBox(width: 16),
+                Expanded(child: _buildCategoryCard('Cultura / Ciudades', 'assets/images/cultura_ciudades.png', isMobile)),
+              ],
+            ),
         ],
       ),
     );
   }
 
-  Widget _buildCategoryCard(String title, String imagePath) {
+  Widget _buildCategoryCard(String title, String imagePath, bool isMobile) {
     return MouseRegion(
       cursor: SystemMouseCursors.click,
       child: GestureDetector(
-        onTap: () {
-          // TODO: Navegar a categoría
-        },
+        onTap: () {},
         child: Container(
-          height: 120,
+          height: isMobile ? 110 : 120,
+          width: double.infinity,
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(16),
             image: DecorationImage(
@@ -70,7 +85,7 @@ class CategoriesSection extends StatelessWidget {
                 title,
                 textAlign: TextAlign.center,
                 style: GoogleFonts.outfit(
-                  fontSize: 14,
+                  fontSize: isMobile ? 15 : 16,
                   fontWeight: FontWeight.bold,
                   color: Colors.white,
                 ),

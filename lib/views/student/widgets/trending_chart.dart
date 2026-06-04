@@ -1,4 +1,4 @@
-// Gráfico de destinos más buscados (estructura vacía)
+// Gráfico de destinos más buscados 
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
@@ -14,6 +14,13 @@ class TrendingChart extends StatelessWidget {
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
         border: Border.all(color: const Color(0xFFE0E0E0), width: 1),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -27,13 +34,10 @@ class TrendingChart extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 24),
-          Center(
+          const Center(
             child: Text(
               'No hay datos disponibles',
-              style: GoogleFonts.outfit(
-                fontSize: 14,
-                color: const Color(0xFF999999),
-              ),
+              style: TextStyle(fontSize: 14, color: Color(0xFF999999)),
             ),
           ),
         ],

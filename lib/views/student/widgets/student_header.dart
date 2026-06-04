@@ -1,6 +1,7 @@
-/// Header universal para usuarios autenticados (Estudiante, Operador, Admin)
+// Header para usuarios autenticados (Estudiante, Operador, Admin)
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import '../../../widgets/custom_dialog.dart';
 
 class UserHeader extends StatefulWidget {
   final String activeMenu;
@@ -8,6 +9,9 @@ class UserHeader extends StatefulWidget {
   final VoidCallback onEditProfile;
   final VoidCallback onLogout;
   final List<String> menuItems;
+  final bool isMobile;
+  final VoidCallback? onNotificationsTap;
+  final VoidCallback? onMenuTap;
 
   const UserHeader({
     super.key,
@@ -16,6 +20,9 @@ class UserHeader extends StatefulWidget {
     required this.onEditProfile,
     required this.onLogout,
     required this.menuItems,
+    required this.isMobile,
+    this.onNotificationsTap,
+    this.onMenuTap,
   });
 
   @override
@@ -32,6 +39,9 @@ class _UserHeaderState extends State<UserHeader> {
       _overlayEntry = null;
       return;
     }
+
+    final RenderBox renderBox = _avatarKey.currentContext!.findRenderObject() as RenderBox;
+    final position = renderBox.localToGlobal(Offset.zero);
 
     _overlayEntry = OverlayEntry(
       builder: (context) => GestureDetector(
@@ -164,97 +174,66 @@ class _UserHeaderState extends State<UserHeader> {
   }
 
   void _mostrarDialogoCerrarSesion() {
-    showDialog(
+    CustomConfirmDialog.show(
       context: context,
-      builder: (context) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        elevation: 4,
-        backgroundColor: Colors.white,
-        contentPadding: const EdgeInsets.all(20),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Icon(Icons.logout, color: Color(0xFFFC6707), size: 45),
-            const SizedBox(height: 12),
-            Text(
-              'Cerrar Sesión',
-              style: GoogleFonts.outfit(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-                color: const Color(0xFF333333),
-              ),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              '¿Estás seguro de que deseas cerrar sesión?',
-              textAlign: TextAlign.center,
-              style: GoogleFonts.outfit(
-                fontSize: 14,
-                fontWeight: FontWeight.w400,
-                color: const Color(0xFF666666),
-              ),
-            ),
-            const SizedBox(height: 20),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                SizedBox(
-                  width: 110,
-                  child: ElevatedButton(
-                    onPressed: () {
-                      Navigator.pop(context);
-                      widget.onLogout();
-                    },
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFFFC6707),
-                      foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(vertical: 10),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(30),
-                      ),
-                    ),
-                    child: Text(
-                      'Salir',
-                      style: GoogleFonts.outfit(
-                        fontSize: 14,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 12),
-                SizedBox(
-                  width: 110,
-                  child: OutlinedButton(
-                    onPressed: () => Navigator.pop(context),
-                    style: OutlinedButton.styleFrom(
-                      backgroundColor: const Color(0xFFF5F5F5),
-                      foregroundColor: const Color(0xFF666666),
-                      padding: const EdgeInsets.symmetric(vertical: 10),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(30),
-                      ),
-                      side: BorderSide.none,
-                    ),
-                    child: Text(
-                      'Cancelar',
-                      style: GoogleFonts.outfit(
-                        fontSize: 14,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ],
-        ),
-      ),
-    );
+      title: 'Cerrar Sesión',
+      message: '¿Estás seguro de que deseas cerrar sesión?',
+      confirmText: 'Salir',
+      icon: Icons.logout,
+    ).then((confirm) {
+      if (confirm == true) {
+        widget.onLogout();
+      }
+    });
   }
 
   @override
   Widget build(BuildContext context) {
+    // Cell 
+    if (widget.isMobile) {
+      return Container(
+        color: Colors.white,
+        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            // Logo
+            InkWell(
+              onTap: () => widget.onMenuSelected('Inicio'),
+              child: Row(
+                children: [
+                  Transform.scale(
+                    scale: 1.5,
+                    child: Image.asset(
+                      'assets/images/logo.png',
+                      width: 60,
+                      height: 60,
+                      fit: BoxFit.contain,
+                    ),
+                  ),
+                  const SizedBox(width: 4),
+                  Padding(
+                    padding: const EdgeInsets.only(top: 8),
+                    child: Image.asset(
+                      'assets/images/Nombre.png',
+                      height: 25,
+                      fit: BoxFit.contain,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            // Menú móvil (3 rayas)
+            IconButton(
+              icon: const Icon(Icons.menu, color: Color(0xFFFC6707), size: 28),
+              onPressed: widget.onMenuTap,
+            ),
+          ],
+        ),
+      );
+    }
+
+    // Compu 
     return Container(
       decoration: const BoxDecoration(
         color: Colors.white,
@@ -270,7 +249,7 @@ class _UserHeaderState extends State<UserHeader> {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          // Logo sin cursor mano ni funcionalidad
+          // Logo
           Row(
             children: [
               Transform.scale(
@@ -293,7 +272,8 @@ class _UserHeaderState extends State<UserHeader> {
               ),
             ],
           ),
-          const SizedBox(width: 100),
+          const SizedBox(width: 115),
+          // Menú horizontal
           Row(
             children: widget.menuItems.map((title) {
               final isActive = title == widget.activeMenu;
@@ -332,6 +312,7 @@ class _UserHeaderState extends State<UserHeader> {
               );
             }).toList(),
           ),
+          // Avatar con menú desplegable
           MouseRegion(
             cursor: SystemMouseCursors.click,
             child: GestureDetector(
