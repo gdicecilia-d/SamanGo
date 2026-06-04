@@ -97,17 +97,16 @@ class AuthBaseView extends StatelessWidget {
             children: [
               Expanded(
                 flex: leftFlex,
-                child: Center(
-                  child: Transform.scale(
-                    scale: scaleFactor,
+                child: SingleChildScrollView(
+                  padding: const EdgeInsets.symmetric(vertical: 40),
+                  child: Center(
                     child: SizedBox(
-                      width: baseFormWidth,
-                      height: MediaQuery.of(context).size.height / scaleFactor,
-                      child: SingleChildScrollView(
-                        padding: const EdgeInsets.symmetric(vertical: 40),
-                        child: Center(
-                          child: _buildFormCard(context, isMobile: false),
+                      width: baseFormWidth * scaleFactor,
+                      child: MediaQuery(
+                        data: MediaQuery.of(context).copyWith(
+                          textScaler: TextScaler.linear(scaleFactor),
                         ),
+                        child: _buildFormCard(context, isMobile: false, customScale: scaleFactor),
                       ),
                     ),
                   ),
@@ -163,22 +162,22 @@ class AuthBaseView extends StatelessWidget {
     );
   }
 
-  Widget _buildFormCard(BuildContext context, {required bool isMobile}) {
-    final double logoScaleValue = isMobile ? 1.5 : 2.0;
-    final double logoWidthValue = isMobile ? 60 : 65;
-    final double nombreHeightValue = isMobile ? 30 : 35;
-    final double topPaddingValue = isMobile ? 12 : 20;
-    final double spacing = isMobile ? 20 : 28;
+  Widget _buildFormCard(BuildContext context, {required bool isMobile, double customScale = 1.0}) {
+    final double logoScaleValue = isMobile ? 1.5 : (2.0 * customScale);
+    final double logoWidthValue = isMobile ? 60 : (65 * customScale);
+    final double nombreHeightValue = isMobile ? 30 : (35 * customScale);
+    final double topPaddingValue = isMobile ? 12 : (20 * customScale);
+    final double spacing = isMobile ? 20 : (28 * customScale);
 
     return Container(
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: const Color(0xFFE0E0E0), width: 1.2),
+        borderRadius: BorderRadius.circular(24 * customScale),
+        border: Border.all(color: const Color(0xFFE0E0E0), width: 1.2 * customScale),
       ),
       padding: EdgeInsets.symmetric(
-        horizontal: isMobile ? 24 : 32,
-        vertical: isMobile ? 32 : 56, // Padding vertical mucho mayor para que sea más largo
+        horizontal: isMobile ? 24 : (32 * customScale),
+        vertical: isMobile ? 32 : (56 * customScale), 
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.center,
