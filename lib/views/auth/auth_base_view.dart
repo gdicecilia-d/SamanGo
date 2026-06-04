@@ -76,21 +76,20 @@ class AuthBaseView extends StatelessWidget {
 
   Widget _buildDesktopLayout(BuildContext context) {
     final screenWidth = MediaQuery.of(context).size.width;
-    // Escala base: tu medida original para un ancho de referencia de 1200px
-    final double scaleFactor = (screenWidth / 1200).clamp(0.9, 1.4);
+    final double scaleFactor = (screenWidth / 1200).clamp(0.9, 1.6);
     
-    // Tus medidas escaladas
-    final double formWidth = 500 * scaleFactor; // Un pelín más ancho
-    final double circleSize = 650 * scaleFactor; // Círculo gigante de vuelta
-    final double leftOffset = -150 * scaleFactor; // Ajuste para el círculo gigante
+    // Medidas base (sin escalar, el Transform.scale se encargará)
+    final double baseFormWidth = 460; 
+    final double circleSize = 500 * scaleFactor; // Círculo más pequeño que 650
+    final double leftOffset = -80 * scaleFactor; // Ajustado
     final double logoScale = 2.0;
     final double logoWidth = 65;
     final double nombreHeight = 35;
     final double topPadding = 20;
     final int leftFlex = 6;
     final int rightFlex = 4;
-    final double leftPadding = 30 * scaleFactor;
-    final double rightPadding = 50 * scaleFactor;
+    // Añadimos padding vertical extra para compensar el Transform.scale en el layout
+    final double verticalPadding = 80 * scaleFactor;
 
     return Scaffold(
       backgroundColor: Colors.white,
@@ -101,11 +100,14 @@ class AuthBaseView extends StatelessWidget {
               Expanded(
                 flex: leftFlex,
                 child: SingleChildScrollView(
-                  padding: EdgeInsets.only(left: leftPadding, right: rightPadding, top: 40, bottom: 40),
+                  padding: EdgeInsets.symmetric(vertical: verticalPadding),
                   child: Center(
-                    child: SizedBox(
-                      width: formWidth,
-                      child: _buildFormCard(context, isMobile: false),
+                    child: Transform.scale(
+                      scale: scaleFactor,
+                      child: SizedBox(
+                        width: baseFormWidth,
+                        child: _buildFormCard(context, isMobile: false),
+                      ),
                     ),
                   ),
                 ),
