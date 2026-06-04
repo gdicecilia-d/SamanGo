@@ -26,7 +26,7 @@ class AuthService {
         password: password,
       );
       final uid = credential.user!.uid;
-      return await _cargarUsuarioDeFirestore(uid);
+      return await cargarUsuarioDeFirestore(uid);
     } on FirebaseAuthException catch (e) {
       print('Error de login: ${e.code}');
       return null;
@@ -62,7 +62,7 @@ class AuthService {
   }
 
   // Carga los datos del usuario desde Firestore
-  Future<Usuario?> _cargarUsuarioDeFirestore(String uid) async {
+  Future<Usuario?> cargarUsuarioDeFirestore(String uid) async {
     try {
       final doc = await _db.collection('users').doc(uid).get();
       if (doc.exists && doc.data() != null) {

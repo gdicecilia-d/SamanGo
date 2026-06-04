@@ -77,10 +77,10 @@ class AuthBaseView extends StatelessWidget {
   Widget _buildDesktopLayout(BuildContext context) {
     final screenWidth = MediaQuery.of(context).size.width;
     // Escala base: tu medida original para un ancho de referencia de 1200px
-    final double scaleFactor = (screenWidth / 1200).clamp(0.8, 1.3);
+    final double scaleFactor = (screenWidth / 1200).clamp(0.9, 1.4);
     
     // Tus medidas escaladas
-    final double formWidth = 480 * scaleFactor;
+    final double formWidth = 540 * scaleFactor;
     final double circleSize = 470 * scaleFactor; // Cambiado de 450 a 470
     final double leftOffset = -75 * scaleFactor; // Ajustado proporcionalmente
     final double logoScale = 2.0;

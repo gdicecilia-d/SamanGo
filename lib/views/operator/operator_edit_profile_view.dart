@@ -9,6 +9,7 @@ import 'package:provider/provider.dart';
 import '../../controllers/auth_controller.dart';
 import '../../controllers/profile_controller.dart';
 import 'package:image_picker/image_picker.dart';
+import '../../models/usuario.dart';
 
 class OperatorEditProfileView extends StatefulWidget {
   const OperatorEditProfileView({super.key});
@@ -152,7 +153,7 @@ class _OperatorEditProfileViewState extends State<OperatorEditProfileView> {
                       if (isMobile)
                         Column(
                           children: [
-                            _buildAvatarSection(user?.id ?? ''),
+                            _buildAvatarSection(user),
                             const SizedBox(height: 24),
                             _buildFormSection(nombre),
                           ],
@@ -161,7 +162,7 @@ class _OperatorEditProfileViewState extends State<OperatorEditProfileView> {
                         Row(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            _buildAvatarSection(user?.id ?? ''),
+                            _buildAvatarSection(user),
                             const SizedBox(width: 48),
                             Expanded(child: _buildFormSection(nombre)),
                           ],
@@ -181,7 +182,10 @@ class _OperatorEditProfileViewState extends State<OperatorEditProfileView> {
     );
   }
 
-  Widget _buildAvatarSection(String userId) {
+  Widget _buildAvatarSection(Usuario? user) {
+    final String userId = user?.id ?? '';
+    final String? fotoUrl = user?.fotoUrl;
+
     return Column(
       children: [
         Container(
@@ -191,10 +195,13 @@ class _OperatorEditProfileViewState extends State<OperatorEditProfileView> {
             shape: BoxShape.circle,
             border: Border.all(color: const Color(0xFFFC6707), width: 3),
           ),
-          child: const CircleAvatar(
-            backgroundColor: Color(0xFFFDDBB3),
+          child: CircleAvatar(
+            backgroundColor: const Color(0xFFFDDBB3),
             radius: 50,
-            child: Icon(Icons.business_center, color: Color(0xFFFC6707), size: 50),
+            backgroundImage: fotoUrl != null ? NetworkImage(fotoUrl) : null,
+            child: fotoUrl == null
+                ? const Icon(Icons.business_center, color: Color(0xFFFC6707), size: 50)
+                : null,
           ),
         ),
         const SizedBox(height: 12),
@@ -214,6 +221,7 @@ class _OperatorEditProfileViewState extends State<OperatorEditProfileView> {
                   final success = await profileController.updateProfileImage(userId, bytes, ext);
                   
                   if (success) {
+                    await Provider.of<AuthController>(context, listen: false).reloadUser();
                     _mostrarMensaje('Logo actualizado exitosamente');
                   } else {
                     _mostrarMensaje('Hubo un error al actualizar el logo');

@@ -45,6 +45,17 @@ class AuthController extends ChangeNotifier {
     _setLoading(false);
   }
 
+  // Recargar usuario (por ejemplo, después de actualizar la foto de perfil)
+  Future<void> reloadUser() async {
+    if (_usuarioActual != null) {
+      final updatedUser = await _authService.cargarUsuarioDeFirestore(_usuarioActual!.id);
+      if (updatedUser != null) {
+        _usuarioActual = updatedUser;
+        notifyListeners();
+      }
+    }
+  }
+
   void _setLoading(bool value) {
     _isLoading = value;
     notifyListeners();

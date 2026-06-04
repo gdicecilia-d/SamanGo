@@ -6,6 +6,7 @@ class Usuario {
   final String rol;
   final String? licenciaUrl;
   final String? carnet;
+  final String? fotoUrl;
 
   const Usuario({
     required this.id,
@@ -14,6 +15,7 @@ class Usuario {
     required this.rol,
     this.licenciaUrl,
     this.carnet,
+    this.fotoUrl,
   });
 
   factory Usuario.fromMap(String uid, Map<String, dynamic> map) {
@@ -24,6 +26,7 @@ class Usuario {
       rol: map['rol'] as String? ?? 'estudiante',
       licenciaUrl: map['licenciaUrl'] as String?,
       carnet: map['carnet'] as String?,
+      fotoUrl: map['fotoUrl'] as String?,
     );
   }
 
@@ -35,6 +38,7 @@ class Usuario {
       'rol': rol,
       if (licenciaUrl != null) 'licenciaUrl': licenciaUrl,
       if (carnet != null) 'carnet': carnet,
+      if (fotoUrl != null) 'fotoUrl': fotoUrl,
     };
   }
 
