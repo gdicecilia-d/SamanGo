@@ -48,7 +48,8 @@ class _OperatorHomeViewState extends State<OperatorHomeView> {
     final screenWidth = MediaQuery.of(context).size.width;
     final isMobile = screenWidth < 850;
     final auth = Provider.of<AuthController>(context);
-    final nombre = auth.usuarioActual?.nombre ?? 'Operador';
+    final nombreCompleto = auth.usuarioActual?.nombre ?? 'Operador';
+    final primerNombre = nombreCompleto.split(' ').first;
 
     return Scaffold(
       key: _scaffoldKey,
@@ -78,7 +79,7 @@ class _OperatorHomeViewState extends State<OperatorHomeView> {
                         style: GoogleFonts.outfit(fontSize: isMobile ? 22 : 28, fontWeight: FontWeight.bold, color: const Color(0xFF333333)),
                         children: [
                           const TextSpan(text: '¡Hola '),
-                          TextSpan(text: nombre, style: const TextStyle(color: Color(0xFFFC6707))),
+                          TextSpan(text: primerNombre, style: const TextStyle(color: Color(0xFFFC6707))),
                           const TextSpan(text: '! Gestione sus viajes y reservas.'),
                         ],
                       ),

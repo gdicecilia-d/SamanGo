@@ -189,6 +189,9 @@ class _StudentHomeViewState extends State<StudentHomeView> {
   }
 
   Widget _buildMobileLayout(BuildContext context) {
+    final nombreCompleto = Provider.of<AuthController>(context).usuarioActual?.nombre ?? 'Estudiante';
+    final primerNombre = nombreCompleto.split(' ').first;
+
     return SingleChildScrollView(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -202,7 +205,7 @@ class _StudentHomeViewState extends State<StudentHomeView> {
                 children: [
                   const TextSpan(text: '¡Hola '),
                   TextSpan(
-                    text: Provider.of<AuthController>(context).usuarioActual?.nombre ?? 'Estudiante',
+                    text: primerNombre,
                     style: const TextStyle(color: Color(0xFFFC6707))
                   ),
                   const TextSpan(text: '! ¿A dónde quieres viajar hoy?'),
@@ -233,6 +236,9 @@ class _StudentHomeViewState extends State<StudentHomeView> {
   }
 
   Widget _buildDesktopLayout(BuildContext context) {
+    final nombreCompleto = Provider.of<AuthController>(context).usuarioActual?.nombre ?? 'Estudiante';
+    final primerNombre = nombreCompleto.split(' ').first;
+
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -251,7 +257,7 @@ class _StudentHomeViewState extends State<StudentHomeView> {
                       children: [
                         const TextSpan(text: '¡Hola '),
                         TextSpan(
-                          text: Provider.of<AuthController>(context).usuarioActual?.nombre ?? 'Estudiante',
+                          text: primerNombre,
                           style: const TextStyle(color: Color(0xFFFC6707))
                         ),
                         const TextSpan(text: '! ¿A dónde quieres viajar hoy?'),
