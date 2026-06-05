@@ -257,7 +257,7 @@ class _EditProfileViewState extends State<EditProfileView> {
                           children: [
                             _buildAvatarSection(user),
                             const SizedBox(height: 24),
-                            _buildFormSection(nombres, apellidos, user?.carnet),
+                            _buildFormSection(user, nombres, apellidos, user?.carnet),
                           ],
                         )
                       else
@@ -266,7 +266,7 @@ class _EditProfileViewState extends State<EditProfileView> {
                           children: [
                             _buildAvatarSection(user),
                             const SizedBox(width: 48),
-                            Expanded(child: _buildFormSection(nombres, apellidos, user?.carnet)),
+                            Expanded(child: _buildFormSection(user, nombres, apellidos, user?.carnet)),
                           ],
                         ),
                       const SizedBox(height: 32),
@@ -347,7 +347,7 @@ class _EditProfileViewState extends State<EditProfileView> {
     );
   }
 
-  Widget _buildFormSection(String nombres, String apellidos, String? carnet) {
+  Widget _buildFormSection(Usuario? user, String nombres, String apellidos, String? carnet) {
     return Column(
       children: [
         Row(
@@ -360,7 +360,7 @@ class _EditProfileViewState extends State<EditProfileView> {
         const SizedBox(height: 16),
         Row(
           children: [
-            Expanded(child: _buildDisabledField('Fecha de Nacimiento', value: '01/01/2000')),
+            Expanded(child: _buildDisabledField('Fecha de Nacimiento', value: user?.fechaNacimiento ?? 'No registrada')),
             const SizedBox(width: 16),
             Expanded(child: _buildDisabledField('Carnet', value: carnet ?? 'No registrado')),
           ],

@@ -53,16 +53,17 @@ class _RegisterStudentViewState extends State<RegisterStudentView> {
 
     final nombreCompleto = '${_nombresController.text} ${_apellidosController.text}';
 
-    final success = await Provider.of<AuthController>(context, listen: false).registerStudent(
+    final errorMessage = await Provider.of<AuthController>(context, listen: false).registerStudent(
       email: _emailController.text,
       password: _passwordController.text,
       nombre: nombreCompleto,
       carnet: _carnetController.text,
+      fechaNacimiento: _fechaNacimientoController.text,
     );
 
     if (!mounted) return;
 
-    if (success) {
+    if (errorMessage == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('Registro exitoso. Ahora inicia sesión.'),
@@ -76,9 +77,9 @@ class _RegisterStudentViewState extends State<RegisterStudentView> {
       );
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Error en el registro. Intenta nuevamente.'),
-          backgroundColor: Color(0xFFFC6707),
+        SnackBar(
+          content: Text(errorMessage),
+          backgroundColor: const Color(0xFFFC6707),
         ),
       );
     }

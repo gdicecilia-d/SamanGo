@@ -155,7 +155,7 @@ class _OperatorEditProfileViewState extends State<OperatorEditProfileView> {
                           children: [
                             _buildAvatarSection(user),
                             const SizedBox(height: 24),
-                            _buildFormSection(nombre),
+                            _buildFormSection(user, nombre),
                           ],
                         )
                       else
@@ -164,7 +164,7 @@ class _OperatorEditProfileViewState extends State<OperatorEditProfileView> {
                           children: [
                             _buildAvatarSection(user),
                             const SizedBox(width: 48),
-                            Expanded(child: _buildFormSection(nombre)),
+                            Expanded(child: _buildFormSection(user, nombre)),
                           ],
                         ),
                       const SizedBox(height: 32),
@@ -245,7 +245,7 @@ class _OperatorEditProfileViewState extends State<OperatorEditProfileView> {
     );
   }
 
-  Widget _buildFormSection(String nombre) {
+  Widget _buildFormSection(Usuario? user, String nombre) {
     return Column(
       children: [
         Row(
@@ -258,17 +258,17 @@ class _OperatorEditProfileViewState extends State<OperatorEditProfileView> {
         const SizedBox(height: 16),
         Row(
           children: [
-            Expanded(child: _buildDisabledField('Tipo de Usuario', value: 'Operador Turístico')),
+            Expanded(child: _buildDisabledField('Fecha de Nacimiento', value: user?.fechaNacimiento ?? 'No registrada')),
             const SizedBox(width: 16),
-            Expanded(child: _buildEditableField('Número de Teléfono', _telefonoController)),
+            Expanded(child: _buildDisabledField('Tipo de Usuario', value: 'Operador Turístico')),
           ],
         ),
         const SizedBox(height: 16),
         Row(
           children: [
-            Expanded(child: _buildEditableField('Correo de Contacto', _emailController)),
+            Expanded(child: _buildEditableField('Número de Teléfono', _telefonoController)),
             const SizedBox(width: 16),
-            Expanded(child: Container()),
+            Expanded(child: _buildEditableField('Correo de Contacto', _emailController)),
           ],
         ),
       ],

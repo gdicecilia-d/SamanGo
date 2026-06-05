@@ -20,21 +20,59 @@ class AuthController extends ChangeNotifier {
   }
 
   // Register Student
-  Future<bool> registerStudent({
+  Future<String?> registerStudent({
     required String email,
     required String password,
     required String nombre,
     required String carnet,
+    required String fechaNacimiento,
   }) async {
     _setLoading(true);
-    _usuarioActual = await _authService.registerStudent(
-      email: email,
-      password: password,
-      nombre: nombre,
-      carnet: carnet,
-    );
-    _setLoading(false);
-    return _usuarioActual != null;
+    try {
+      _usuarioActual = await _authService.registerStudent(
+        email: email,
+        password: password,
+        nombre: nombre,
+        carnet: carnet,
+        fechaNacimientoText: fechaNacimiento,
+      );
+      _setLoading(false);
+      return null;
+    } catch (e) {
+      _setLoading(false);
+      return e.toString();
+    }
+  }
+
+  // Register Operator
+  Future<String?> registerOperator({
+    required String email,
+    required String password,
+    required String nombre,
+    required String empresa,
+    required String rif,
+    required String telefono,
+    required String descripcion,
+    required String fechaNacimiento,
+  }) async {
+    _setLoading(true);
+    try {
+      _usuarioActual = await _authService.registerOperator(
+        email: email,
+        password: password,
+        nombre: nombre,
+        empresa: empresa,
+        rif: rif,
+        telefono: telefono,
+        descripcion: descripcion,
+        fechaNacimientoText: fechaNacimiento,
+      );
+      _setLoading(false);
+      return null;
+    } catch (e) {
+      _setLoading(false);
+      return e.toString();
+    }
   }
 
   // Logout

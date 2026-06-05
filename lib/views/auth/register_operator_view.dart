@@ -3,10 +3,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:provider/provider.dart';
 import 'auth_base_view.dart';
 import 'login_view.dart';
 import 'select_role_view.dart';
 import '../../models/validators.dart';
+import '../../controllers/auth_controller.dart';
 
 class RegisterOperatorView extends StatefulWidget {
   const RegisterOperatorView({super.key});
@@ -100,7 +102,7 @@ class _RegisterOperatorViewState extends State<RegisterOperatorView> {
     }
   }
 
-  void _submitForm() {
+  void _submitForm() async {
     setState(() {
       _showErrors = true;
     });
@@ -113,7 +115,34 @@ class _RegisterOperatorViewState extends State<RegisterOperatorView> {
       );
       return;
     }
-    _showSuccessDialog(context);
+
+    final nombreCompleto = _representanteController.text;
+    final telefonoCompleto = '$_selectedTelefonoPrefijo${_telefonoNumeroController.text}';
+    final rifCompleto = '$_selectedRifLetra${_rifNumeroController.text}';
+
+    final errorMessage = await Provider.of<AuthController>(context, listen: false).registerOperator(
+      email: _emailController.text,
+      password: _passwordController.text,
+      nombre: nombreCompleto,
+      empresa: _empresaController.text,
+      rif: rifCompleto,
+      telefono: telefonoCompleto,
+      descripcion: _descripcionController.text,
+      fechaNacimiento: _fechaNacimientoController.text,
+    );
+
+    if (!mounted) return;
+
+    if (errorMessage == null) {
+      _showSuccessDialog(context);
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(errorMessage),
+          backgroundColor: const Color(0xFFFC6707),
+        ),
+      );
+    }
   }
 
   @override

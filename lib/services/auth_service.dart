@@ -18,7 +18,7 @@ class AuthService {
         correo: 'admin@operador.com',
         rol: 'operador',
       );
-      await _db.collection('users').doc(dummyId).set(dummyUser.toMap(), SetOptions(merge: true));
+      await _db.collection('operadores').doc(dummyId).set(dummyUser.toMap(), SetOptions(merge: true));
       return await cargarUsuarioDeFirestore(dummyId);
     }
     // --------------------------------------
@@ -37,11 +37,12 @@ class AuthService {
   }
 
   // Registra un nuevo estudiante
-  Future<Usuario?> registerStudent({
+  Future<Usuario> registerStudent({
     required String email,
     required String password,
     required String nombre,
     required String carnet,
+    required String fechaNacimientoText,
   }) async {
     try {
       final credential = await _auth.createUserWithEmailAndPassword(
@@ -49,39 +50,86 @@ class AuthService {
         password: password,
       );
       final uid = credential.user!.uid;
+
       final usuario = Usuario(
         id: uid,
         nombre: nombre,
         correo: email,
         rol: 'estudiante',
         carnet: carnet,
+        fechaNacimiento: fechaNacimientoText,
       );
-      await _db.collection('users').doc(uid).set(usuario.toMap());
+      await _db.collection('estudiantes').doc(uid).set(usuario.toMap());
       return usuario;
     } on FirebaseAuthException catch (e) {
-      print('Error de registro: ${e.code}');
-      return null;
+      if (e.code == 'email-already-in-use') {
+        throw 'El usuario ya tiene una cuenta';
+      }
+      throw 'Error en el registro. Intenta nuevamente.';
+    }
+  }
+
+  // Registra un nuevo operador
+  Future<Usuario> registerOperator({
+    required String email,
+    required String password,
+    required String nombre,
+    required String empresa,
+    required String rif,
+    required String telefono,
+    required String descripcion,
+    required String fechaNacimientoText,
+  }) async {
+    try {
+      final credential = await _auth.createUserWithEmailAndPassword(
+        email: email.trim(),
+        password: password,
+      );
+      final uid = credential.user!.uid;
+
+      final usuario = Usuario(
+        id: uid,
+        nombre: nombre,
+        correo: email,
+        rol: 'operador',
+        empresa: empresa,
+        rif: rif,
+        telefono: telefono,
+        descripcion: descripcion,
+        fechaNacimiento: fechaNacimientoText,
+      );
+      await _db.collection('operadores').doc(uid).set(usuario.toMap());
+      return usuario;
+    } on FirebaseAuthException catch (e) {
+      if (e.code == 'email-already-in-use') {
+        throw 'El usuario ya tiene una cuenta';
+      }
+      throw 'Error en el registro. Intenta nuevamente.';
     }
   }
 
   // Carga los datos del usuario desde Firestore
   Future<Usuario?> cargarUsuarioDeFirestore(String uid) async {
     try {
-      final doc = await _db.collection('users').doc(uid).get();
+      var doc = await _db.collection('estudiantes').doc(uid).get();
       if (doc.exists && doc.data() != null) {
         return Usuario.fromMap(uid, doc.data()!);
-      } else {
-        // Si no existe el documento en Firestore, lo creamos automáticamente
-        final user = _auth.currentUser;
-        final nuevoUsuario = Usuario(
-          id: uid,
-          nombre: user?.displayName ?? 'Usuario',
-          correo: user?.email ?? '',
-          rol: 'estudiante',
-        );
-        await _db.collection('users').doc(uid).set(nuevoUsuario.toMap());
-        return nuevoUsuario;
       }
+      doc = await _db.collection('operadores').doc(uid).get();
+      if (doc.exists && doc.data() != null) {
+        return Usuario.fromMap(uid, doc.data()!);
+      }
+
+      // Fallback
+      final user = _auth.currentUser;
+      final nuevoUsuario = Usuario(
+        id: uid,
+        nombre: user?.displayName ?? 'Usuario',
+        correo: user?.email ?? '',
+        rol: 'estudiante',
+      );
+      await _db.collection('estudiantes').doc(uid).set(nuevoUsuario.toMap());
+      return nuevoUsuario;
     } catch (e) {
       print('Error cargando usuario: $e');
       return null;
