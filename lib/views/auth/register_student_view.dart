@@ -25,6 +25,8 @@ class _RegisterStudentViewState extends State<RegisterStudentView> {
 
   bool _obscurePassword = true;
   bool _acceptTerms = false;
+  bool _showErrors = false;
+  final TextEditingController _fechaNacimientoController = TextEditingController();
 
   bool get _isFormValid {
     return FormValidators.validarNombre(_nombresController.text) == null &&
@@ -32,15 +34,18 @@ class _RegisterStudentViewState extends State<RegisterStudentView> {
         FormValidators.validarCarnet(_carnetController.text) == null &&
         FormValidators.validarCorreoUnimet(_emailController.text) == null &&
         FormValidators.validarPassword(_passwordController.text) == null &&
-        _acceptTerms;
+        _fechaNacimientoController.text.isNotEmpty;
   }
 
   void _submitForm() async {
-    if (!_isFormValid) {
+    setState(() {
+      _showErrors = true;
+    });
+    if (!_isFormValid || !_acceptTerms) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Por favor completa todos los campos correctamente'),
-          backgroundColor: Color(0xFFFC6707),
+        SnackBar(
+          content: Text(!_acceptTerms ? 'Debes aceptar los Términos y Condiciones' : 'Por favor completa todos los campos correctamente'),
+          backgroundColor: const Color(0xFFFC6707),
         ),
       );
       return;
@@ -140,7 +145,7 @@ class _RegisterStudentViewState extends State<RegisterStudentView> {
                       style: GoogleFonts.outfit(fontSize: 14),
                       decoration: _inputDecoration(
                         hint: 'Ej: Juan David',
-                        errorText: _nombresController.text.isNotEmpty 
+                        errorText: (_showErrors || _nombresController.text.isNotEmpty) 
                             ? FormValidators.validarNombre(_nombresController.text) 
                             : null,
                       ),
@@ -168,7 +173,7 @@ class _RegisterStudentViewState extends State<RegisterStudentView> {
                       style: GoogleFonts.outfit(fontSize: 14),
                       decoration: _inputDecoration(
                         hint: 'Ej: Pérez Díaz',
-                        errorText: _apellidosController.text.isNotEmpty 
+                        errorText: (_showErrors || _apellidosController.text.isNotEmpty) 
                             ? FormValidators.validarNombre(_apellidosController.text) 
                             : null,
                       ),
@@ -177,6 +182,32 @@ class _RegisterStudentViewState extends State<RegisterStudentView> {
                 ),
               ),
             ],
+          ),
+          const SizedBox(height: 16),
+
+          // Fecha de Nacimiento
+          Align(
+            alignment: Alignment.centerLeft,
+            child: Text(
+              'Fecha de Nacimiento',
+              style: GoogleFonts.outfit(
+                fontSize: 14,
+                fontWeight: FontWeight.w500,
+                color: const Color(0xFF333333),
+              ),
+            ),
+          ),
+          const SizedBox(height: 8),
+          TextFormField(
+            controller: _fechaNacimientoController,
+            onChanged: (_) => setState(() {}),
+            style: GoogleFonts.outfit(fontSize: 14),
+            decoration: _inputDecoration(
+              hint: 'Ej: 12/05/2000',
+              errorText: (_showErrors && _fechaNacimientoController.text.isEmpty) 
+                  ? 'La fecha de nacimiento es obligatoria' 
+                  : null,
+            ),
           ),
           const SizedBox(height: 16),
 
@@ -201,7 +232,7 @@ class _RegisterStudentViewState extends State<RegisterStudentView> {
             style: GoogleFonts.outfit(fontSize: 14),
             decoration: _inputDecoration(
               hint: 'Ej: 20251234567',
-              errorText: _carnetController.text.isNotEmpty 
+              errorText: (_showErrors || _carnetController.text.isNotEmpty) 
                   ? FormValidators.validarCarnet(_carnetController.text)
                   : null,
             ),
@@ -228,7 +259,7 @@ class _RegisterStudentViewState extends State<RegisterStudentView> {
             style: GoogleFonts.outfit(fontSize: 14),
             decoration: _inputDecoration(
               hint: 'ejemplo@correo.unimet.edu.ve',
-              errorText: _emailController.text.isNotEmpty 
+              errorText: (_showErrors || _emailController.text.isNotEmpty) 
                   ? FormValidators.validarCorreoUnimet(_emailController.text)
                   : null,
             ),
@@ -254,8 +285,11 @@ class _RegisterStudentViewState extends State<RegisterStudentView> {
             obscureText: _obscurePassword,
             style: GoogleFonts.outfit(fontSize: 14),
             decoration: InputDecoration(
-              hintText: 'Ingrese su contraseña (mínimo 6 caracteres)',
+              hintText: 'Ingrese su contraseña (mínimo 8 caracteres)',
               hintStyle: GoogleFonts.outfit(fontSize: 14, color: const Color(0xFF999999)),
+              errorText: (_showErrors || _passwordController.text.isNotEmpty)
+                  ? FormValidators.validarPassword(_passwordController.text)
+                  : null,
               border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
               focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: Colors.transparent)),
               enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
@@ -271,17 +305,6 @@ class _RegisterStudentViewState extends State<RegisterStudentView> {
               ),
             ),
           ),
-          if (_passwordController.text.isNotEmpty && _passwordController.text.length < 6)
-            Padding(
-              padding: const EdgeInsets.only(top: 4, left: 16),
-              child: Align(
-                alignment: Alignment.centerLeft,
-                child: Text(
-                  'Mínimo 6 caracteres',
-                  style: GoogleFonts.outfit(color: const Color(0xFFFC6707), fontSize: 12),
-                ),
-              ),
-            ),
           const SizedBox(height: 16),
 
           // Checkbox Términos y Condiciones
@@ -304,12 +327,32 @@ class _RegisterStudentViewState extends State<RegisterStudentView> {
               ),
               const SizedBox(width: 8),
               Expanded(
-                child: Text(
-                  'He leído y acepto los Términos de Servicio y la Política de Privacidad',
-                  style: GoogleFonts.outfit(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w400,
-                    color: const Color(0xFF666666),
+                child: GestureDetector(
+                  onTap: () {
+                    showDialog(
+                      context: context,
+                      builder: (context) => AlertDialog(
+                        title: Text('Términos y Condiciones', style: GoogleFonts.outfit(fontWeight: FontWeight.bold)),
+                        content: SingleChildScrollView(
+                          child: Text('Aquí van los términos y condiciones de la aplicación...', style: GoogleFonts.outfit()),
+                        ),
+                        actions: [
+                          TextButton(
+                            onPressed: () => Navigator.pop(context),
+                            child: Text('Cerrar', style: GoogleFonts.outfit(color: const Color(0xFFFC6707))),
+                          ),
+                        ],
+                      ),
+                    );
+                  },
+                  child: Text(
+                    'He leído y acepto los Términos de Servicio y la Política de Privacidad',
+                    style: GoogleFonts.outfit(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w400,
+                      color: Colors.blue,
+                      decoration: TextDecoration.underline,
+                    ),
                   ),
                 ),
               ),
@@ -321,9 +364,9 @@ class _RegisterStudentViewState extends State<RegisterStudentView> {
           SizedBox(
             width: double.infinity,
             child: TextButton(
-              onPressed: _isFormValid ? _submitForm : null,
+              onPressed: _passwordController.text.isNotEmpty ? _submitForm : null,
               style: TextButton.styleFrom(
-                backgroundColor: _isFormValid ? const Color(0xFFFC6707) : const Color(0xFFFDDBB3),
+                backgroundColor: _passwordController.text.isNotEmpty ? const Color(0xFFFC6707) : const Color(0xFFFDDBB3),
                 foregroundColor: Colors.white,
                 padding: const EdgeInsets.symmetric(vertical: 16),
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),

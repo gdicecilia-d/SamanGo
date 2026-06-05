@@ -6,6 +6,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'auth_base_view.dart';
 import 'login_view.dart';
 import 'select_role_view.dart';
+import '../../models/validators.dart';
 
 class RegisterOperatorView extends StatefulWidget {
   const RegisterOperatorView({super.key});
@@ -27,6 +28,8 @@ class _RegisterOperatorViewState extends State<RegisterOperatorView> {
   // Variables de estado
   bool _obscurePassword = true;
   bool _acceptTerms = false;
+  bool _showErrors = false;
+  final TextEditingController _fechaNacimientoController = TextEditingController();
   bool _isUploading = false;
   String? _selectedFileName;
   String? _uploadError;
@@ -48,14 +51,12 @@ class _RegisterOperatorViewState extends State<RegisterOperatorView> {
         _representanteController.text.length >= 5 &&
         _telefonoNumeroController.text.isNotEmpty &&
         RegExp(r'^\d{7}$').hasMatch(_telefonoNumeroController.text) &&
-        _emailController.text.isNotEmpty &&
-        RegExp(r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$').hasMatch(_emailController.text) &&
-        _passwordController.text.isNotEmpty &&
-        _passwordController.text.length >= 6 &&
+        FormValidators.validarEmail(_emailController.text) == null &&
+        FormValidators.validarPassword(_passwordController.text) == null &&
         _descripcionController.text.isNotEmpty &&
         _descripcionController.text.length >= 10 &&
         _selectedFileName != null &&
-        _acceptTerms;
+        _fechaNacimientoController.text.isNotEmpty;
   }
 
   // Seleccionar archivo
@@ -100,11 +101,14 @@ class _RegisterOperatorViewState extends State<RegisterOperatorView> {
   }
 
   void _submitForm() {
-    if (!_isFormValid) {
+    setState(() {
+      _showErrors = true;
+    });
+    if (!_isFormValid || !_acceptTerms) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Por favor completa todos los campos correctamente'),
-          backgroundColor: Color(0xFFFC6707),
+        SnackBar(
+          content: Text(!_acceptTerms ? 'Debes aceptar los Términos y Condiciones' : 'Por favor completa todos los campos correctamente'),
+          backgroundColor: const Color(0xFFFC6707),
         ),
       );
       return;
@@ -147,7 +151,7 @@ class _RegisterOperatorViewState extends State<RegisterOperatorView> {
             _buildTextField(
               controller: _empresaController,
               hint: 'Ej: RutaVzla',
-              errorText: _empresaController.text.isNotEmpty && _empresaController.text.length < 3
+              errorText: (_showErrors || _empresaController.text.isNotEmpty) && _empresaController.text.length < 3
                   ? 'Mínimo 3 caracteres'
                   : null,
             ),
@@ -166,7 +170,7 @@ class _RegisterOperatorViewState extends State<RegisterOperatorView> {
                     hint: 'Ej: 123456789',
                     keyboardType: TextInputType.number,
                     inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-                    errorText: _rifNumeroController.text.isNotEmpty && !RegExp(r'^\d{8,9}$').hasMatch(_rifNumeroController.text)
+                    errorText: (_showErrors || _rifNumeroController.text.isNotEmpty) && !RegExp(r'^\d{8,9}$').hasMatch(_rifNumeroController.text)
                         ? 'Debe tener entre 8 y 9 dígitos'
                         : null,
                   ),
@@ -180,7 +184,7 @@ class _RegisterOperatorViewState extends State<RegisterOperatorView> {
             _buildTextField(
               controller: _representanteController,
               hint: 'Ej: Juan Miguel Moreira',
-              errorText: _representanteController.text.isNotEmpty && _representanteController.text.length < 5
+              errorText: (_showErrors || _representanteController.text.isNotEmpty) && _representanteController.text.length < 5
                   ? 'Mínimo 5 caracteres'
                   : null,
             ),
@@ -201,7 +205,7 @@ class _RegisterOperatorViewState extends State<RegisterOperatorView> {
                     hint: '1234567',
                     keyboardType: TextInputType.number,
                     inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-                    errorText: _telefonoNumeroController.text.isNotEmpty && !RegExp(r'^\d{7}$').hasMatch(_telefonoNumeroController.text)
+                    errorText: (_showErrors || _telefonoNumeroController.text.isNotEmpty) && !RegExp(r'^\d{7}$').hasMatch(_telefonoNumeroController.text)
                         ? 'Debe tener 7 dígitos'
                         : null,
                   ),
@@ -216,8 +220,8 @@ class _RegisterOperatorViewState extends State<RegisterOperatorView> {
               controller: _emailController,
               hint: 'ejemplo@rutas.com',
               keyboardType: TextInputType.emailAddress,
-              errorText: _emailController.text.isNotEmpty && !RegExp(r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$').hasMatch(_emailController.text)
-                  ? 'Formato de email inválido'
+              errorText: (_showErrors || _emailController.text.isNotEmpty)
+                  ? FormValidators.validarEmail(_emailController.text)
                   : null,
             ),
             const SizedBox(height: 16),
@@ -227,13 +231,24 @@ class _RegisterOperatorViewState extends State<RegisterOperatorView> {
             _buildPasswordField(),
             const SizedBox(height: 16),
 
+            // Fecha de Nacimiento
+            _buildLabel('Fecha de Nacimiento'),
+            _buildTextField(
+              controller: _fechaNacimientoController,
+              hint: 'Ej: 12/05/2000',
+              errorText: (_showErrors && _fechaNacimientoController.text.isEmpty)
+                  ? 'La fecha de nacimiento es obligatoria'
+                  : null,
+            ),
+            const SizedBox(height: 16),
+
             // Descripción Servicios
             _buildLabel('Descripción Servicios'),
             _buildTextField(
               controller: _descripcionController,
               hint: 'Tipos de tours u ofertas',
               maxLines: 2,
-              errorText: _descripcionController.text.isNotEmpty && _descripcionController.text.length < 10
+              errorText: (_showErrors || _descripcionController.text.isNotEmpty) && _descripcionController.text.length < 10
                   ? 'Mínimo 10 caracteres'
                   : null,
             ),
@@ -252,9 +267,9 @@ class _RegisterOperatorViewState extends State<RegisterOperatorView> {
             SizedBox(
               width: double.infinity,
               child: TextButton(
-                onPressed: _isFormValid ? _submitForm : null,
+                onPressed: _passwordController.text.isNotEmpty ? _submitForm : null,
                 style: TextButton.styleFrom(
-                  backgroundColor: _isFormValid ? const Color(0xFFFC6707) : const Color(0xFFFDDBB3),
+                  backgroundColor: _passwordController.text.isNotEmpty ? const Color(0xFFFC6707) : const Color(0xFFFDDBB3),
                   foregroundColor: Colors.white,
                   padding: const EdgeInsets.symmetric(vertical: 16),
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
@@ -316,8 +331,8 @@ class _RegisterOperatorViewState extends State<RegisterOperatorView> {
   }
 
   Widget _buildPasswordField() {
-    final errorText = _passwordController.text.isNotEmpty && _passwordController.text.length < 6
-        ? 'Mínimo 6 caracteres'
+    final errorText = (_showErrors || _passwordController.text.isNotEmpty)
+        ? FormValidators.validarPassword(_passwordController.text)
         : null;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -471,12 +486,32 @@ class _RegisterOperatorViewState extends State<RegisterOperatorView> {
         ),
         const SizedBox(width: 8),
         Expanded(
-          child: Text(
-            'He leído y acepto los Términos de Servicio y la Política de Privacidad',
-            style: GoogleFonts.outfit(
-              fontSize: 12,
-              fontWeight: FontWeight.w400,
-              color: const Color(0xFF666666),
+          child: GestureDetector(
+            onTap: () {
+              showDialog(
+                context: context,
+                builder: (context) => AlertDialog(
+                  title: Text('Términos y Condiciones', style: GoogleFonts.outfit(fontWeight: FontWeight.bold)),
+                  content: SingleChildScrollView(
+                    child: Text('Aquí van los términos y condiciones de la aplicación...', style: GoogleFonts.outfit()),
+                  ),
+                  actions: [
+                    TextButton(
+                      onPressed: () => Navigator.pop(context),
+                      child: Text('Cerrar', style: GoogleFonts.outfit(color: const Color(0xFFFC6707))),
+                    ),
+                  ],
+                ),
+              );
+            },
+            child: Text(
+              'He leído y acepto los Términos de Servicio y la Política de Privacidad',
+              style: GoogleFonts.outfit(
+                fontSize: 12,
+                fontWeight: FontWeight.w400,
+                color: Colors.blue,
+                decoration: TextDecoration.underline,
+              ),
             ),
           ),
         ),
