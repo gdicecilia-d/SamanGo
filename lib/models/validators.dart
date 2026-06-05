@@ -48,15 +48,27 @@ class FormValidators {
     return null;
   }
 
-  // Validación de email para OPERADOR (cualquier dominio válido)
+  // Lista visible de dominios permitidos para el Operador
+  static const List<String> dominiosPermitidosOperador = ['.com', '.ve', '.com.ve'];
+
+  // Validación de email para OPERADOR
   static String? validarEmail(String? value) {
     if (value == null || value.isEmpty) {
       return 'El email es obligatorio';
     }
-    final regex = RegExp(r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$');
+    if (RegExp(r'[0-9]').hasMatch(value)) {
+      return 'El correo no puede contener números';
+    }
+    final regex = RegExp(r'^[a-zA-Z._%+-]+@[a-zA-Z.-]+\.[a-zA-Z]{2,}$');
     if (!regex.hasMatch(value)) {
       return 'Formato de email inválido (ejemplo@dominio.com)';
     }
+
+    bool hasValidDomain = dominiosPermitidosOperador.any((domain) => value.toLowerCase().endsWith(domain));
+    if (!hasValidDomain) {
+      return 'Dominio inválido. Permitidos: ${dominiosPermitidosOperador.join(", ")}';
+    }
+
     return null;
   }
 
@@ -65,7 +77,10 @@ class FormValidators {
     if (value == null || value.isEmpty) {
       return 'El correo es obligatorio';
     }
-    final regex = RegExp(r'^[a-zA-Z0-9._%+-]+@correo\.unimet\.edu\.ve$');
+    if (RegExp(r'[0-9]').hasMatch(value)) {
+      return 'El correo no puede contener números';
+    }
+    final regex = RegExp(r'^[a-zA-Z._%+-]+@correo\.unimet\.edu\.ve$');
     if (!regex.hasMatch(value)) {
       return 'Debe ser un correo UNIMET válido (@correo.unimet.edu.ve)';
     }
@@ -77,8 +92,22 @@ class FormValidators {
     if (value == null || value.isEmpty) {
       return 'La contraseña es obligatoria';
     }
-    if (value.length < 6) {
-      return 'Mínimo 6 caracteres';
+    if (value.length < 8) {
+      return 'Mínimo 8 caracteres';
+    }
+    final hasUpper = RegExp(r'[A-Z]').hasMatch(value);
+    final hasLower = RegExp(r'[a-z]').hasMatch(value);
+    final hasNumber = RegExp(r'[0-9]').hasMatch(value);
+    final hasSymbol = RegExp(r'[!@#\$%\^&\*\(\)_\+\-\=\[\]\{\};:\x27\",\.<>\/?\\|`~]').hasMatch(value);
+    
+    List<String> faltantes = [];
+    if (!hasUpper) faltantes.add('una mayúscula');
+    if (!hasLower) faltantes.add('una minúscula');
+    if (!hasNumber) faltantes.add('un número');
+    if (!hasSymbol) faltantes.add('un símbolo');
+    
+    if (faltantes.isNotEmpty) {
+      return 'Falta: ${faltantes.join(', ')}';
     }
     return null;
   }
@@ -121,6 +150,9 @@ class FormValidators {
     }
     if (value.length < 3) {
       return 'El nombre debe tener al menos 3 caracteres';
+    }
+    if (RegExp(r'[0-9]').hasMatch(value)) {
+      return 'No puede contener números';
     }
     return null;
   }
