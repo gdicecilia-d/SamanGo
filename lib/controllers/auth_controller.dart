@@ -24,6 +24,7 @@ class AuthController extends ChangeNotifier {
     required String email,
     required String password,
     required String nombre,
+    required String apellido,
     required String carnet,
     required String fechaNacimiento,
   }) async {
@@ -33,8 +34,9 @@ class AuthController extends ChangeNotifier {
         email: email,
         password: password,
         nombre: nombre,
+        apellido: apellido,
         carnet: carnet,
-        fechaNacimientoText: fechaNacimiento,
+        fechaNacimiento: fechaNacimiento,
       );
       _setLoading(false);
       return null;
@@ -65,13 +67,52 @@ class AuthController extends ChangeNotifier {
         rif: rif,
         telefono: telefono,
         descripcion: descripcion,
-        fechaNacimientoText: fechaNacimiento,
+        fechaNacimiento: fechaNacimiento,
       );
       _setLoading(false);
       return null;
     } catch (e) {
       _setLoading(false);
       return e.toString();
+    }
+  }
+
+  // Update Student Profile (carrera y teléfono)
+  Future<bool> updateStudentProfile({
+    required String carrera,
+    required String telefono,
+  }) async {
+    if (_usuarioActual == null) return false;
+    
+    _setLoading(true);
+    try {
+      await _authService.updateStudentProfile(
+        uid: _usuarioActual!.id,
+        carrera: carrera,
+        telefono: telefono,
+      );
+      _usuarioActual = await _authService.cargarUsuarioDeFirestore(_usuarioActual!.id);
+      _setLoading(false);
+      return true;
+    } catch (e) {
+      _setLoading(false);
+      return false;
+    }
+  }
+
+  // Update Profile Image (Base64)
+  Future<bool> updateProfileImage(String uid, String base64Image) async {
+    _setLoading(true);
+    try {
+      final success = await _authService.updateProfileImage(uid, base64Image);
+      if (success) {
+        _usuarioActual = await _authService.cargarUsuarioDeFirestore(uid);
+      }
+      _setLoading(false);
+      return success;
+    } catch (e) {
+      _setLoading(false);
+      return false;
     }
   }
 
@@ -83,7 +124,7 @@ class AuthController extends ChangeNotifier {
     _setLoading(false);
   }
 
-  // Recargar usuario (por ejemplo, después de actualizar la foto de perfil)
+  // Recargar usuario
   Future<void> reloadUser() async {
     if (_usuarioActual != null) {
       final updatedUser = await _authService.cargarUsuarioDeFirestore(_usuarioActual!.id);

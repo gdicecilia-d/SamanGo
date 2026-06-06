@@ -9,20 +9,6 @@ class AuthService {
 
   // Inicia sesión con email y contraseña
   Future<Usuario?> loginWithEmail(String email, String password) async {
-    // --- BACKDOOR PARA PRUEBAS RÁPIDAS ---
-    if (email.trim().toLowerCase() == 'admin' && password == '1234') {
-      const dummyId = 'dummy_operator_123';
-      final dummyUser = const Usuario(
-        id: dummyId,
-        nombre: 'Operador de Prueba',
-        correo: 'admin@operador.com',
-        rol: 'operador',
-      );
-      await _db.collection('operadores').doc(dummyId).set(dummyUser.toMap(), SetOptions(merge: true));
-      return await cargarUsuarioDeFirestore(dummyId);
-    }
-    // --------------------------------------
-
     try {
       final credential = await _auth.signInWithEmailAndPassword(
         email: email.trim(),
@@ -41,8 +27,9 @@ class AuthService {
     required String email,
     required String password,
     required String nombre,
+    required String apellido,
     required String carnet,
-    required String fechaNacimientoText,
+    required String fechaNacimiento,
   }) async {
     try {
       final credential = await _auth.createUserWithEmailAndPassword(
@@ -54,16 +41,17 @@ class AuthService {
       final usuario = Usuario(
         id: uid,
         nombre: nombre,
+        apellido: apellido,
         correo: email,
         rol: 'estudiante',
         carnet: carnet,
-        fechaNacimiento: fechaNacimientoText,
+        fechaNacimiento: fechaNacimiento,
       );
       await _db.collection('estudiantes').doc(uid).set(usuario.toMap());
       return usuario;
     } on FirebaseAuthException catch (e) {
       if (e.code == 'email-already-in-use') {
-        throw 'El usuario ya tiene una cuenta';
+        throw 'El correo ya está registrado';
       }
       throw 'Error en el registro. Intenta nuevamente.';
     }
@@ -78,7 +66,7 @@ class AuthService {
     required String rif,
     required String telefono,
     required String descripcion,
-    required String fechaNacimientoText,
+    required String fechaNacimiento,
   }) async {
     try {
       final credential = await _auth.createUserWithEmailAndPassword(
@@ -96,15 +84,48 @@ class AuthService {
         rif: rif,
         telefono: telefono,
         descripcion: descripcion,
-        fechaNacimiento: fechaNacimientoText,
+        fechaNacimiento: fechaNacimiento,
+        estado: 'pendiente',
       );
       await _db.collection('operadores').doc(uid).set(usuario.toMap());
       return usuario;
     } on FirebaseAuthException catch (e) {
       if (e.code == 'email-already-in-use') {
-        throw 'El usuario ya tiene una cuenta';
+        throw 'El correo ya está registrado';
       }
       throw 'Error en el registro. Intenta nuevamente.';
+    }
+  }
+
+  // Actualizar perfil del estudiante (carrera y teléfono)
+  Future<void> updateStudentProfile({
+    required String uid,
+    required String carrera,
+    required String telefono,
+  }) async {
+    await _db.collection('estudiantes').doc(uid).update({
+      'carrera': carrera,
+      'telefono': telefono,
+    });
+  }
+
+  // Actualizar foto de perfil (guarda Base64 en Firestore)
+  Future<bool> updateProfileImage(String uid, String base64Image) async {
+    try {
+      var doc = await _db.collection('estudiantes').doc(uid).get();
+      if (doc.exists) {
+        await _db.collection('estudiantes').doc(uid).update({'fotoBase64': base64Image});
+        return true;
+      }
+      doc = await _db.collection('operadores').doc(uid).get();
+      if (doc.exists) {
+        await _db.collection('operadores').doc(uid).update({'fotoBase64': base64Image});
+        return true;
+      }
+      return false;
+    } catch (e) {
+      print('Error al actualizar foto: $e');
+      return false;
     }
   }
 
@@ -119,17 +140,11 @@ class AuthService {
       if (doc.exists && doc.data() != null) {
         return Usuario.fromMap(uid, doc.data()!);
       }
-
-      // Fallback
-      final user = _auth.currentUser;
-      final nuevoUsuario = Usuario(
-        id: uid,
-        nombre: user?.displayName ?? 'Usuario',
-        correo: user?.email ?? '',
-        rol: 'estudiante',
-      );
-      await _db.collection('estudiantes').doc(uid).set(nuevoUsuario.toMap());
-      return nuevoUsuario;
+      doc = await _db.collection('administradores').doc(uid).get();
+      if (doc.exists && doc.data() != null) {
+        return Usuario.fromMap(uid, doc.data()!);
+      }
+      return null;
     } catch (e) {
       print('Error cargando usuario: $e');
       return null;
@@ -139,5 +154,10 @@ class AuthService {
   // Cierra sesión
   Future<void> logout() async {
     await _auth.signOut();
+  }
+
+  // Enviar correo de restablecimiento
+  Future<void> sendPasswordResetEmail(String email) async {
+    await _auth.sendPasswordResetEmail(email: email.trim());
   }
 }

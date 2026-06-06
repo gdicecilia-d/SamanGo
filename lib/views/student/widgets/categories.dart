@@ -10,46 +10,48 @@ class CategoriesSection extends StatelessWidget {
     final screenWidth = MediaQuery.of(context).size.width;
     final isMobile = screenWidth < 850;
 
-    return Padding(
-      padding: EdgeInsets.symmetric(horizontal: isMobile ? 16 : 24),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: EdgeInsets.symmetric(horizontal: isMobile ? 16 : 24),
+          child: Text(
             'Explorar por Categorías',
             style: GoogleFonts.outfit(
-              fontSize: isMobile ? 22 : 28,
+              fontSize: isMobile ? 20 : 24,
               fontWeight: FontWeight.bold,
               color: const Color(0xFF333333),
             ),
           ),
-          const SizedBox(height: 16),
-          if (isMobile)
-            Column(
-              children: [
-                _buildCategoryCard('Playas / Cayos', 'assets/images/playas_cayos.png', isMobile),
-                const SizedBox(height: 16),
-                _buildCategoryCard('Montañas / Trekking', 'assets/images/montañas_trekking.png', isMobile),
-                const SizedBox(height: 16),
-                _buildCategoryCard('Aventura / Ríos', 'assets/images/aventuras_rios.png', isMobile),
-                const SizedBox(height: 16),
-                _buildCategoryCard('Cultura / Ciudades', 'assets/images/cultura_ciudades.png', isMobile),
-              ],
-            )
-          else
-            Row(
-              children: [
-                Expanded(child: _buildCategoryCard('Playas / Cayos', 'assets/images/playas_cayos.png', isMobile)),
-                const SizedBox(width: 16),
-                Expanded(child: _buildCategoryCard('Montañas / Trekking', 'assets/images/montañas_trekking.png', isMobile)),
-                const SizedBox(width: 16),
-                Expanded(child: _buildCategoryCard('Aventura / Ríos', 'assets/images/aventuras_rios.png', isMobile)),
-                const SizedBox(width: 16),
-                Expanded(child: _buildCategoryCard('Cultura / Ciudades', 'assets/images/cultura_ciudades.png', isMobile)),
-              ],
-            ),
-        ],
-      ),
+        ),
+        const SizedBox(height: 16),
+        Padding(
+          padding: EdgeInsets.symmetric(horizontal: isMobile ? 16 : 24),
+          child: isMobile
+              ? Column(
+                  children: [
+                    _buildCategoryCard('Playas / Cayos', 'assets/images/playas_cayos.png', isMobile),
+                    const SizedBox(height: 16),
+                    _buildCategoryCard('Montañas / Trekking', 'assets/images/montañas_trekking.png', isMobile),
+                    const SizedBox(height: 16),
+                    _buildCategoryCard('Aventura / Ríos', 'assets/images/aventuras_rios.png', isMobile),
+                    const SizedBox(height: 16),
+                    _buildCategoryCard('Cultura / Ciudades', 'assets/images/cultura_ciudades.png', isMobile),
+                  ],
+                )
+              : Row(
+                  children: [
+                    Expanded(child: _buildCategoryCard('Playas / Cayos', 'assets/images/playas_cayos.png', isMobile)),
+                    const SizedBox(width: 16),
+                    Expanded(child: _buildCategoryCard('Montañas / Trekking', 'assets/images/montañas_trekking.png', isMobile)),
+                    const SizedBox(width: 16),
+                    Expanded(child: _buildCategoryCard('Aventura / Ríos', 'assets/images/aventuras_rios.png', isMobile)),
+                    const SizedBox(width: 16),
+                    Expanded(child: _buildCategoryCard('Cultura / Ciudades', 'assets/images/cultura_ciudades.png', isMobile)),
+                  ],
+                ),
+        ),
+      ],
     );
   }
 
@@ -57,7 +59,9 @@ class CategoriesSection extends StatelessWidget {
     return MouseRegion(
       cursor: SystemMouseCursors.click,
       child: GestureDetector(
-        onTap: () {},
+        onTap: () {
+          // TODO: Filtrar destinos por categoría
+        },
         child: Container(
           height: isMobile ? 110 : 120,
           width: double.infinity,

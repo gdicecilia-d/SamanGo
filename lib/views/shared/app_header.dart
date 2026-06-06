@@ -1,23 +1,21 @@
-// Header universal para usuarios autenticados (Estudiante, Operador, Admin)
+// Header universal para toda la app (Estudiante, Operador, Admin)
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
-import '../../../controllers/auth_controller.dart';
-import '../../../views/shared/widgets/custom_dialog.dart';
-import '../../auth/login_view.dart';
+import '../../controllers/auth_controller.dart';
+import 'widgets/custom_dialog.dart';  // Ruta corregida
 
-class UserHeader extends StatefulWidget {
+class AppHeader extends StatefulWidget {
   final String activeMenu;
   final Function(String) onMenuSelected;
   final VoidCallback onEditProfile;
   final VoidCallback onLogout;
   final List<String> menuItems;
   final bool isMobile;
-  final VoidCallback? onNotificationsTap;
   final VoidCallback? onMenuTap;
 
-  const UserHeader({
+  const AppHeader({
     super.key,
     required this.activeMenu,
     required this.onMenuSelected,
@@ -25,15 +23,14 @@ class UserHeader extends StatefulWidget {
     required this.onLogout,
     required this.menuItems,
     required this.isMobile,
-    this.onNotificationsTap,
     this.onMenuTap,
   });
 
   @override
-  State<UserHeader> createState() => _UserHeaderState();
+  State<AppHeader> createState() => _AppHeaderState();
 }
 
-class _UserHeaderState extends State<UserHeader> {
+class _AppHeaderState extends State<AppHeader> {
   final GlobalKey _avatarKey = GlobalKey();
   OverlayEntry? _overlayEntry;
 
@@ -45,7 +42,6 @@ class _UserHeaderState extends State<UserHeader> {
     }
 
     final RenderBox renderBox = _avatarKey.currentContext!.findRenderObject() as RenderBox;
-    final position = renderBox.localToGlobal(Offset.zero);
 
     _overlayEntry = OverlayEntry(
       builder: (context) => GestureDetector(
@@ -264,7 +260,7 @@ class _UserHeaderState extends State<UserHeader> {
             ),
           ),
           const SizedBox(width: 115),
-          // Menú items
+          // Menú items (dinámico)
           Row(
             children: widget.menuItems.map((title) {
               final isActive = title == widget.activeMenu;

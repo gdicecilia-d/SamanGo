@@ -1,14 +1,17 @@
 // Pantalla de editar perfil del estudiante
+import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'widgets/student_header.dart';
-import '../../widgets/custom_dialog.dart';
+import 'package:image_picker/image_picker.dart';
+import 'package:provider/provider.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import '../shared/app_header.dart';
+import '../../views/shared/widgets/custom_dialog.dart';
+import '../../controllers/auth_controller.dart';
+import '../../services/storage_service.dart';
 import '../auth/login_view.dart';
 import 'student_home_view.dart';
-import 'package:provider/provider.dart';
-import '../../controllers/auth_controller.dart';
-import '../../controllers/profile_controller.dart';
-import 'package:image_picker/image_picker.dart';
 import '../../models/usuario.dart';
 
 class EditProfileView extends StatefulWidget {
@@ -21,18 +24,63 @@ class EditProfileView extends StatefulWidget {
 class _EditProfileViewState extends State<EditProfileView> {
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
   final TextEditingController _emailController = TextEditingController();
-  final TextEditingController _carreraController = TextEditingController();
-  final TextEditingController _telefonoController = TextEditingController();
+  final TextEditingController _telefonoNumeroController = TextEditingController();
+  final StorageService _storageService = StorageService();
+
+  String? _selectedCarrera;
+  String _selectedTelefonoPrefijo = '0412';
+  bool _isHoveringFoto = false;
+  bool _isLoading = false;
+  
+  final List<String> _telefonoOpciones = ['0412', '0414', '0416', '0424', '0426', '0212'];
+  
+  final List<String> _carreras = [
+    'Ingeniería Civil',
+    'Ingeniería de Producción',
+    'Ingeniería de Sistemas',
+    'Ingeniería Eléctrica',
+    'Ingeniería Mecánica',
+    'Ingeniería Química',
+    'TSU en Sistemas Inteligentes',
+    'Administración',
+    'Ciencias Administrativas',
+    'Contaduría Pública',
+    'Economía Empresarial',
+    'Matemáticas Industriales',
+    'Psicología',
+    'Derecho',
+    'Estudios Liberales',
+    'Estudios Internacionales',
+    'Educación',
+    'Idiomas Modernos',
+  ];
 
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      final user = Provider.of<AuthController>(context, listen: false).usuarioActual;
-      if (user != null) {
+    _cargarDatosUsuario();
+  }
+
+  @override
+  void dispose() {
+    _emailController.dispose();
+    _telefonoNumeroController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _cargarDatosUsuario() async {
+    final auth = Provider.of<AuthController>(context, listen: false);
+    final user = auth.usuarioActual;
+    if (user != null) {
+      setState(() {
         _emailController.text = user.correo;
-      }
-    });
+        _selectedCarrera = user.carrera;
+        if (user.telefono != null && user.telefono!.length >= 11) {
+          _selectedTelefonoPrefijo = user.telefono!.substring(0, 4);
+          _telefonoNumeroController.text = user.telefono!.substring(4);
+        }
+      });
+    }
   }
 
   void _mostrarMensaje(String mensaje) {
@@ -54,8 +102,57 @@ class _EditProfileViewState extends State<EditProfileView> {
     );
 
     if (confirmar == true) {
-      _mostrarMensaje('Perfil actualizado correctamente');
-      Navigator.pop(context);
+      setState(() => _isLoading = true);
+      
+      final telefonoCompleto = _telefonoNumeroController.text.isNotEmpty 
+          ? '$_selectedTelefonoPrefijo${_telefonoNumeroController.text}'
+          : '';
+      
+      final success = await Provider.of<AuthController>(context, listen: false).updateStudentProfile(
+        carrera: _selectedCarrera ?? '',
+        telefono: telefonoCompleto,
+      );
+      
+      if (success) {
+        await Provider.of<AuthController>(context, listen: false).reloadUser();
+        await _cargarDatosUsuario();
+        _mostrarMensaje('Perfil actualizado correctamente');
+        if (!mounted) return;
+        Navigator.pop(context);
+      } else {
+        _mostrarMensaje('Error al actualizar el perfil');
+      }
+      
+      setState(() => _isLoading = false);
+    }
+  }
+
+  Future<void> _actualizarFoto() async {
+    final ImagePicker picker = ImagePicker();
+    final XFile? image = await picker.pickImage(source: ImageSource.gallery);
+    
+    if (image != null) {
+      final ext = image.name.split('.').last.toLowerCase();
+      if (ext == 'jpg' || ext == 'jpeg' || ext == 'png') {
+        setState(() => _isLoading = true);
+        final bytes = await image.readAsBytes();
+        final auth = Provider.of<AuthController>(context, listen: false);
+        final userId = auth.usuarioActual?.id ?? '';
+        
+        final base64Image = _storageService.imageToBase64(bytes);
+        final success = await auth.updateProfileImage(userId, base64Image);
+        
+        if (success) {
+          await auth.reloadUser();
+          await _cargarDatosUsuario();
+          _mostrarMensaje('Foto actualizada exitosamente');
+        } else {
+          _mostrarMensaje('Error al actualizar la foto');
+        }
+        setState(() => _isLoading = false);
+      } else {
+        _mostrarMensaje('Solo se permiten formatos PNG y JPG/JPEG');
+      }
     }
   }
 
@@ -79,125 +176,21 @@ class _EditProfileViewState extends State<EditProfileView> {
     });
   }
 
-  void _handleMenuSelected(String menu, BuildContext context) {
+  void _handleMenuSelected(String menu) {
     if (menu == 'Inicio') {
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(builder: (_) => const StudentHomeView()),
       );
     } else if (menu == 'Mis Viajes') {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Mis Viajes - Próximamente'), backgroundColor: Color(0xFFFC6707)),
-      );
+      _mostrarMensaje('Mis Viajes - Próximamente');
     } else if (menu == 'Favoritos') {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Favoritos - Próximamente'), backgroundColor: Color(0xFFFC6707)),
-      );
-    } else if (menu == 'Notificaciones') {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Notificaciones - Próximamente'), backgroundColor: Color(0xFFFC6707)),
-      );
+      _mostrarMensaje('Favoritos - Próximamente');
     }
   }
 
   void _openDrawer() {
     _scaffoldKey.currentState?.openEndDrawer();
-  }
-
-  Widget _buildDrawer(BuildContext context) {
-    return Drawer(
-      backgroundColor: Colors.white,
-      width: 280,
-      child: SafeArea(
-        child: Column(
-          children: [
-            const SizedBox(height: 24),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 24),
-              child: Row(
-                children: [
-                  Container(
-                    width: 50,
-                    height: 50,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      border: Border.all(color: const Color(0xFFFC6707), width: 2),
-                    ),
-                    child: const CircleAvatar(
-                      backgroundColor: Color(0xFFFDDBB3),
-                      child: Icon(Icons.person, color: Color(0xFFFC6707), size: 28),
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Consumer<AuthController>(
-                      builder: (context, auth, _) {
-                        return Text(
-                          auth.usuarioActual?.nombre ?? 'Estudiante',
-                          style: GoogleFonts.outfit(fontSize: 18, fontWeight: FontWeight.bold, color: const Color(0xFF333333)),
-                        );
-                      }
-                    ),
-                  ),
-                  IconButton(
-                    icon: const Icon(Icons.edit, color: Color(0xFFFC6707), size: 20),
-                    onPressed: () {
-                      Navigator.pop(context);
-                    },
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 16),
-            const Divider(height: 1, thickness: 1, color: Color(0xFFE0E0E0)),
-            _buildDrawerItem('Inicio', Icons.home_outlined, () {
-              Navigator.pop(context);
-              _handleMenuSelected('Inicio', context);
-            }),
-            _buildDrawerItem('Mis Viajes', Icons.airplane_ticket_outlined, () {
-              Navigator.pop(context);
-              _handleMenuSelected('Mis Viajes', context);
-            }),
-            _buildDrawerItem('Favoritos', Icons.favorite_border, () {
-              Navigator.pop(context);
-              _handleMenuSelected('Favoritos', context);
-            }),
-            _buildDrawerItem('Notificaciones', Icons.notifications_none_outlined, () {
-              Navigator.pop(context);
-              _handleMenuSelected('Notificaciones', context);
-            }),
-            const Spacer(),
-            const Divider(height: 1, thickness: 1, color: Color(0xFFE0E0E0)),
-            _buildDrawerItem('Cerrar Sesión', Icons.logout_outlined, () {
-              Navigator.pop(context);
-              CustomConfirmDialog.show(
-                context: context,
-                title: 'Cerrar Sesión',
-                message: '¿Estás seguro de que deseas cerrar sesión?',
-                confirmText: 'Salir',
-                icon: Icons.logout,
-              ).then((confirm) {
-                if (confirm == true) {
-                  _handleCerrarSesion();
-                }
-              });
-            }),
-            const SizedBox(height: 24),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildDrawerItem(String title, IconData icon, VoidCallback onTap) {
-    return ListTile(
-      leading: Icon(icon, color: const Color(0xFFFC6707)),
-      title: Text(
-        title,
-        style: GoogleFonts.outfit(fontSize: 16, fontWeight: FontWeight.w500, color: const Color(0xFF333333)),
-      ),
-      onTap: onTap,
-    );
   }
 
   @override
@@ -207,25 +200,26 @@ class _EditProfileViewState extends State<EditProfileView> {
     final isLandscape = MediaQuery.of(context).orientation == Orientation.landscape;
     final auth = Provider.of<AuthController>(context);
     final user = auth.usuarioActual;
-    final nombreCompleto = user?.nombre ?? 'Estudiante';
-    final partesNombre = nombreCompleto.split(' ');
-    final nombres = partesNombre.isNotEmpty ? partesNombre[0] : '';
-    final apellidos = partesNombre.length > 1 ? partesNombre.sublist(1).join(' ') : '';
+
+    if (user == null) {
+      return const Scaffold(
+        body: Center(child: CircularProgressIndicator()),
+      );
+    }
 
     return Scaffold(
       key: _scaffoldKey,
       backgroundColor: Colors.white,
-      endDrawer: isMobile ? _buildDrawer(context) : null,
+      endDrawer: isMobile ? _buildDrawer() : null,
       body: Column(
         children: [
-          UserHeader(
+          AppHeader(
             activeMenu: 'Perfil',
-            onMenuSelected: (menu) => _handleMenuSelected(menu, context),
+            onMenuSelected: _handleMenuSelected,
             onEditProfile: () {},
             onLogout: _handleCerrarSesion,
             menuItems: const ['Inicio', 'Mis Viajes', 'Favoritos'],
             isMobile: isMobile,
-            onNotificationsTap: null,
             onMenuTap: isMobile ? _openDrawer : null,
           ),
           Expanded(
@@ -257,7 +251,7 @@ class _EditProfileViewState extends State<EditProfileView> {
                           children: [
                             _buildAvatarSection(user),
                             const SizedBox(height: 24),
-                            _buildFormSection(user, nombres, apellidos, user?.carnet),
+                            _buildFormSection(user),
                           ],
                         )
                       else
@@ -266,7 +260,7 @@ class _EditProfileViewState extends State<EditProfileView> {
                           children: [
                             _buildAvatarSection(user),
                             const SizedBox(width: 48),
-                            Expanded(child: _buildFormSection(user, nombres, apellidos, user?.carnet)),
+                            Expanded(child: _buildFormSection(user)),
                           ],
                         ),
                       const SizedBox(height: 32),
@@ -284,61 +278,149 @@ class _EditProfileViewState extends State<EditProfileView> {
     );
   }
 
-  Widget _buildAvatarSection(Usuario? user) {
-    final String userId = user?.id ?? '';
-    final String? fotoUrl = user?.fotoUrl;
+  Widget _buildDrawer() {
+    final auth = Provider.of<AuthController>(context);
+    final user = auth.usuarioActual;
+    
+    return Drawer(
+      backgroundColor: Colors.white,
+      width: 280,
+      child: SafeArea(
+        child: Column(
+          children: [
+            const SizedBox(height: 24),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 24),
+              child: Row(
+                children: [
+                  Container(
+                    width: 50,
+                    height: 50,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      border: Border.all(color: const Color(0xFFFC6707), width: 2),
+                    ),
+                    child: ClipOval(
+                      child: user?.fotoBase64 != null
+                          ? Image.memory(
+                              base64Decode(user!.fotoBase64!),
+                              width: 50,
+                              height: 50,
+                              fit: BoxFit.cover,
+                              gaplessPlayback: true,
+                            )
+                          : Container(
+                              color: const Color(0xFFFDDBB3),
+                              child: const Icon(Icons.person, color: Color(0xFFFC6707), size: 28),
+                            ),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          user?.nombre ?? 'Estudiante',
+                          style: GoogleFonts.outfit(fontSize: 16, fontWeight: FontWeight.bold, color: const Color(0xFF333333)),
+                        ),
+                        Text(
+                          user?.apellido ?? '',
+                          style: GoogleFonts.outfit(fontSize: 14, color: const Color(0xFF666666)),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 16),
+            const Divider(height: 1, thickness: 1, color: Color(0xFFE0E0E0)),
+            _buildDrawerItem('Inicio', Icons.home_outlined, () {
+              Navigator.pop(context);
+              _handleMenuSelected('Inicio');
+            }),
+            _buildDrawerItem('Mis Viajes', Icons.airplane_ticket_outlined, () {
+              Navigator.pop(context);
+              _handleMenuSelected('Mis Viajes');
+            }),
+            _buildDrawerItem('Favoritos', Icons.favorite_border, () {
+              Navigator.pop(context);
+              _handleMenuSelected('Favoritos');
+            }),
+            const Spacer(),
+            const Divider(height: 1, thickness: 1, color: Color(0xFFE0E0E0)),
+            _buildDrawerItem('Cerrar Sesión', Icons.logout_outlined, () {
+              Navigator.pop(context);
+              _handleCerrarSesion();
+            }),
+            const SizedBox(height: 24),
+          ],
+        ),
+      ),
+    );
+  }
 
+  Widget _buildDrawerItem(String title, IconData icon, VoidCallback onTap) {
+    return ListTile(
+      leading: Icon(icon, color: const Color(0xFFFC6707)),
+      title: Text(
+        title,
+        style: GoogleFonts.outfit(fontSize: 16, fontWeight: FontWeight.w500, color: const Color(0xFF333333)),
+      ),
+      onTap: onTap,
+    );
+  }
+
+  Widget _buildAvatarSection(Usuario user) {
     return Column(
       children: [
-        Container(
-          width: 100,
-          height: 100,
-          decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            border: Border.all(color: const Color(0xFFFC6707), width: 3),
-          ),
-          child: CircleAvatar(
-            backgroundColor: const Color(0xFFFDDBB3),
-            radius: 50,
-            backgroundImage: fotoUrl != null ? NetworkImage(fotoUrl) : null,
-            child: fotoUrl == null
-                ? const Icon(Icons.person, color: Color(0xFFFC6707), size: 50)
-                : null,
+        GestureDetector(
+          onTap: _actualizarFoto,
+          child: Container(
+            width: 100,
+            height: 100,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              border: Border.all(color: const Color(0xFFFC6707), width: 3),
+            ),
+            child: ClipOval(
+              child: user.fotoBase64 != null
+                  ? Image.memory(
+                      base64Decode(user.fotoBase64!),
+                      width: 100,
+                      height: 100,
+                      fit: BoxFit.cover,
+                      gaplessPlayback: true,
+                    )
+                  : Container(
+                      color: const Color(0xFFFDDBB3),
+                      child: const Icon(Icons.person, color: Color(0xFFFC6707), size: 50),
+                    ),
+            ),
           ),
         ),
         const SizedBox(height: 12),
         MouseRegion(
           cursor: SystemMouseCursors.click,
+          onEnter: (_) => setState(() => _isHoveringFoto = true),
+          onExit: (_) => setState(() => _isHoveringFoto = false),
           child: GestureDetector(
-            onTap: () async {
-              final ImagePicker picker = ImagePicker();
-              final XFile? image = await picker.pickImage(source: ImageSource.gallery);
-              if (image != null) {
-                final ext = image.name.split('.').last.toLowerCase();
-                if (ext == 'jpg' || ext == 'jpeg' || ext == 'png') {
-                  final bytes = await image.readAsBytes();
-                  final profileController = Provider.of<ProfileController>(context, listen: false);
-                  
-                  _mostrarMensaje('Subiendo foto...');
-                  final success = await profileController.updateProfileImage(userId, bytes, ext);
-                  
-                  if (success) {
-                    await Provider.of<AuthController>(context, listen: false).reloadUser();
-                    _mostrarMensaje('Imagen actualizada exitosamente');
-                  } else {
-                    _mostrarMensaje('Hubo un error al actualizar la imagen');
-                  }
-                } else {
-                  _mostrarMensaje('Solo se permiten formatos PNG y JPG/JPEG');
-                }
-              }
-            },
-            child: Text(
-              'Actualizar foto',
-              style: GoogleFonts.outfit(
-                fontSize: 14,
-                fontWeight: FontWeight.w500,
-                color: const Color(0xFFFC6707),
+            onTap: _actualizarFoto,
+            child: AnimatedContainer(
+              duration: const Duration(milliseconds: 150),
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(20),
+                color: _isHoveringFoto ? const Color(0xFFFC6707).withOpacity(0.1) : Colors.transparent,
+              ),
+              child: Text(
+                'Actualizar foto',
+                style: GoogleFonts.outfit(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w500,
+                  color: const Color(0xFFFC6707),
+                ),
               ),
             ),
           ),
@@ -347,38 +429,165 @@ class _EditProfileViewState extends State<EditProfileView> {
     );
   }
 
-  Widget _buildFormSection(Usuario? user, String nombres, String apellidos, String? carnet) {
+  Widget _buildFormSection(Usuario user) {
     return Column(
       children: [
         Row(
           children: [
-            Expanded(child: _buildDisabledField('Nombres', value: nombres)),
+            Expanded(child: _buildDisabledField('Nombres', value: user.nombre)),
             const SizedBox(width: 16),
-            Expanded(child: _buildDisabledField('Apellidos', value: apellidos)),
+            Expanded(child: _buildDisabledField('Apellidos', value: user.apellido ?? '---')),
           ],
         ),
         const SizedBox(height: 16),
         Row(
           children: [
-            Expanded(child: _buildDisabledField('Fecha de Nacimiento', value: user?.fechaNacimiento ?? 'No registrada')),
+            Expanded(child: _buildDisabledField('Fecha de Nacimiento', value: user.fechaNacimiento ?? 'No registrada')),
             const SizedBox(width: 16),
-            Expanded(child: _buildDisabledField('Carnet', value: carnet ?? 'No registrado')),
+            Expanded(child: _buildDisabledField('Carnet', value: user.carnet ?? 'No registrado')),
           ],
         ),
         const SizedBox(height: 16),
         Row(
           children: [
-            Expanded(child: _buildEditableField('Correo Unimet', _emailController)),
+            Expanded(child: _buildDisabledField('Correo Unimet', value: user.correo)),
             const SizedBox(width: 16),
-            Expanded(child: _buildEditableField('Carrera', _carreraController)),
+            Expanded(child: _buildCarreraDropdown()),
           ],
         ),
         const SizedBox(height: 16),
         Row(
           children: [
-            Expanded(child: _buildEditableField('Número de Teléfono', _telefonoController)),
+            Expanded(child: _buildTelefonoField()),
             const SizedBox(width: 16),
             Expanded(child: Container()),
+          ],
+        ),
+      ],
+    );
+  }
+
+  Widget _buildCarreraDropdown() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Carrera',
+          style: GoogleFonts.outfit(
+            fontSize: 12,
+            fontWeight: FontWeight.w500,
+            color: const Color(0xFF666666),
+          ),
+        ),
+        const SizedBox(height: 4),
+        Container(
+          width: double.infinity,
+          decoration: BoxDecoration(
+            color: const Color(0xFFF5F5F5),
+            borderRadius: BorderRadius.circular(30),
+          ),
+          child: DropdownButtonFormField<String>(
+            value: _selectedCarrera != null && _carreras.contains(_selectedCarrera) 
+                ? _selectedCarrera 
+                : null,
+            hint: Text(
+              'Selecciona tu carrera',
+              style: GoogleFonts.outfit(fontSize: 14, color: const Color(0xFF999999)),
+            ),
+            items: _carreras.map((carrera) {
+              return DropdownMenuItem(
+                value: carrera,
+                child: Text(carrera, style: GoogleFonts.outfit(fontSize: 14)),
+              );
+            }).toList(),
+            onChanged: (value) {
+              setState(() {
+                _selectedCarrera = value;
+              });
+            },
+            decoration: const InputDecoration(
+              border: InputBorder.none,
+              contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            ),
+            isExpanded: true,
+            icon: const Icon(Icons.arrow_drop_down, color: Color(0xFFFC6707)),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildTelefonoField() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Número de Teléfono',
+          style: GoogleFonts.outfit(
+            fontSize: 12,
+            fontWeight: FontWeight.w500,
+            color: const Color(0xFF666666),
+          ),
+        ),
+        const SizedBox(height: 4),
+        Row(
+          children: [
+            Container(
+              width: 85,
+              height: 50,
+              decoration: BoxDecoration(
+                color: const Color(0xFFF5F5F5),
+                borderRadius: BorderRadius.circular(30),
+              ),
+              child: DropdownButtonFormField<String>(
+                value: _selectedTelefonoPrefijo,
+                items: _telefonoOpciones.map((prefijo) {
+                  return DropdownMenuItem(
+                    value: prefijo,
+                    child: Text(prefijo, style: GoogleFonts.outfit(fontSize: 16)),
+                  );
+                }).toList(),
+                onChanged: (value) {
+                  setState(() {
+                    _selectedTelefonoPrefijo = value!;
+                  });
+                },
+                decoration: const InputDecoration(
+                  border: InputBorder.none,
+                  contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                ),
+                icon: const Icon(Icons.arrow_drop_down, color: Color(0xFFFC6707)),
+              ),
+            ),
+            const SizedBox(width: 8),
+            Expanded(
+              child: TextField(
+                controller: _telefonoNumeroController,
+                keyboardType: TextInputType.number,
+                inputFormatters: [
+                  FilteringTextInputFormatter.digitsOnly,
+                  LengthLimitingTextInputFormatter(7)
+                ],
+                style: GoogleFonts.outfit(fontSize: 14),
+                decoration: InputDecoration(
+                  hintText: '1234567',
+                  hintStyle: GoogleFonts.outfit(fontSize: 14, color: const Color(0xFF999999)),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(30),
+                    borderSide: const BorderSide(color: Color(0xFFE0E0E0)),
+                  ),
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(30),
+                    borderSide: const BorderSide(color: Color(0xFFE0E0E0)),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(30),
+                    borderSide: const BorderSide(color: Color(0xFFFC6707), width: 1.5),
+                  ),
+                  contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                ),
+              ),
+            ),
           ],
         ),
       ],
@@ -392,17 +601,23 @@ class _EditProfileViewState extends State<EditProfileView> {
         SizedBox(
           width: isMobile ? 140 : 180,
           child: ElevatedButton(
-            onPressed: _guardarCambios,
+            onPressed: _isLoading ? null : _guardarCambios,
             style: ElevatedButton.styleFrom(
               backgroundColor: const Color(0xFFFC6707),
               foregroundColor: Colors.white,
               padding: EdgeInsets.symmetric(vertical: isMobile ? 10 : 14),
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
             ),
-            child: Text(
-              'Actualizar',
-              style: GoogleFonts.outfit(fontSize: isMobile ? 14 : 16, fontWeight: FontWeight.bold),
-            ),
+            child: _isLoading
+                ? const SizedBox(
+                    width: 20,
+                    height: 20,
+                    child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                  )
+                : Text(
+                    'Actualizar',
+                    style: GoogleFonts.outfit(fontSize: isMobile ? 14 : 16, fontWeight: FontWeight.bold),
+                  ),
           ),
         ),
         SizedBox(width: 16),
@@ -429,7 +644,7 @@ class _EditProfileViewState extends State<EditProfileView> {
     );
   }
 
-  Widget _buildDisabledField(String label, {String? value}) {
+  Widget _buildDisabledField(String label, {required String value}) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -443,27 +658,9 @@ class _EditProfileViewState extends State<EditProfileView> {
             borderRadius: BorderRadius.circular(30),
             border: Border.all(color: const Color(0xFFE0E0E0), width: 1),
           ),
-          child: Text(value ?? '---', style: GoogleFonts.outfit(fontSize: 14, color: const Color(0xFF999999))),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildEditableField(String label, TextEditingController controller) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(label, style: GoogleFonts.outfit(fontSize: 12, fontWeight: FontWeight.w500, color: const Color(0xFF666666))),
-        const SizedBox(height: 4),
-        TextField(
-          controller: controller,
-          decoration: InputDecoration(
-            hintText: 'Ingrese $label',
-            hintStyle: GoogleFonts.outfit(fontSize: 14, color: const Color(0xFF999999)),
-            border: OutlineInputBorder(borderRadius: BorderRadius.circular(30), borderSide: const BorderSide(color: Color(0xFFE0E0E0))),
-            enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(30), borderSide: const BorderSide(color: Color(0xFFE0E0E0))),
-            focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(30), borderSide: const BorderSide(color: Color(0xFFFC6707), width: 1.5)),
-            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          child: Text(
+            value.isEmpty ? '---' : value,
+            style: GoogleFonts.outfit(fontSize: 14, color: const Color(0xFF333333)),
           ),
         ),
       ],

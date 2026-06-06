@@ -1,4 +1,4 @@
-// Vista principal del Home que implementa el patrón Template Method y Observer 
+// Vista principal del Home
 import 'package:flutter/material.dart';
 import '../controllers/home_controller.dart';
 import 'widgets/base_scaffold.dart';

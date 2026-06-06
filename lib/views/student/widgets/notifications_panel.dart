@@ -8,7 +8,7 @@ class NotificationsPanel extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      margin: const EdgeInsets.only(right: 24),
+      width: double.infinity,
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
@@ -26,7 +26,7 @@ class NotificationsPanel extends StatelessWidget {
         children: [
           Container(
             width: double.infinity,
-            padding: const EdgeInsets.symmetric(vertical: 12),
+            padding: const EdgeInsets.symmetric(vertical: 14),
             decoration: const BoxDecoration(
               color: Color(0xFFFC6707),
               borderRadius: BorderRadius.only(
@@ -46,10 +46,11 @@ class NotificationsPanel extends StatelessWidget {
             ),
           ),
           const Padding(
-            padding: EdgeInsets.all(24),
+            padding: EdgeInsets.all(32),
             child: Center(
               child: Text(
                 'No hay notificaciones por el momento',
+                textAlign: TextAlign.center,
                 style: TextStyle(fontSize: 14, color: Color(0xFF999999)),
               ),
             ),

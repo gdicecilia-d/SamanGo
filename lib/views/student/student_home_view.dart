@@ -1,18 +1,17 @@
-// Pantalla principal del estudiante 
+// Pantalla principal del estudiante
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'widgets/student_header.dart';
-import 'widgets/search_bar.dart';
-import 'widgets/recommendations.dart';
-import 'widgets/categories.dart';
-import 'widgets/offers.dart';
-import 'widgets/notifications_panel.dart';
-import 'widgets/trending_chart.dart';
-import '../../widgets/custom_dialog.dart';
-import '../auth/login_view.dart';
-import 'edit_profile_view.dart';
 import 'package:provider/provider.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import '../shared/app_header.dart';
 import '../../controllers/auth_controller.dart';
+import 'edit_profile_view.dart';
+import 'widgets/search_bar.dart';
+import 'widgets/categories.dart';
+import 'widgets/destination_card.dart';
+import 'destination_detail_view.dart';
+import '../../views/shared/widgets/custom_dialog.dart';
+import '../auth/login_view.dart';
 
 class StudentHomeView extends StatefulWidget {
   const StudentHomeView({super.key});
@@ -23,27 +22,59 @@ class StudentHomeView extends StatefulWidget {
 
 class _StudentHomeViewState extends State<StudentHomeView> {
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
+  String _activeMenu = 'Inicio';
+  final List<String> _menuItems = ['Inicio', 'Mis Viajes', 'Favoritos'];
 
-  void _handleMenuSelected(String menu, BuildContext context) {
+  void _handleMenuSelected(String menu) {
+    setState(() {
+      _activeMenu = menu;
+    });
+    
     if (menu == 'Mis Viajes') {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Mis Viajes - Próximamente'), backgroundColor: Color(0xFFFC6707)),
-      );
+      _mostrarMensaje('Mis Viajes - Próximamente');
     } else if (menu == 'Favoritos') {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Favoritos - Próximamente'), backgroundColor: Color(0xFFFC6707)),
-      );
+      _mostrarMensaje('Favoritos - Próximamente');
     }
   }
 
-  void _handleEditProfile(BuildContext context) {
-    Navigator.push(context, MaterialPageRoute(builder: (_) => const EditProfileView()));
+  void _handleEditProfile() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (_) => const EditProfileView()),
+    );
   }
 
-  void _handleLogout(BuildContext context) async {
-    await Provider.of<AuthController>(context, listen: false).logout();
-    if (!mounted) return;
-    Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => const LoginView()));
+  void _handleLogout() {
+    _mostrarDialogoCerrarSesion();
+  }
+
+  void _mostrarDialogoCerrarSesion() {
+    CustomConfirmDialog.show(
+      context: context,
+      title: 'Cerrar Sesión',
+      message: '¿Estás seguro de que deseas cerrar sesión?',
+      confirmText: 'Salir',
+      icon: Icons.logout,
+    ).then((confirm) async {
+      if (confirm == true) {
+        await Provider.of<AuthController>(context, listen: false).logout();
+        if (!context.mounted) return;
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (_) => const LoginView()),
+        );
+      }
+    });
+  }
+
+  void _mostrarMensaje(String mensaje) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(mensaje),
+        backgroundColor: const Color(0xFFFC6707),
+        duration: const Duration(seconds: 2),
+      ),
+    );
   }
 
   void _openDrawer() {
@@ -54,39 +85,44 @@ class _StudentHomeViewState extends State<StudentHomeView> {
   Widget build(BuildContext context) {
     final screenWidth = MediaQuery.of(context).size.width;
     final isMobile = screenWidth < 850;
+    final auth = Provider.of<AuthController>(context);
+    final nombre = auth.usuarioActual?.nombre ?? 'Estudiante';
+    final primerNombre = nombre.split(' ').first;
 
     return Scaffold(
       key: _scaffoldKey,
       backgroundColor: Colors.white,
-      endDrawer: isMobile ? _buildDrawer(context) : null,
+      endDrawer: isMobile ? _buildDrawer() : null,
       body: Column(
         children: [
-          UserHeader(
-            activeMenu: 'Inicio',
-            onMenuSelected: (menu) => _handleMenuSelected(menu, context),
-            onEditProfile: () => _handleEditProfile(context),
-            onLogout: () => _handleLogout(context),
-            menuItems: const ['Inicio', 'Mis Viajes', 'Favoritos'],
+          AppHeader(
+            activeMenu: _activeMenu,
+            onMenuSelected: _handleMenuSelected,
+            onEditProfile: _handleEditProfile,
+            onLogout: _handleLogout,
+            menuItems: _menuItems,
             isMobile: isMobile,
-            onNotificationsTap: null,
             onMenuTap: isMobile ? _openDrawer : null,
           ),
           Expanded(
-            child: isMobile ? _buildMobileLayout(context) : _buildDesktopLayout(context),
+            child: isMobile ? _buildMobileLayout(primerNombre) : _buildDesktopLayout(primerNombre),
           ),
         ],
       ),
-      floatingActionButton: isMobile
-          ? null
-          : FloatingActionButton(
+      floatingActionButton: !isMobile
+          ? FloatingActionButton(
               onPressed: () {},
               backgroundColor: const Color(0xFFFC6707),
               child: const Icon(Icons.help_outline, color: Colors.white),
-            ),
+            )
+          : null,
     );
   }
 
-  Widget _buildDrawer(BuildContext context) {
+  Widget _buildDrawer() {
+    final auth = Provider.of<AuthController>(context);
+    final user = auth.usuarioActual;
+    
     return Drawer(
       backgroundColor: Colors.white,
       width: 280,
@@ -112,21 +148,19 @@ class _StudentHomeViewState extends State<StudentHomeView> {
                   ),
                   const SizedBox(width: 12),
                   Expanded(
-                    child: Consumer<AuthController>(
-                      builder: (context, auth, _) {
-                        return Text(
-                          auth.usuarioActual?.nombre ?? 'Estudiante',
-                          style: GoogleFonts.outfit(fontSize: 18, fontWeight: FontWeight.bold, color: const Color(0xFF333333)),
-                        );
-                      }
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          user?.nombre ?? 'Estudiante',
+                          style: GoogleFonts.outfit(fontSize: 16, fontWeight: FontWeight.bold, color: const Color(0xFF333333)),
+                        ),
+                        Text(
+                          user?.apellido ?? '',
+                          style: GoogleFonts.outfit(fontSize: 14, color: const Color(0xFF666666)),
+                        ),
+                      ],
                     ),
-                  ),
-                  IconButton(
-                    icon: const Icon(Icons.edit, color: Color(0xFFFC6707), size: 20),
-                    onPressed: () {
-                      Navigator.pop(context);
-                      _handleEditProfile(context);
-                    },
                   ),
                 ],
               ),
@@ -135,40 +169,21 @@ class _StudentHomeViewState extends State<StudentHomeView> {
             const Divider(height: 1, thickness: 1, color: Color(0xFFE0E0E0)),
             _buildDrawerItem('Inicio', Icons.home_outlined, () {
               Navigator.pop(context);
+              _handleMenuSelected('Inicio');
             }),
             _buildDrawerItem('Mis Viajes', Icons.airplane_ticket_outlined, () {
               Navigator.pop(context);
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Mis Viajes - Próximamente'), backgroundColor: Color(0xFFFC6707)),
-              );
+              _handleMenuSelected('Mis Viajes');
             }),
             _buildDrawerItem('Favoritos', Icons.favorite_border, () {
               Navigator.pop(context);
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Favoritos - Próximamente'), backgroundColor: Color(0xFFFC6707)),
-              );
-            }),
-            _buildDrawerItem('Notificaciones', Icons.notifications_none_outlined, () {
-              Navigator.pop(context);
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Notificaciones - Próximamente'), backgroundColor: Color(0xFFFC6707)),
-              );
+              _handleMenuSelected('Favoritos');
             }),
             const Spacer(),
             const Divider(height: 1, thickness: 1, color: Color(0xFFE0E0E0)),
             _buildDrawerItem('Cerrar Sesión', Icons.logout_outlined, () {
               Navigator.pop(context);
-              CustomConfirmDialog.show(
-                context: context,
-                title: 'Cerrar Sesión',
-                message: '¿Estás seguro de que deseas cerrar sesión?',
-                confirmText: 'Salir',
-                icon: Icons.logout,
-              ).then((confirm) {
-                if (confirm == true) {
-                  _handleLogout(context);
-                }
-              });
+              _handleLogout();
             }),
             const SizedBox(height: 24),
           ],
@@ -188,57 +203,52 @@ class _StudentHomeViewState extends State<StudentHomeView> {
     );
   }
 
-  Widget _buildMobileLayout(BuildContext context) {
-    final nombreCompleto = Provider.of<AuthController>(context).usuarioActual?.nombre ?? 'Estudiante';
-    final primerNombre = nombreCompleto.split(' ').first;
-
+  Widget _buildMobileLayout(String primerNombre) {
     return SingleChildScrollView(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const SizedBox(height: 8),
+          const SizedBox(height: 16),
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16),
-            child: RichText(
-              text: TextSpan(
-                style: GoogleFonts.outfit(fontSize: 22, fontWeight: FontWeight.bold, color: const Color(0xFF333333)),
-                children: [
-                  const TextSpan(text: '¡Hola '),
-                  TextSpan(
-                    text: primerNombre,
-                    style: const TextStyle(color: Color(0xFFFC6707))
+            child: Wrap(
+              alignment: WrapAlignment.start,
+              crossAxisAlignment: WrapCrossAlignment.center,
+              children: [
+                RichText(
+                  text: TextSpan(
+                    style: GoogleFonts.outfit(fontSize: 22, fontWeight: FontWeight.bold),
+                    children: [
+                      const TextSpan(text: '¡Hola ', style: TextStyle(color: Color(0xFFFC6707))),
+                      TextSpan(text: primerNombre, style: const TextStyle(color: Color(0xFFFC6707))),
+                      const TextSpan(text: '!', style: TextStyle(color: Color(0xFFFC6707))),
+                    ],
                   ),
-                  const TextSpan(text: '! ¿A dónde quieres viajar hoy?'),
-                ],
-              ),
+                ),
+                const SizedBox(width: 8),
+                Flexible(
+                  child: Text(
+                    '¿A dónde quieres viajar hoy?',
+                    style: GoogleFonts.outfit(
+                      fontSize: 20,
+                      fontWeight: FontWeight.w500,
+                      color: const Color(0xFF333333),
+                    ),
+                  ),
+                ),
+              ],
             ),
           ),
-          const SizedBox(height: 16),
-          const SearchBarWidget(),
           const SizedBox(height: 24),
-          const RecommendationsSection(),
+          _buildMainContent(isMobile: true),
           const SizedBox(height: 32),
-          const CategoriesSection(),
-          const SizedBox(height: 32),
-          const OffersSection(),
-          const SizedBox(height: 32),
-          Center(
-            child: Container(
-              margin: const EdgeInsets.symmetric(horizontal: 16),
-              child: const TrendingChart(),
-            ),
-          ),
-          const SizedBox(height: 20),
-          _buildFooter(context),
+          _buildFooter(true),
         ],
       ),
     );
   }
 
-  Widget _buildDesktopLayout(BuildContext context) {
-    final nombreCompleto = Provider.of<AuthController>(context).usuarioActual?.nombre ?? 'Estudiante';
-    final primerNombre = nombreCompleto.split(' ').first;
-
+  Widget _buildDesktopLayout(String primerNombre) {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -251,45 +261,75 @@ class _StudentHomeViewState extends State<StudentHomeView> {
                 const SizedBox(height: 16),
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 24),
-                  child: RichText(
-                    text: TextSpan(
-                      style: GoogleFonts.outfit(fontSize: 28, fontWeight: FontWeight.bold, color: const Color(0xFF333333)),
-                      children: [
-                        const TextSpan(text: '¡Hola '),
-                        TextSpan(
-                          text: primerNombre,
-                          style: const TextStyle(color: Color(0xFFFC6707))
+                  child: Wrap(
+                    alignment: WrapAlignment.start,
+                    crossAxisAlignment: WrapCrossAlignment.center,
+                    children: [
+                      RichText(
+                        text: TextSpan(
+                          style: GoogleFonts.outfit(fontSize: 28, fontWeight: FontWeight.bold),
+                          children: [
+                            const TextSpan(text: '¡Hola ', style: TextStyle(color: Color(0xFFFC6707))),
+                            TextSpan(text: primerNombre, style: const TextStyle(color: Color(0xFFFC6707))),
+                            const TextSpan(text: '!', style: TextStyle(color: Color(0xFFFC6707))),
+                          ],
                         ),
-                        const TextSpan(text: '! ¿A dónde quieres viajar hoy?'),
-                      ],
-                    ),
+                      ),
+                      const SizedBox(width: 12),
+                      Flexible(
+                        child: Text(
+                          '¿A dónde quieres viajar hoy?',
+                          style: GoogleFonts.outfit(
+                            fontSize: 26,
+                            fontWeight: FontWeight.w500,
+                            color: const Color(0xFF333333),
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
                 ),
-                const SizedBox(height: 16),
-                const SearchBarWidget(),
                 const SizedBox(height: 32),
-                const RecommendationsSection(),
-                const SizedBox(height: 48),
-                const CategoriesSection(),
-                const SizedBox(height: 48),
-                const OffersSection(),
-                const SizedBox(height: 40),
-                _buildFooter(context),
+                _buildMainContent(isMobile: false),
+                _buildFooter(false),
               ],
             ),
           ),
         ),
-        Expanded(
-          flex: 3,
-          child: SingleChildScrollView(
-            child: Column(
-              children: [
-                const SizedBox(height: 80),
-                const NotificationsPanel(),
-                const SizedBox(height: 24),
-                const TrendingChart(),
-                const SizedBox(height: 80),
-              ],
+        Container(
+          width: 320,
+          decoration: BoxDecoration(
+            border: Border(
+              left: BorderSide(
+                color: Colors.grey.withOpacity(0.3),
+                width: 1.5,
+              ),
+            ),
+          ),
+          child: Center(
+            child: SingleChildScrollView(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const SizedBox(height: 80),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    child: SizedBox(
+                      width: 260,
+                      child: _buildNotificationsPanel(),
+                    ),
+                  ),
+                  const SizedBox(height: 32),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    child: SizedBox(
+                      width: 260,
+                      child: _buildTrendingChart(),
+                    ),
+                  ),
+                  const SizedBox(height: 80),
+                ],
+              ),
             ),
           ),
         ),
@@ -297,13 +337,196 @@ class _StudentHomeViewState extends State<StudentHomeView> {
     );
   }
 
-  Widget _buildFooter(BuildContext context) {
-    final screenWidth = MediaQuery.of(context).size.width;
-    final isMobile = screenWidth < 850;
+  Widget _buildMainContent({required bool isMobile}) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // Buscador
+        Padding(
+          padding: EdgeInsets.symmetric(horizontal: isMobile ? 16 : 24),
+          child: const SearchBarWidget(),
+        ),
+        const SizedBox(height: 32),
 
+        // 1. Destinos Disponibles
+        Padding(
+          padding: EdgeInsets.symmetric(horizontal: isMobile ? 16 : 24),
+          child: Text(
+            'Destinos Disponibles',
+            style: GoogleFonts.outfit(
+              fontSize: isMobile ? 20 : 24,
+              fontWeight: FontWeight.bold,
+              color: const Color(0xFF333333),
+            ),
+          ),
+        ),
+        const SizedBox(height: 16),
+        Padding(
+          padding: EdgeInsets.symmetric(horizontal: isMobile ? 16 : 24),
+          child: Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(32),
+            decoration: BoxDecoration(
+              color: const Color(0xFFF8F8F8),
+              borderRadius: BorderRadius.circular(16),
+            ),
+            child: const Center(
+              child: Column(
+                children: [
+                  Icon(Icons.explore_outlined, size: 48, color: Color(0xFFCCCCCC)),
+                  SizedBox(height: 12),
+                  Text(
+                    'Próximamente nuevos destinos',
+                    style: TextStyle(fontSize: 14, color: Color(0xFF999999)),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+        const SizedBox(height: 32),
+
+        // 2. Explorar por Categorías
+        const CategoriesSection(),
+        const SizedBox(height: 32),
+
+        // 3. Ofertas Especiales
+        Padding(
+          padding: EdgeInsets.symmetric(horizontal: isMobile ? 16 : 24),
+          child: Text(
+            'Ofertas Especiales',
+            style: GoogleFonts.outfit(
+              fontSize: isMobile ? 20 : 24,
+              fontWeight: FontWeight.bold,
+              color: const Color(0xFF333333),
+            ),
+          ),
+        ),
+        const SizedBox(height: 16),
+        Padding(
+          padding: EdgeInsets.symmetric(horizontal: isMobile ? 16 : 24),
+          child: Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(32),
+            decoration: BoxDecoration(
+              color: const Color(0xFFF8F8F8),
+              borderRadius: BorderRadius.circular(16),
+            ),
+            child: const Center(
+              child: Column(
+                children: [
+                  Icon(Icons.local_offer_outlined, size: 48, color: Color(0xFFCCCCCC)),
+                  SizedBox(height: 12),
+                  Text(
+                    'Próximamente ofertas especiales',
+                    style: TextStyle(fontSize: 14, color: Color(0xFF999999)),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildNotificationsPanel() {
     return Container(
       width: double.infinity,
-      padding: EdgeInsets.symmetric(vertical: isMobile ? 16 : 20, horizontal: isMobile ? 16 : 0),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: const Color(0xFFE0E0E0), width: 1),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.symmetric(vertical: 14),
+            decoration: const BoxDecoration(
+              color: Color(0xFFFC6707),
+              borderRadius: BorderRadius.only(
+                topLeft: Radius.circular(16),
+                topRight: Radius.circular(16),
+              ),
+            ),
+            child: Center(
+              child: Text(
+                'Notificaciones',
+                style: GoogleFonts.outfit(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.white,
+                ),
+              ),
+            ),
+          ),
+          const Padding(
+            padding: EdgeInsets.all(32),
+            child: Center(
+              child: Text(
+                'No hay notificaciones por el momento',
+                textAlign: TextAlign.center,
+                style: TextStyle(fontSize: 14, color: Color(0xFF999999)),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildTrendingChart() {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: const Color(0xFFE0E0E0), width: 1),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Destinos más buscados',
+            style: GoogleFonts.outfit(
+              fontSize: 16,
+              fontWeight: FontWeight.bold,
+              color: const Color(0xFF333333),
+            ),
+          ),
+          const SizedBox(height: 24),
+          const Center(
+            child: Text(
+              'No hay datos disponibles',
+              style: TextStyle(fontSize: 14, color: Color(0xFF999999)),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildFooter(bool isMobile) {
+    return Container(
+      width: double.infinity,
+      padding: EdgeInsets.symmetric(vertical: isMobile ? 16 : 20),
       decoration: const BoxDecoration(
         color: Color(0xFFFC6707),
         borderRadius: BorderRadius.only(
