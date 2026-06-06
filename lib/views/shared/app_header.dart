@@ -4,7 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import '../../controllers/auth_controller.dart';
-import 'widgets/custom_dialog.dart';  // Ruta corregida
+import 'widgets/custom_dialog.dart';
 
 class AppHeader extends StatefulWidget {
   final String activeMenu;
@@ -77,7 +77,6 @@ class _AppHeaderState extends State<AppHeader> {
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      // Avatar
                       Container(
                         width: 65,
                         height: 65,
@@ -107,7 +106,6 @@ class _AppHeaderState extends State<AppHeader> {
                         ),
                       ),
                       const SizedBox(height: 12),
-                      // Nombre
                       Consumer<AuthController>(
                         builder: (context, auth, _) {
                           final user = auth.usuarioActual;
@@ -127,7 +125,6 @@ class _AppHeaderState extends State<AppHeader> {
                       const SizedBox(height: 20),
                       const Divider(height: 1, thickness: 1, color: Color(0xFFE0E0E0)),
                       const SizedBox(height: 8),
-                      // Editar Perfil
                       MouseRegion(
                         cursor: SystemMouseCursors.click,
                         child: GestureDetector(
@@ -156,7 +153,6 @@ class _AppHeaderState extends State<AppHeader> {
                         ),
                       ),
                       const SizedBox(height: 8),
-                      // Cerrar Sesión
                       MouseRegion(
                         cursor: SystemMouseCursors.click,
                         child: GestureDetector(
@@ -248,7 +244,6 @@ class _AppHeaderState extends State<AppHeader> {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          // Logo clickeable
           InkWell(
             onTap: () => widget.onMenuSelected('Inicio'),
             child: Row(
@@ -260,7 +255,6 @@ class _AppHeaderState extends State<AppHeader> {
             ),
           ),
           const SizedBox(width: 115),
-          // Menú items (dinámico)
           Row(
             children: widget.menuItems.map((title) {
               final isActive = title == widget.activeMenu;
@@ -270,36 +264,19 @@ class _AppHeaderState extends State<AppHeader> {
                   onTap: () => widget.onMenuSelected(title),
                   child: Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 16),
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Text(
-                          title,
-                          style: GoogleFonts.outfit(
-                            fontSize: 16,
-                            fontWeight: isActive ? FontWeight.w700 : FontWeight.w500,
-                            color: isActive ? const Color(0xFFFC6707) : const Color(0xFF555555),
-                          ),
-                        ),
-                        if (isActive) ...[
-                          const SizedBox(height: 4),
-                          Container(
-                            width: 20,
-                            height: 3,
-                            decoration: BoxDecoration(
-                              color: const Color(0xFFFC6707),
-                              borderRadius: BorderRadius.circular(2),
-                            ),
-                          ),
-                        ],
-                      ],
+                    child: Text(
+                      title,
+                      style: GoogleFonts.outfit(
+                        fontSize: 16,
+                        fontWeight: isActive ? FontWeight.w700 : FontWeight.w500,
+                        color: isActive ? const Color(0xFFFC6707) : const Color(0xFF555555),
+                      ),
                     ),
                   ),
                 ),
               );
             }).toList(),
           ),
-          // Avatar
           MouseRegion(
             cursor: SystemMouseCursors.click,
             child: GestureDetector(

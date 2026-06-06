@@ -122,6 +122,11 @@ class AuthService {
         await _db.collection('operadores').doc(uid).update({'fotoBase64': base64Image});
         return true;
       }
+      doc = await _db.collection('administradores').doc(uid).get();
+      if (doc.exists) {
+        await _db.collection('administradores').doc(uid).update({'fotoBase64': base64Image});
+        return true;
+      }
       return false;
     } catch (e) {
       print('Error al actualizar foto: $e');
@@ -132,14 +137,17 @@ class AuthService {
   // Carga los datos del usuario desde Firestore
   Future<Usuario?> cargarUsuarioDeFirestore(String uid) async {
     try {
+      // Buscar en estudiantes
       var doc = await _db.collection('estudiantes').doc(uid).get();
       if (doc.exists && doc.data() != null) {
         return Usuario.fromMap(uid, doc.data()!);
       }
+      // Buscar en operadores
       doc = await _db.collection('operadores').doc(uid).get();
       if (doc.exists && doc.data() != null) {
         return Usuario.fromMap(uid, doc.data()!);
       }
+      // Buscar en administradores
       doc = await _db.collection('administradores').doc(uid).get();
       if (doc.exists && doc.data() != null) {
         return Usuario.fromMap(uid, doc.data()!);
