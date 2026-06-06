@@ -7,6 +7,7 @@ import 'forgot_password_view.dart';
 import 'select_role_view.dart';
 import '../student/student_home_view.dart';
 import '../operator/operator_home_view.dart';
+import '../admin/admin_home_view.dart';
 import '../../controllers/auth_controller.dart';
 import 'package:provider/provider.dart';
 
@@ -68,10 +69,15 @@ class _LoginViewState extends State<LoginView> {
           context,
           MaterialPageRoute(builder: (_) => const OperatorHomeView()),
         );
+      } else if (usuario.isAdmin) {
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (_) => const AdminHomeView()),
+        );
       } else {
         Navigator.pushReplacement(
           context,
-          MaterialPageRoute(builder: (_) => const StudentHomeView()), // Admin u otro
+          MaterialPageRoute(builder: (_) => const StudentHomeView()),
         );
       }
     } else {
