@@ -3,8 +3,8 @@ import 'dart:typed_data';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_core/firebase_core.dart';
-import 'package:mailer/mailer.dart';
-import 'package:mailer/smtp_server.dart';
+import 'dart:convert';
+import 'package:http/http.dart' as http;
 import '../models/usuario.dart';
 import 'storage_service.dart';
 
@@ -12,10 +12,7 @@ class AuthService {
   final FirebaseAuth _auth = FirebaseAuth.instance;
   final FirebaseFirestore _db = FirebaseFirestore.instance;
 
-  // Credenciales de correo (Para entorno de desarrollo)
-  // IMPORTANTE: En producción usar EmailJS o un backend real.
-  final String _smtpEmail = 'juancollsimoes@gmail.com'; 
-  final String _smtpPassword = 'akfydxirzblhhzpd'; 
+  // Credenciales y variables de servicio eliminadas porque EmailJS las maneja directamente en su dashboard
 
   // Inicia sesión con email y contraseña
   Future<Usuario?> loginWithEmail(String email, String password) async {
@@ -192,20 +189,37 @@ class AuthService {
     }
   }
 
-  // Utilidad para enviar correos SMTP
+  // Utilidad para enviar correos vía EmailJS (Soporta Web sin bloqueos)
   Future<void> _sendEmail({required String to, required String subject, required String html}) async {
-    final smtpServer = gmail(_smtpEmail, _smtpPassword);
-    final message = Message()
-      ..from = Address(_smtpEmail, 'SamanGo')
-      ..recipients.add(to)
-      ..subject = subject
-      ..html = html;
+    // Estas son las credenciales de tu cuenta de EmailJS
+    const serviceId = 'service_g1qpjdb';
+    const templateId = 'template_j16ut8g';
+    const publicKey = 'q3Z-wi-zfV3BVRvzA';
 
+    final url = Uri.parse('https://api.emailjs.com/api/v1.0/email/send');
     try {
-      await send(message, smtpServer);
-      print('Correo real enviado con éxito a $to');
+      final response = await http.post(
+        url,
+        headers: {'Content-Type': 'application/json'},
+        body: json.encode({
+          'service_id': serviceId,
+          'template_id': templateId,
+          'user_id': publicKey,
+          'template_params': {
+            'to_email': to,
+            'subject': subject,
+            'message_html': html,
+          }
+        }),
+      );
+
+      if (response.statusCode == 200) {
+        print('Correo enviado con éxito a $to a través de EmailJS');
+      } else {
+        print('Error de EmailJS: \${response.body}');
+      }
     } catch (e) {
-      print('Error enviando correo SMTP: $e');
+      print('Error enviando correo HTTP: \$e');
     }
   }
 
