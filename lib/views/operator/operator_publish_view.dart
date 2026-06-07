@@ -107,7 +107,7 @@ class _OperatorPublishViewState extends State<OperatorPublishView> {
   }
 
   Future<void> _publicarTour() async {
-    // Validaciones
+    // Validaciones básicas
     if (_tituloController.text.trim().isEmpty) {
       _mostrarMensaje('Por favor ingresa el título del tour');
       return;
@@ -140,28 +140,20 @@ class _OperatorPublishViewState extends State<OperatorPublishView> {
       final operadorNombre = auth.usuarioActual?.nombre ?? 'Operador';
       final operadorEmpresa = auth.usuarioActual?.empresa ?? '';
 
-      // Subir imagen de portada a Firebase Storage
+      // Convertir portada a Base64 y guardarla como string en Firestore
+      // Así no se necesita Firebase Storage (plan gratuito no lo permite)
       String portadaUrl = '';
       if (_portadaImagenBytes != null) {
-        final fileName = 'portada_${DateTime.now().millisecondsSinceEpoch}.jpg';
-        portadaUrl = await _storageService.uploadTourImage(
-          uid: operadorId,
-          bytes: _portadaImagenBytes!,
-          fileName: fileName,
-        );
+        final base64 = _storageService.imageToBase64(_portadaImagenBytes!);
+        portadaUrl = 'data:image/jpeg;base64,$base64';
       }
 
-      // Subir imágenes de referencia
+      // Convertir imágenes de referencia a Base64 también
       List<String> referenciasUrls = [];
       for (int i = 0; i < _referenciasImagenesBytes.length; i++) {
         if (_referenciasImagenesBytes[i] != null) {
-          final fileName = 'ref_${i}_${DateTime.now().millisecondsSinceEpoch}.jpg';
-          final url = await _storageService.uploadTourImage(
-            uid: operadorId,
-            bytes: _referenciasImagenesBytes[i]!,
-            fileName: fileName,
-          );
-          referenciasUrls.add(url);
+          final base64 = _storageService.imageToBase64(_referenciasImagenesBytes[i]!);
+          referenciasUrls.add('data:image/jpeg;base64,$base64');
         }
       }
 

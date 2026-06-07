@@ -1,4 +1,12 @@
-// Tarjeta de destino para el catálogo del estudiante
+// Tarjeta de destino para el catalogo del estudiante
+// Ruta: lib/views/student/widgets/destination_card.dart
+//
+// CAMBIO: el campo imagenUrl ahora puede ser un string Base64 con prefijo
+// 'data:image/jpeg;base64,...' o una URL normal. El widget detecta cual es
+// y usa Image.memory() para Base64 o Image.network() para URLs normales.
+
+import 'dart:convert';
+import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
@@ -26,6 +34,16 @@ class DestinationCard extends StatelessWidget {
     this.onFavoriteTap,
   });
 
+  // Devuelve true si imagenUrl es un Base64 embebido, false si es URL normal
+  bool get _esBase64 => imagenUrl.startsWith('data:image');
+
+  // Convierte el string Base64 a bytes para Image.memory()
+  Uint8List get _bytesBase64 {
+    // Eliminar el prefijo 'data:image/jpeg;base64,' y decodificar
+    final base64String = imagenUrl.split(',').last;
+    return base64Decode(base64String);
+  }
+
   @override
   Widget build(BuildContext context) {
     final primaryColor = isOffer ? const Color(0xFF9C27B0) : const Color(0xFFFC6707);
@@ -41,7 +59,7 @@ class DestinationCard extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Zona de Imagen
+            // Zona de imagen
             ClipRRect(
               borderRadius: const BorderRadius.only(
                 topLeft: Radius.circular(20),
@@ -49,29 +67,11 @@ class DestinationCard extends StatelessWidget {
               ),
               child: Container(
                 margin: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(16),
-                ),
-                child: imagenUrl.isNotEmpty
-                    ? Image.network(
-                        imagenUrl,
-                        height: 140,
-                        width: double.infinity,
-                        fit: BoxFit.cover,
-                        errorBuilder: (_, __, ___) => Container(
-                          height: 140,
-                          color: const Color(0xFFFDDBB3),
-                          child: const Icon(Icons.image, color: Color(0xFFFC6707), size: 40),
-                        ),
-                      )
-                    : Container(
-                        height: 140,
-                        color: const Color(0xFFFDDBB3),
-                        child: const Icon(Icons.image, color: Color(0xFFFC6707), size: 40),
-                      ),
+                decoration: BoxDecoration(borderRadius: BorderRadius.circular(16)),
+                child: _buildImagen(),
               ),
             ),
-            // Zona de Texto y Acciones
+            // Zona de texto y acciones
             Padding(
               padding: const EdgeInsets.all(12),
               child: Column(
@@ -90,15 +90,12 @@ class DestinationCard extends StatelessWidget {
                   const SizedBox(height: 4),
                   Row(
                     children: [
-                      Icon(Icons.access_time, size: 14, color: const Color(0xFF888888)),
+                      const Icon(Icons.access_time, size: 14, color: Color(0xFF888888)),
                       const SizedBox(width: 4),
                       Expanded(
                         child: Text(
                           duracion,
-                          style: GoogleFonts.outfit(
-                            fontSize: 12,
-                            color: const Color(0xFF888888),
-                          ),
+                          style: GoogleFonts.outfit(fontSize: 12, color: const Color(0xFF888888)),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                         ),
@@ -108,15 +105,12 @@ class DestinationCard extends StatelessWidget {
                   const SizedBox(height: 2),
                   Row(
                     children: [
-                      Icon(Icons.location_on, size: 14, color: const Color(0xFF888888)),
+                      const Icon(Icons.location_on, size: 14, color: Color(0xFF888888)),
                       const SizedBox(width: 4),
                       Expanded(
                         child: Text(
                           ubicacion,
-                          style: GoogleFonts.outfit(
-                            fontSize: 12,
-                            color: const Color(0xFF888888),
-                          ),
+                          style: GoogleFonts.outfit(fontSize: 12, color: const Color(0xFF888888)),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                         ),
@@ -140,11 +134,7 @@ class DestinationCard extends StatelessWidget {
                           if (onFavoriteTap != null)
                             IconButton(
                               onPressed: onFavoriteTap,
-                              icon: Icon(
-                                Icons.favorite_border,
-                                color: primaryColor,
-                                size: 20,
-                              ),
+                              icon: Icon(Icons.favorite_border, color: primaryColor, size: 20),
                               padding: EdgeInsets.zero,
                               constraints: const BoxConstraints(),
                             ),
@@ -157,7 +147,7 @@ class DestinationCard extends StatelessWidget {
                               tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                             ),
                             child: Text(
-                              'Ver más',
+                              'Ver mas',
                               style: GoogleFonts.outfit(
                                 fontSize: 13,
                                 color: primaryColor,
@@ -175,6 +165,47 @@ class DestinationCard extends StatelessWidget {
           ],
         ),
       ),
+    );
+  }
+
+  // Construye el widget de imagen segun si es Base64 o URL normal
+  Widget _buildImagen() {
+    // Placeholder cuando no hay imagen
+    if (imagenUrl.isEmpty) {
+      return _placeholder();
+    }
+
+    // Base64 embebido: usar Image.memory()
+    if (_esBase64) {
+      try {
+        return Image.memory(
+          _bytesBase64,
+          height: 140,
+          width: double.infinity,
+          fit: BoxFit.cover,
+          errorBuilder: (_, __, ___) => _placeholder(),
+        );
+      } catch (_) {
+        return _placeholder();
+      }
+    }
+
+    // URL normal (http/https): usar Image.network()
+    return Image.network(
+      imagenUrl,
+      height: 140,
+      width: double.infinity,
+      fit: BoxFit.cover,
+      errorBuilder: (_, __, ___) => _placeholder(),
+    );
+  }
+
+  // Widget que se muestra cuando no hay imagen o falla la carga
+  Widget _placeholder() {
+    return Container(
+      height: 140,
+      color: const Color(0xFFFDDBB3),
+      child: const Icon(Icons.image, color: Color(0xFFFC6707), size: 40),
     );
   }
 }
