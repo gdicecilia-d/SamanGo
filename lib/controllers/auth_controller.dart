@@ -47,7 +47,7 @@ class AuthController extends ChangeNotifier {
     }
   }
 
-  // Register Operator
+  // Register Operator 
   Future<String?> registerOperator({
     required String email,
     required String nombre,
@@ -55,12 +55,10 @@ class AuthController extends ChangeNotifier {
     required String rif,
     required String telefono,
     required String descripcion,
-    required String fechaNacimiento,
     Uint8List? fileBytes,
   }) async {
     _setLoading(true);
     try {
-      // El operador se registra pero no se guarda como _usuarioActual ni hace login automático
       await _authService.registerOperator(
         email: email,
         nombre: nombre,
@@ -68,7 +66,6 @@ class AuthController extends ChangeNotifier {
         rif: rif,
         telefono: telefono,
         descripcion: descripcion,
-        fechaNacimiento: fechaNacimiento,
         fileBytes: fileBytes,
       );
       _setLoading(false);
@@ -116,7 +113,7 @@ class AuthController extends ChangeNotifier {
       }
       await _authService.sendPasswordResetEmail(email);
       _setLoading(false);
-      return null; // Éxito
+      return null;
     } catch (e) {
       _setLoading(false);
       return 'Ocurrió un error al intentar enviar el correo.';

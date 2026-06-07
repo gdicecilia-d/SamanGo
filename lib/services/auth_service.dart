@@ -12,8 +12,6 @@ class AuthService {
   final FirebaseAuth _auth = FirebaseAuth.instance;
   final FirebaseFirestore _db = FirebaseFirestore.instance;
 
-  // Credenciales y variables de servicio eliminadas porque EmailJS las maneja directamente en su dashboard
-
   // Inicia sesión con email y contraseña
   Future<Usuario?> loginWithEmail(String email, String password) async {
     try {
@@ -64,7 +62,7 @@ class AuthService {
     }
   }
 
-  // Registra un nuevo operador (Solo base de datos)
+  // Registra un nuevo operador (Solo base de datos) 
   Future<Usuario> registerOperator({
     required String email,
     required String nombre,
@@ -72,7 +70,6 @@ class AuthService {
     required String rif,
     required String telefono,
     required String descripcion,
-    required String fechaNacimiento,
     Uint8List? fileBytes,
   }) async {
     try {
@@ -102,7 +99,7 @@ class AuthService {
         rif: rif,
         telefono: telefono,
         descripcion: descripcion,
-        fechaNacimiento: fechaNacimiento,
+        fechaNacimiento: '', // Campo vacío
         estado: 'pendiente',
         licenciaUrl: licenciaUrl,
       );
@@ -134,10 +131,9 @@ class AuthService {
       );
       
       final authUid = credential.user!.uid;
-      await tempApp.delete(); // Limpiamos la app secundaria
+      await tempApp.delete();
 
-      // 3. Actualizar documento y moverlo al ID real de Auth si es necesario,
-      // o simplemente actualizar el estado y guardar el authId.
+      // 3. Actualizar documento
       await _db.collection('operadores').doc(operador.id).update({
         'estado': 'aprobado',
         'authId': authUid,
@@ -161,8 +157,8 @@ class AuthService {
         ''',
       );
     } catch (e) {
-      print('Error al aprobar operador: \$e');
-      throw 'Error al procesar la aprobación: \$e';
+      print('Error al aprobar operador: $e');
+      throw 'Error al procesar la aprobación: $e';
     }
   }
 
@@ -189,9 +185,8 @@ class AuthService {
     }
   }
 
-  // Utilidad para enviar correos vía EmailJS (Soporta Web sin bloqueos)
+  // Utilidad para enviar correos vía EmailJS
   Future<void> _sendEmail({required String to, required String subject, required String html}) async {
-    // Estas son las credenciales de tu cuenta de EmailJS
     const serviceId = 'service_g1qpjdb';
     const templateId = 'template_j16ut8g';
     const publicKey = 'q3Z-wi-zfV3BVRvzA';
@@ -214,12 +209,12 @@ class AuthService {
       );
 
       if (response.statusCode == 200) {
-        print('Correo enviado con éxito a $to a través de EmailJS');
+        print('Correo enviado con éxito a $to');
       } else {
-        print('Error de EmailJS: \${response.body}');
+        print('Error de EmailJS: ${response.body}');
       }
     } catch (e) {
-      print('Error enviando correo HTTP: \$e');
+      print('Error enviando correo HTTP: $e');
     }
   }
 
@@ -270,7 +265,7 @@ class AuthService {
       }
       return false;
     } catch (e) {
-      print('Error al actualizar foto: \$e');
+      print('Error al actualizar foto: $e');
       return false;
     }
   }
@@ -298,7 +293,7 @@ class AuthService {
       }
       return null;
     } catch (e) {
-      print('Error cargando usuario: \$e');
+      print('Error cargando usuario: $e');
       return null;
     }
   }

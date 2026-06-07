@@ -29,7 +29,6 @@ class _RegisterOperatorViewState extends State<RegisterOperatorView> {
   // Variables de estado
   bool _acceptTerms = false;
   bool _showErrors = false;
-  final TextEditingController _fechaNacimientoController = TextEditingController();
   bool _isUploading = false;
   String? _selectedFileName;
   String? _uploadError;
@@ -56,11 +55,10 @@ class _RegisterOperatorViewState extends State<RegisterOperatorView> {
         FormValidators.validarEmail(_emailController.text) == null &&
         _descripcionController.text.isNotEmpty &&
         _descripcionController.text.length >= 10 &&
-        _selectedFileName != null &&
-        _fechaNacimientoController.text.isNotEmpty;
+        _selectedFileName != null;
   }
 
-  // Seleccionar archivo
+  // Seleccionar archivo - SOLO IMÁGENES
   Future<void> _pickFile() async {
     setState(() {
       _isUploading = true;
@@ -69,8 +67,7 @@ class _RegisterOperatorViewState extends State<RegisterOperatorView> {
 
     try {
       FilePickerResult? result = await FilePicker.pickFiles(
-        type: FileType.custom,
-        allowedExtensions: ['jpg', 'jpeg', 'png'],
+        type: FileType.image, // SOLO IMÁGENES
         withData: true,
       );
 
@@ -96,7 +93,7 @@ class _RegisterOperatorViewState extends State<RegisterOperatorView> {
       }
     } catch (e) {
       setState(() {
-        _uploadError = 'Error al seleccionar archivo';
+        _uploadError = 'Error al seleccionar imagen';
         _isUploading = false;
       });
     }
@@ -127,7 +124,6 @@ class _RegisterOperatorViewState extends State<RegisterOperatorView> {
       rif: rifCompleto,
       telefono: telefonoCompleto,
       descripcion: _descripcionController.text,
-      fechaNacimiento: _fechaNacimientoController.text,
       fileBytes: _selectedFileBytes,
     );
 
@@ -255,17 +251,6 @@ class _RegisterOperatorViewState extends State<RegisterOperatorView> {
             ),
             const SizedBox(height: 16),
 
-            // Fecha de Nacimiento
-            _buildLabel('Fecha de Nacimiento'),
-            _buildTextField(
-              controller: _fechaNacimientoController,
-              hint: 'Ej: 12/05/2000',
-              errorText: (_showErrors && _fechaNacimientoController.text.isEmpty)
-                  ? 'La fecha de nacimiento es obligatoria'
-                  : null,
-            ),
-            const SizedBox(height: 16),
-
             // Descripción Servicios
             _buildLabel('Descripción Servicios'),
             _buildTextField(
@@ -278,7 +263,7 @@ class _RegisterOperatorViewState extends State<RegisterOperatorView> {
             ),
             const SizedBox(height: 16),
 
-            // Subir Licencia
+            // Subir Licencia 
             _buildLabel('Subir Licencia de Turismo'),
             _buildFilePicker(),
             const SizedBox(height: 16),
@@ -427,7 +412,7 @@ class _RegisterOperatorViewState extends State<RegisterOperatorView> {
                 const SizedBox(width: 12),
                 Expanded(
                   child: Text(
-                    _isUploading ? 'Subiendo...' : (_selectedFileName ?? 'Seleccionar Archivos'),
+                    _isUploading ? 'Subiendo...' : (_selectedFileName ?? 'Seleccionar imagen'),
                     style: GoogleFonts.outfit(
                       fontSize: 14,
                       color: hasError ? const Color(0xFFFC6707) : const Color(0xFF666666),
@@ -447,7 +432,7 @@ class _RegisterOperatorViewState extends State<RegisterOperatorView> {
           Padding(
             padding: const EdgeInsets.only(top: 6),
             child: Text(
-              'Debes subir una foto o captura de la licencia',
+              'Debes subir una imagen de la licencia de turismo (JPG, PNG)',
               style: GoogleFonts.outfit(color: const Color(0xFFFC6707), fontSize: 12),
             ),
           ),

@@ -48,18 +48,16 @@ class FormValidators {
     return null;
   }
 
-  // Lista visible de dominios permitidos para el Operador
-  static const List<String> dominiosPermitidosOperador = ['.com', '.ve', '.com.ve'];
+  // Lista de dominios permitidos para el Operador
+  static const List<String> dominiosPermitidosOperador = ['.com', '.ve', '.com.ve', '.org', '.net', '.edu', '.gob.ve'];
 
-  // Validación de email para OPERADOR
+  // Validación de email para OPERADOR (permite números)
   static String? validarEmail(String? value) {
     if (value == null || value.isEmpty) {
       return 'El email es obligatorio';
     }
-    if (RegExp(r'[0-9]').hasMatch(value)) {
-      return 'El correo no puede contener números';
-    }
-    final regex = RegExp(r'^[a-zA-Z._%+-]+@[a-zA-Z.-]+\.[a-zA-Z]{2,}$');
+    // Ya no se valida que no tenga números
+    final regex = RegExp(r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$');
     if (!regex.hasMatch(value)) {
       return 'Formato de email inválido (ejemplo@dominio.com)';
     }
@@ -72,7 +70,7 @@ class FormValidators {
     return null;
   }
 
-  // Validación de correo UNIMET para ESTUDIANTE
+  // Validación de correo UNIMET para ESTUDIANTE (NO permite números)
   static String? validarCorreoUnimet(String? value) {
     if (value == null || value.isEmpty) {
       return 'El correo es obligatorio';
@@ -98,7 +96,7 @@ class FormValidators {
     final hasUpper = RegExp(r'[A-Z]').hasMatch(value);
     final hasLower = RegExp(r'[a-z]').hasMatch(value);
     final hasNumber = RegExp(r'[0-9]').hasMatch(value);
-    final hasSymbol = RegExp(r'[!@#\$%\^&\*\(\)_\+\-\=\[\]\{\};:\x27\",\.<>\/?\\|`~]').hasMatch(value);
+    final hasSymbol = RegExp(r'[!@#\$%\^&\*\(\)_\+\-\=\[\]\{\};:\x27",\.<>\/?\\|`~]').hasMatch(value);
     
     List<String> faltantes = [];
     if (!hasUpper) faltantes.add('una mayúscula');
