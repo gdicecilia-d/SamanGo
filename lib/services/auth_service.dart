@@ -153,7 +153,7 @@ class AuthService {
           <p>Tus credenciales de acceso son las siguientes:</p>
           <ul>
             <li><strong>Usuario:</strong> ${operador.correo}</li>
-            <li><strong>Contraseña:</strong> \$password</li>
+            <li><strong>Contraseña:</strong> $password</li>
           </ul>
           <p>Te recomendamos cambiar tu contraseña al iniciar sesión por primera vez.</p>
           <br>
