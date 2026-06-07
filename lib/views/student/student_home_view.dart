@@ -26,15 +26,14 @@ class _StudentHomeViewState extends State<StudentHomeView> {
   final List<String> _menuItems = ['Inicio', 'Mis Viajes', 'Favoritos'];
 
   void _handleMenuSelected(String menu) {
-    setState(() {
-      _activeMenu = menu;
-    });
-    
+    // No cambiar el menú activo si no es Inicio
     if (menu == 'Mis Viajes') {
       _mostrarMensaje('Mis Viajes - Próximamente');
     } else if (menu == 'Favoritos') {
       _mostrarMensaje('Favoritos - Próximamente');
     }
+    // Inicio no hace nada porque ya estamos ahí
+    // El menú activo siempre es 'Inicio'
   }
 
   void _handleEditProfile() {
@@ -81,6 +80,13 @@ class _StudentHomeViewState extends State<StudentHomeView> {
     _scaffoldKey.currentState?.openEndDrawer();
   }
 
+  bool _esOferta(dynamic isOfferValue) {
+    if (isOfferValue == null) return false;
+    if (isOfferValue is bool) return isOfferValue;
+    if (isOfferValue is String) return isOfferValue.toLowerCase() == 'true';
+    return false;
+  }
+
   @override
   Widget build(BuildContext context) {
     final screenWidth = MediaQuery.of(context).size.width;
@@ -96,7 +102,7 @@ class _StudentHomeViewState extends State<StudentHomeView> {
       body: Column(
         children: [
           AppHeader(
-            activeMenu: _activeMenu,
+            activeMenu: 'Inicio', // Siempre 'Inicio'
             onMenuSelected: _handleMenuSelected,
             onEditProfile: _handleEditProfile,
             onLogout: _handleLogout,
@@ -105,7 +111,100 @@ class _StudentHomeViewState extends State<StudentHomeView> {
             onMenuTap: isMobile ? _openDrawer : null,
           ),
           Expanded(
-            child: isMobile ? _buildMobileLayout(primerNombre) : _buildDesktopLayout(primerNombre),
+            child: isMobile 
+                ? SingleChildScrollView(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const SizedBox(height: 16),
+                        Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 16),
+                          child: RichText(
+                            text: TextSpan(
+                              style: GoogleFonts.outfit(fontSize: 22, fontWeight: FontWeight.bold, color: const Color(0xFF333333)),
+                              children: [
+                                const TextSpan(text: '¡Hola '),
+                                TextSpan(text: primerNombre, style: const TextStyle(color: Color(0xFFFC6707))),
+                                const TextSpan(text: '! ¿A dónde quieres viajar hoy?'),
+                              ],
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 24),
+                        _buildMainContent(isMobile: true),
+                        _buildFooter(true),
+                      ],
+                    ),
+                  )
+                : Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Expanded(
+                        flex: 7,
+                        child: SingleChildScrollView(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const SizedBox(height: 16),
+                              Padding(
+                                padding: const EdgeInsets.symmetric(horizontal: 24),
+                                child: RichText(
+                                  text: TextSpan(
+                                    style: GoogleFonts.outfit(fontSize: 28, fontWeight: FontWeight.bold, color: const Color(0xFF333333)),
+                                    children: [
+                                      const TextSpan(text: '¡Hola '),
+                                      TextSpan(text: primerNombre, style: const TextStyle(color: Color(0xFFFC6707))),
+                                      const TextSpan(text: '! ¿A dónde quieres viajar hoy?'),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(height: 32),
+                              _buildMainContent(isMobile: false),
+                              _buildFooter(false),
+                            ],
+                          ),
+                        ),
+                      ),
+                      Container(
+                        width: 320,
+                        decoration: BoxDecoration(
+                          border: Border(
+                            left: BorderSide(
+                              color: Colors.grey.withOpacity(0.3),
+                              width: 1.5,
+                            ),
+                          ),
+                        ),
+                        child: Center(
+                          child: SingleChildScrollView(
+                            child: Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                const SizedBox(height: 80),
+                                Padding(
+                                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                                  child: SizedBox(
+                                    width: 260,
+                                    child: _buildNotificationsPanel(),
+                                  ),
+                                ),
+                                const SizedBox(height: 32),
+                                Padding(
+                                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                                  child: SizedBox(
+                                    width: 260,
+                                    child: _buildTrendingChart(),
+                                  ),
+                                ),
+                                const SizedBox(height: 80),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
           ),
         ],
       ),
@@ -169,15 +268,14 @@ class _StudentHomeViewState extends State<StudentHomeView> {
             const Divider(height: 1, thickness: 1, color: Color(0xFFE0E0E0)),
             _buildDrawerItem('Inicio', Icons.home_outlined, () {
               Navigator.pop(context);
-              _handleMenuSelected('Inicio');
             }),
             _buildDrawerItem('Mis Viajes', Icons.airplane_ticket_outlined, () {
               Navigator.pop(context);
-              _handleMenuSelected('Mis Viajes');
+              _mostrarMensaje('Mis Viajes - Próximamente');
             }),
             _buildDrawerItem('Favoritos', Icons.favorite_border, () {
               Navigator.pop(context);
-              _handleMenuSelected('Favoritos');
+              _mostrarMensaje('Favoritos - Próximamente');
             }),
             const Spacer(),
             const Divider(height: 1, thickness: 1, color: Color(0xFFE0E0E0)),
@@ -200,140 +298,6 @@ class _StudentHomeViewState extends State<StudentHomeView> {
         style: GoogleFonts.outfit(fontSize: 16, fontWeight: FontWeight.w500, color: const Color(0xFF333333)),
       ),
       onTap: onTap,
-    );
-  }
-
-  Widget _buildMobileLayout(String primerNombre) {
-    return SingleChildScrollView(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const SizedBox(height: 16),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            child: Wrap(
-              alignment: WrapAlignment.start,
-              crossAxisAlignment: WrapCrossAlignment.center,
-              children: [
-                RichText(
-                  text: TextSpan(
-                    style: GoogleFonts.outfit(fontSize: 22, fontWeight: FontWeight.bold),
-                    children: [
-                      const TextSpan(text: '¡Hola ', style: TextStyle(color: Color(0xFFFC6707))),
-                      TextSpan(text: primerNombre, style: const TextStyle(color: Color(0xFFFC6707))),
-                      const TextSpan(text: '!', style: TextStyle(color: Color(0xFFFC6707))),
-                    ],
-                  ),
-                ),
-                const SizedBox(width: 8),
-                Flexible(
-                  child: Text(
-                    '¿A dónde quieres viajar hoy?',
-                    style: GoogleFonts.outfit(
-                      fontSize: 20,
-                      fontWeight: FontWeight.w500,
-                      color: const Color(0xFF333333),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 24),
-          _buildMainContent(isMobile: true),
-          const SizedBox(height: 32),
-          _buildFooter(true),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildDesktopLayout(String primerNombre) {
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Expanded(
-          flex: 7,
-          child: SingleChildScrollView(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const SizedBox(height: 16),
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 24),
-                  child: Wrap(
-                    alignment: WrapAlignment.start,
-                    crossAxisAlignment: WrapCrossAlignment.center,
-                    children: [
-                      RichText(
-                        text: TextSpan(
-                          style: GoogleFonts.outfit(fontSize: 28, fontWeight: FontWeight.bold),
-                          children: [
-                            const TextSpan(text: '¡Hola ', style: TextStyle(color: Color(0xFFFC6707))),
-                            TextSpan(text: primerNombre, style: const TextStyle(color: Color(0xFFFC6707))),
-                            const TextSpan(text: '!', style: TextStyle(color: Color(0xFFFC6707))),
-                          ],
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Flexible(
-                        child: Text(
-                          '¿A dónde quieres viajar hoy?',
-                          style: GoogleFonts.outfit(
-                            fontSize: 26,
-                            fontWeight: FontWeight.w500,
-                            color: const Color(0xFF333333),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 32),
-                _buildMainContent(isMobile: false),
-                _buildFooter(false),
-              ],
-            ),
-          ),
-        ),
-        Container(
-          width: 320,
-          decoration: BoxDecoration(
-            border: Border(
-              left: BorderSide(
-                color: Colors.grey.withOpacity(0.3),
-                width: 1.5,
-              ),
-            ),
-          ),
-          child: Center(
-            child: SingleChildScrollView(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  const SizedBox(height: 80),
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 16),
-                    child: SizedBox(
-                      width: 260,
-                      child: _buildNotificationsPanel(),
-                    ),
-                  ),
-                  const SizedBox(height: 32),
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 16),
-                    child: SizedBox(
-                      width: 260,
-                      child: _buildTrendingChart(),
-                    ),
-                  ),
-                  const SizedBox(height: 80),
-                ],
-              ),
-            ),
-          ),
-        ),
-      ],
     );
   }
 
@@ -361,29 +325,122 @@ class _StudentHomeViewState extends State<StudentHomeView> {
           ),
         ),
         const SizedBox(height: 16),
-        Padding(
-          padding: EdgeInsets.symmetric(horizontal: isMobile ? 16 : 24),
-          child: Container(
-            width: double.infinity,
-            padding: const EdgeInsets.all(32),
-            decoration: BoxDecoration(
-              color: const Color(0xFFF8F8F8),
-              borderRadius: BorderRadius.circular(16),
-            ),
-            child: const Center(
-              child: Column(
-                children: [
-                  Icon(Icons.explore_outlined, size: 48, color: Color(0xFFCCCCCC)),
-                  SizedBox(height: 12),
-                  Text(
-                    'Próximamente nuevos destinos',
-                    style: TextStyle(fontSize: 14, color: Color(0xFF999999)),
+        
+        StreamBuilder<QuerySnapshot>(
+          stream: FirebaseFirestore.instance
+              .collection('destinos')
+              .where('activo', isEqualTo: true)
+              .snapshots(),
+          builder: (context, snapshot) {
+            if (snapshot.connectionState == ConnectionState.waiting) {
+              return const Center(child: CircularProgressIndicator(color: Color(0xFFFC6707)));
+            }
+
+            if (snapshot.hasError) {
+              return Padding(
+                padding: EdgeInsets.symmetric(horizontal: isMobile ? 16 : 24),
+                child: Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(32),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFF8F8F8),
+                    borderRadius: BorderRadius.circular(16),
                   ),
-                ],
-              ),
-            ),
-          ),
+                  child: const Center(
+                    child: Text(
+                      'Error al cargar destinos',
+                      style: TextStyle(fontSize: 14, color: Color(0xFF999999)),
+                    ),
+                  ),
+                ),
+              );
+            }
+
+            final todosDestinos = snapshot.data?.docs ?? [];
+            
+            final destinosNormales = todosDestinos.where((doc) {
+              final data = doc.data() as Map<String, dynamic>;
+              return !_esOferta(data['isOffer']);
+            }).toList();
+            
+            final ofertas = todosDestinos.where((doc) {
+              final data = doc.data() as Map<String, dynamic>;
+              return _esOferta(data['isOffer']);
+            }).toList();
+            
+            if (todosDestinos.isEmpty) {
+              return Padding(
+                padding: EdgeInsets.symmetric(horizontal: isMobile ? 16 : 24),
+                child: Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(32),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFF8F8F8),
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                  child: const Center(
+                    child: Column(
+                      children: [
+                        Icon(Icons.explore_outlined, size: 48, color: Color(0xFFCCCCCC)),
+                        SizedBox(height: 12),
+                        Text(
+                          'No hay destinos disponibles aún',
+                          style: TextStyle(fontSize: 14, color: Color(0xFF999999)),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              );
+            }
+
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                if (destinosNormales.isNotEmpty)
+                  Padding(
+                    padding: EdgeInsets.symmetric(horizontal: isMobile ? 16 : 24),
+                    child: GridView.builder(
+                      shrinkWrap: true,
+                      physics: const NeverScrollableScrollPhysics(),
+                      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                        crossAxisCount: isMobile ? 2 : 4,
+                        crossAxisSpacing: 16,
+                        mainAxisSpacing: 16,
+                        childAspectRatio: 0.75,
+                      ),
+                      itemCount: destinosNormales.length,
+                      itemBuilder: (context, index) {
+                        final doc = destinosNormales[index];
+                        final data = doc.data() as Map<String, dynamic>;
+                        return DestinationCard(
+                          id: doc.id,
+                          nombre: data['nombre'] ?? '',
+                          ubicacion: data['ubicacion'] ?? '',
+                          precio: (data['precio'] ?? 0).toDouble(),
+                          duracion: data['duracion'] ?? 'Full Day',
+                          imagenUrl: data['imagen'] ?? '',
+                          isOffer: false,
+                          onTap: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) => DestinationDetailView(destinoId: doc.id),
+                              ),
+                            );
+                          },
+                        );
+                      },
+                    ),
+                  ),
+                
+                if (destinosNormales.isNotEmpty && ofertas.isNotEmpty)
+                  const SizedBox(height: 32),
+              ],
+            );
+          },
         ),
+
         const SizedBox(height: 32),
 
         // 2. Explorar por Categorías
@@ -403,28 +460,90 @@ class _StudentHomeViewState extends State<StudentHomeView> {
           ),
         ),
         const SizedBox(height: 16),
-        Padding(
-          padding: EdgeInsets.symmetric(horizontal: isMobile ? 16 : 24),
-          child: Container(
-            width: double.infinity,
-            padding: const EdgeInsets.all(32),
-            decoration: BoxDecoration(
-              color: const Color(0xFFF8F8F8),
-              borderRadius: BorderRadius.circular(16),
-            ),
-            child: const Center(
-              child: Column(
-                children: [
-                  Icon(Icons.local_offer_outlined, size: 48, color: Color(0xFFCCCCCC)),
-                  SizedBox(height: 12),
-                  Text(
-                    'Próximamente ofertas especiales',
-                    style: TextStyle(fontSize: 14, color: Color(0xFF999999)),
+        
+        StreamBuilder<QuerySnapshot>(
+          stream: FirebaseFirestore.instance
+              .collection('destinos')
+              .where('activo', isEqualTo: true)
+              .snapshots(),
+          builder: (context, snapshot) {
+            if (snapshot.connectionState == ConnectionState.waiting) {
+              return const Center(child: CircularProgressIndicator(color: Color(0xFF9C27B0)));
+            }
+
+            if (snapshot.hasError) {
+              return const SizedBox.shrink();
+            }
+
+            final todosDestinos = snapshot.data?.docs ?? [];
+            
+            final ofertas = todosDestinos.where((doc) {
+              final data = doc.data() as Map<String, dynamic>;
+              return _esOferta(data['isOffer']);
+            }).toList();
+            
+            if (ofertas.isEmpty) {
+              return Padding(
+                padding: EdgeInsets.symmetric(horizontal: isMobile ? 16 : 24),
+                child: Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(32),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFF8F8F8),
+                    borderRadius: BorderRadius.circular(16),
                   ),
-                ],
+                  child: const Center(
+                    child: Column(
+                      children: [
+                        Icon(Icons.local_offer_outlined, size: 48, color: Color(0xFFCCCCCC)),
+                        SizedBox(height: 12),
+                        Text(
+                          'Próximamente ofertas especiales',
+                          style: TextStyle(fontSize: 14, color: Color(0xFF999999)),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              );
+            }
+
+            return Padding(
+              padding: EdgeInsets.symmetric(horizontal: isMobile ? 16 : 24),
+              child: SizedBox(
+                height: 280,
+                child: ListView.separated(
+                  scrollDirection: Axis.horizontal,
+                  itemCount: ofertas.length,
+                  separatorBuilder: (_, __) => const SizedBox(width: 16),
+                  itemBuilder: (context, index) {
+                    final doc = ofertas[index];
+                    final data = doc.data() as Map<String, dynamic>;
+                    return SizedBox(
+                      width: 220,
+                      child: DestinationCard(
+                        id: doc.id,
+                        nombre: data['nombre'] ?? '',
+                        ubicacion: data['ubicacion'] ?? '',
+                        precio: (data['precio'] ?? 0).toDouble(),
+                        duracion: data['duracion'] ?? 'Full Day',
+                        imagenUrl: data['imagen'] ?? '',
+                        isOffer: true,
+                        onTap: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => DestinationDetailView(destinoId: doc.id),
+                            ),
+                          );
+                        },
+                      ),
+                    );
+                  },
+                ),
               ),
-            ),
-          ),
+            );
+          },
         ),
       ],
     );
@@ -527,6 +646,7 @@ class _StudentHomeViewState extends State<StudentHomeView> {
     return Container(
       width: double.infinity,
       padding: EdgeInsets.symmetric(vertical: isMobile ? 16 : 20),
+      margin: const EdgeInsets.only(top: 40),
       decoration: const BoxDecoration(
         color: Color(0xFFFC6707),
         borderRadius: BorderRadius.only(

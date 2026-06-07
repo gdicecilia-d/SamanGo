@@ -1,13 +1,12 @@
-// Pantalla para publicar un nuevo tour (Operador)
+// Pantalla para publicar un nuevo tour 
 import 'dart:typed_data';
-import '../shared/app_header.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import '../student/widgets/student_header.dart';
+import '../shared/app_header.dart';
 import '../../services/storage_service.dart';
 import '../../controllers/auth_controller.dart';
 import 'operator_home_view.dart';
@@ -107,7 +106,7 @@ class _OperatorPublishViewState extends State<OperatorPublishView> {
   }
 
   Future<void> _publicarTour() async {
-    // Validaciones básicas
+    // Validaciones
     if (_tituloController.text.trim().isEmpty) {
       _mostrarMensaje('Por favor ingresa el título del tour');
       return;
@@ -140,19 +139,20 @@ class _OperatorPublishViewState extends State<OperatorPublishView> {
       final operadorNombre = auth.usuarioActual?.nombre ?? 'Operador';
       final operadorEmpresa = auth.usuarioActual?.empresa ?? '';
 
-      // Convertir portada a Base64 y guardarla como string en Firestore
-      // Así no se necesita Firebase Storage (plan gratuito no lo permite)
+      // Convertir portada a Base64 (comprimida)
       String portadaUrl = '';
       if (_portadaImagenBytes != null) {
-        final base64 = _storageService.imageToBase64(_portadaImagenBytes!);
+        final comprimidos = _storageService.comprimirImagen(_portadaImagenBytes!);
+        final base64 = _storageService.imageToBase64(comprimidos);
         portadaUrl = 'data:image/jpeg;base64,$base64';
       }
 
-      // Convertir imágenes de referencia a Base64 también
+      // Convertir imágenes de referencia a Base64 (comprimidas)
       List<String> referenciasUrls = [];
       for (int i = 0; i < _referenciasImagenesBytes.length; i++) {
         if (_referenciasImagenesBytes[i] != null) {
-          final base64 = _storageService.imageToBase64(_referenciasImagenesBytes[i]!);
+          final comprimidos = _storageService.comprimirImagen(_referenciasImagenesBytes[i]!);
+          final base64 = _storageService.imageToBase64(comprimidos);
           referenciasUrls.add('data:image/jpeg;base64,$base64');
         }
       }
