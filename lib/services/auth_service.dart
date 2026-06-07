@@ -1,10 +1,12 @@
 import 'dart:math';
+import 'dart:typed_data';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:mailer/mailer.dart';
 import 'package:mailer/smtp_server.dart';
 import '../models/usuario.dart';
+import 'storage_service.dart';
 
 class AuthService {
   final FirebaseAuth _auth = FirebaseAuth.instance;
@@ -12,8 +14,8 @@ class AuthService {
 
   // Credenciales de correo (Para entorno de desarrollo)
   // IMPORTANTE: En producción usar EmailJS o un backend real.
-  final String _smtpEmail = 'samangounimet@gmail.com'; // Reemplazar
-  final String _smtpPassword = 'tupassworddeaplicacion'; // Reemplazar por Contraseña de Aplicación de Google
+  final String _smtpEmail = 'juancollsimoes@gmail.com'; 
+  final String _smtpPassword = 'akfydxirzblhhzpd'; 
 
   // Inicia sesión con email y contraseña
   Future<Usuario?> loginWithEmail(String email, String password) async {
@@ -74,6 +76,7 @@ class AuthService {
     required String telefono,
     required String descripcion,
     required String fechaNacimiento,
+    Uint8List? fileBytes,
   }) async {
     try {
       final emailExists = await checkEmailExists(email);
@@ -83,6 +86,15 @@ class AuthService {
 
       final docRef = _db.collection('operadores').doc();
       final uid = docRef.id;
+
+      String? licenciaUrl;
+      if (fileBytes != null) {
+        licenciaUrl = await StorageService().uploadLicencia(
+          uid: uid,
+          fileBytes: fileBytes,
+          fileName: 'licencia_operador_$uid',
+        );
+      }
 
       final usuario = Usuario(
         id: uid,
@@ -95,6 +107,7 @@ class AuthService {
         descripcion: descripcion,
         fechaNacimiento: fechaNacimiento,
         estado: 'pendiente',
+        licenciaUrl: licenciaUrl,
       );
       await docRef.set(usuario.toMap());
       return usuario;

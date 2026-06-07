@@ -1,3 +1,4 @@
+import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import '../models/usuario.dart';
 import '../services/auth_service.dart';
@@ -55,6 +56,7 @@ class AuthController extends ChangeNotifier {
     required String telefono,
     required String descripcion,
     required String fechaNacimiento,
+    Uint8List? fileBytes,
   }) async {
     _setLoading(true);
     try {
@@ -67,6 +69,7 @@ class AuthController extends ChangeNotifier {
         telefono: telefono,
         descripcion: descripcion,
         fechaNacimiento: fechaNacimiento,
+        fileBytes: fileBytes,
       );
       _setLoading(false);
       return null;

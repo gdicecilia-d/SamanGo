@@ -42,6 +42,8 @@ class _RegisterOperatorViewState extends State<RegisterOperatorView> {
   String _selectedRifLetra = 'J';
   final List<String> _rifOpciones = ['J', 'V', 'E', 'G', 'P'];
 
+  Uint8List? _selectedFileBytes;
+
   bool get _isFormValid {
     return _empresaController.text.isNotEmpty &&
         _empresaController.text.length >= 3 &&
@@ -68,7 +70,7 @@ class _RegisterOperatorViewState extends State<RegisterOperatorView> {
     try {
       FilePickerResult? result = await FilePicker.pickFiles(
         type: FileType.custom,
-        allowedExtensions: ['pdf', 'jpg', 'jpeg', 'png'],
+        allowedExtensions: ['jpg', 'jpeg', 'png'],
         withData: true,
       );
 
@@ -84,6 +86,7 @@ class _RegisterOperatorViewState extends State<RegisterOperatorView> {
 
         setState(() {
           _selectedFileName = file.name;
+          _selectedFileBytes = file.bytes;
           _isUploading = false;
         });
       } else {
@@ -125,6 +128,7 @@ class _RegisterOperatorViewState extends State<RegisterOperatorView> {
       telefono: telefonoCompleto,
       descripcion: _descripcionController.text,
       fechaNacimiento: _fechaNacimientoController.text,
+      fileBytes: _selectedFileBytes,
     );
 
     if (!mounted) return;
@@ -443,7 +447,7 @@ class _RegisterOperatorViewState extends State<RegisterOperatorView> {
           Padding(
             padding: const EdgeInsets.only(top: 6),
             child: Text(
-              'Debes subir la licencia de turismo',
+              'Debes subir una foto o captura de la licencia',
               style: GoogleFonts.outfit(color: const Color(0xFFFC6707), fontSize: 12),
             ),
           ),
