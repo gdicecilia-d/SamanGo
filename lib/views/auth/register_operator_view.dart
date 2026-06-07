@@ -24,11 +24,9 @@ class _RegisterOperatorViewState extends State<RegisterOperatorView> {
   final TextEditingController _representanteController = TextEditingController();
   final TextEditingController _telefonoNumeroController = TextEditingController();
   final TextEditingController _emailController = TextEditingController();
-  final TextEditingController _passwordController = TextEditingController();
   final TextEditingController _descripcionController = TextEditingController();
 
   // Variables de estado
-  bool _obscurePassword = true;
   bool _acceptTerms = false;
   bool _showErrors = false;
   final TextEditingController _fechaNacimientoController = TextEditingController();
@@ -54,7 +52,6 @@ class _RegisterOperatorViewState extends State<RegisterOperatorView> {
         _telefonoNumeroController.text.isNotEmpty &&
         RegExp(r'^\d{7}$').hasMatch(_telefonoNumeroController.text) &&
         FormValidators.validarEmail(_emailController.text) == null &&
-        FormValidators.validarPassword(_passwordController.text) == null &&
         _descripcionController.text.isNotEmpty &&
         _descripcionController.text.length >= 10 &&
         _selectedFileName != null &&
@@ -122,7 +119,6 @@ class _RegisterOperatorViewState extends State<RegisterOperatorView> {
 
     final errorMessage = await Provider.of<AuthController>(context, listen: false).registerOperator(
       email: _emailController.text,
-      password: _passwordController.text,
       nombre: nombreCompleto,
       empresa: _empresaController.text,
       rif: rifCompleto,
@@ -255,11 +251,6 @@ class _RegisterOperatorViewState extends State<RegisterOperatorView> {
             ),
             const SizedBox(height: 16),
 
-            // Contraseña
-            _buildLabel('Contraseña'),
-            _buildPasswordField(),
-            const SizedBox(height: 16),
-
             // Fecha de Nacimiento
             _buildLabel('Fecha de Nacimiento'),
             _buildTextField(
@@ -296,9 +287,9 @@ class _RegisterOperatorViewState extends State<RegisterOperatorView> {
             SizedBox(
               width: double.infinity,
               child: TextButton(
-                onPressed: _passwordController.text.isNotEmpty ? _submitForm : null,
+                onPressed: _submitForm,
                 style: TextButton.styleFrom(
-                  backgroundColor: _passwordController.text.isNotEmpty ? const Color(0xFFFC6707) : const Color(0xFFFDDBB3),
+                  backgroundColor: const Color(0xFFFC6707),
                   foregroundColor: Colors.white,
                   padding: const EdgeInsets.symmetric(vertical: 16),
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
@@ -353,41 +344,6 @@ class _RegisterOperatorViewState extends State<RegisterOperatorView> {
             filled: true,
             fillColor: const Color(0xFFF5F5F5),
             contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildPasswordField() {
-    final errorText = (_showErrors || _passwordController.text.isNotEmpty)
-        ? FormValidators.validarPassword(_passwordController.text)
-        : null;
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        TextFormField(
-          controller: _passwordController,
-          onChanged: (_) => setState(() {}),
-          obscureText: _obscurePassword,
-          style: GoogleFonts.outfit(fontSize: 14),
-          decoration: InputDecoration(
-            hintText: 'Ingrese su contraseña (mínimo 6 caracteres)',
-            hintStyle: GoogleFonts.outfit(fontSize: 14, color: const Color(0xFF999999)),
-            errorText: errorText,
-            errorStyle: GoogleFonts.outfit(color: const Color(0xFFFC6707), fontSize: 12),
-            border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
-            focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: Colors.transparent)),
-            enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
-            errorBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: Color(0xFFFC6707), width: 1.5)),
-            focusedErrorBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: Color(0xFFFC6707), width: 1.5)),
-            filled: true,
-            fillColor: const Color(0xFFF5F5F5),
-            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
-            suffixIcon: IconButton(
-              icon: Icon(_obscurePassword ? Icons.visibility_off : Icons.visibility, color: const Color(0xFF999999)),
-              onPressed: () => setState(() => _obscurePassword = !_obscurePassword),
-            ),
           ),
         ),
       ],

@@ -55,6 +55,7 @@ dependencies:
   # lo que causa el tiempo de publicacion excesivo.
   # Con este paquete se comprimen a ~200KB antes de subir.
   image: ^4.1.7
+  mailer: ^7.1.0
 
 # Paquetes que solo se usan en desarrollo y testing (no van en la app final)
 dev_dependencies:

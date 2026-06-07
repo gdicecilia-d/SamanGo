@@ -49,7 +49,6 @@ class AuthController extends ChangeNotifier {
   // Register Operator
   Future<String?> registerOperator({
     required String email,
-    required String password,
     required String nombre,
     required String empresa,
     required String rif,
@@ -59,9 +58,9 @@ class AuthController extends ChangeNotifier {
   }) async {
     _setLoading(true);
     try {
-      _usuarioActual = await _authService.registerOperator(
+      // El operador se registra pero no se guarda como _usuarioActual ni hace login automático
+      await _authService.registerOperator(
         email: email,
-        password: password,
         nombre: nombre,
         empresa: empresa,
         rif: rif,
@@ -77,7 +76,51 @@ class AuthController extends ChangeNotifier {
     }
   }
 
-  // Update Student Profile (carrera y teléfono)
+  // Aprobar Operador (Admin)
+  Future<String?> approveOperator(Usuario operador) async {
+    _setLoading(true);
+    try {
+      await _authService.approveOperator(operador);
+      _setLoading(false);
+      return null;
+    } catch (e) {
+      _setLoading(false);
+      return e.toString();
+    }
+  }
+
+  // Rechazar Operador (Admin)
+  Future<String?> rejectOperator(Usuario operador) async {
+    _setLoading(true);
+    try {
+      await _authService.rejectOperator(operador);
+      _setLoading(false);
+      return null;
+    } catch (e) {
+      _setLoading(false);
+      return e.toString();
+    }
+  }
+
+  // Recuperar Contraseña
+  Future<String?> recoverPassword(String email) async {
+    _setLoading(true);
+    try {
+      final exists = await _authService.checkEmailExists(email);
+      if (!exists) {
+        _setLoading(false);
+        return 'El correo ingresado no está registrado en el sistema';
+      }
+      await _authService.sendPasswordResetEmail(email);
+      _setLoading(false);
+      return null; // Éxito
+    } catch (e) {
+      _setLoading(false);
+      return 'Ocurrió un error al intentar enviar el correo.';
+    }
+  }
+
+  // Update Student Profile
   Future<bool> updateStudentProfile({
     required String carrera,
     required String telefono,
@@ -100,7 +143,7 @@ class AuthController extends ChangeNotifier {
     }
   }
 
-  // Update Profile Image (Base64)
+  // Update Profile Image
   Future<bool> updateProfileImage(String uid, String base64Image) async {
     _setLoading(true);
     try {

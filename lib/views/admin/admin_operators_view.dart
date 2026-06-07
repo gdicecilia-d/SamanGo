@@ -2,6 +2,8 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import '../../models/usuario.dart';
 import '../../controllers/auth_controller.dart';
 import '../shared/app_header.dart';
 import '../../views/shared/widgets/custom_dialog.dart';
@@ -26,6 +28,7 @@ class _AdminOperatorsViewState extends State<AdminOperatorsView> {
   
   bool _isHoveringAceptar = false;
   bool _isHoveringRechazar = false;
+  bool _isProcessing = false;
 
   void _handleMenuSelected(String menu) {
     if (menu == 'Dashboard') {
@@ -380,99 +383,94 @@ class _AdminOperatorsViewState extends State<AdminOperatorsView> {
   }
 
   Widget _buildOperatorsList(bool isMobile) {
-    final List<Map<String, dynamic>> operadoresEjemplo = [
-      {
-        'id': '1',
-        'nombre': 'Carlos Mendoza',
-        'empresa': 'EcoRutas Venezuela',
-        'correo': 'carlos@ecorutas.com',
-        'telefono': '04121234567',
-        'rif': 'J-40789234-5',
-        'descripcion': 'Ofrecemos tours ecológicos por todo el país.',
-        'fechaSolicitud': '15/05/2026',
-        'licenciaUrl': 'https://firebasestorage.googleapis.com/.../licencia.pdf',
-      },
-    ];
+    return StreamBuilder<QuerySnapshot>(
+      stream: FirebaseFirestore.instance.collection('operadores').snapshots(),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Center(
+            child: Padding(
+              padding: EdgeInsets.all(32.0),
+              child: CircularProgressIndicator(color: Color(0xFFFC6707)),
+            ),
+          );
+        }
 
-    if (_selectedTab == 0 && operadoresEjemplo.isEmpty) {
-      return Container(
-        padding: const EdgeInsets.all(32),
-        decoration: BoxDecoration(
-          color: const Color(0xFFF8F8F8),
-          borderRadius: BorderRadius.circular(16),
-        ),
-        child: const Center(
-          child: Column(
-            children: [
-              Icon(Icons.pending_actions, size: 48, color: Color(0xFFCCCCCC)),
-              SizedBox(height: 12),
-              Text(
-                'No hay solicitudes pendientes',
-                style: TextStyle(fontSize: 14, color: Color(0xFF999999)),
+        if (snapshot.hasError) {
+          return Center(child: Text('Error: \${snapshot.error}'));
+        }
+
+        final docs = snapshot.data?.docs ?? [];
+        
+        String filtroEstado;
+        if (_selectedTab == 0) {
+          filtroEstado = 'pendiente';
+        } else if (_selectedTab == 1) {
+          filtroEstado = 'aprobado';
+        } else {
+          filtroEstado = 'rechazado';
+        }
+
+        final operadoresFiltrados = docs.where((doc) {
+          final data = doc.data() as Map<String, dynamic>;
+          return data['estado'] == filtroEstado;
+        }).toList();
+
+        if (operadoresFiltrados.isEmpty) {
+          return Container(
+            padding: const EdgeInsets.all(32),
+            decoration: BoxDecoration(
+              color: const Color(0xFFF8F8F8),
+              borderRadius: BorderRadius.circular(16),
+            ),
+            child: Center(
+              child: Column(
+                children: [
+                  Icon(
+                    _selectedTab == 0 ? Icons.pending_actions : (_selectedTab == 1 ? Icons.check_circle : Icons.cancel),
+                    size: 48,
+                    color: const Color(0xFFCCCCCC),
+                  ),
+                  const SizedBox(height: 12),
+                  const Text(
+                    'No hay operadores con este estado',
+                    style: TextStyle(fontSize: 14, color: Color(0xFF999999)),
+                  ),
+                ],
               ),
-            ],
-          ),
-        ),
-      );
-    }
+            ),
+          );
+        }
 
-    if (_selectedTab == 1 && operadoresEjemplo.isEmpty) {
-      return Container(
-        padding: const EdgeInsets.all(32),
-        decoration: BoxDecoration(
-          color: const Color(0xFFF8F8F8),
-          borderRadius: BorderRadius.circular(16),
-        ),
-        child: const Center(
-          child: Column(
-            children: [
-              Icon(Icons.check_circle, size: 48, color: Color(0xFFCCCCCC)),
-              SizedBox(height: 12),
-              Text(
-                'No hay operadores aprobados',
-                style: TextStyle(fontSize: 14, color: Color(0xFF999999)),
-              ),
-            ],
-          ),
-        ),
-      );
-    }
+        return ListView.separated(
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          itemCount: operadoresFiltrados.length,
+          separatorBuilder: (_, __) => const SizedBox(height: 16),
+          itemBuilder: (context, index) {
+            final doc = operadoresFiltrados[index];
+            final data = doc.data() as Map<String, dynamic>;
+            final operadorMap = {
+              'id': doc.id,
+              'nombre': data['nombre'] ?? 'Sin nombre',
+              'empresa': data['empresa'] ?? 'Sin empresa',
+              'correo': data['correo'] ?? 'Sin correo',
+              'telefono': data['telefono'] ?? 'Sin teléfono',
+              'rif': data['rif'] ?? 'Sin RIF',
+              'descripcion': data['descripcion'] ?? 'Sin descripción',
+              'fechaSolicitud': data['fechaNacimiento'] ?? 'N/A',
+              'licenciaUrl': data['licenciaUrl'] ?? '',
+            };
+            
+            final operadorObj = Usuario.fromMap(doc.id, data);
 
-    if (_selectedTab == 2 && operadoresEjemplo.isEmpty) {
-      return Container(
-        padding: const EdgeInsets.all(32),
-        decoration: BoxDecoration(
-          color: const Color(0xFFF8F8F8),
-          borderRadius: BorderRadius.circular(16),
-        ),
-        child: const Center(
-          child: Column(
-            children: [
-              Icon(Icons.cancel, size: 48, color: Color(0xFFCCCCCC)),
-              SizedBox(height: 12),
-              Text(
-                'No hay operadores rechazados',
-                style: TextStyle(fontSize: 14, color: Color(0xFF999999)),
-              ),
-            ],
-          ),
-        ),
-      );
-    }
-
-    return ListView.separated(
-      shrinkWrap: true,
-      physics: const NeverScrollableScrollPhysics(),
-      itemCount: operadoresEjemplo.length,
-      separatorBuilder: (_, __) => const SizedBox(height: 16),
-      itemBuilder: (context, index) {
-        final operador = operadoresEjemplo[index];
-        return _buildOperatorCard(operador, isMobile);
+            return _buildOperatorCard(operadorMap, operadorObj, isMobile);
+          },
+        );
       },
     );
   }
 
-  Widget _buildOperatorCard(Map<String, dynamic> operador, bool isMobile) {
+  Widget _buildOperatorCard(Map<String, dynamic> operadorMap, Usuario operadorObj, bool isMobile) {
     return Container(
       decoration: BoxDecoration(
         color: Colors.white,
@@ -506,7 +504,7 @@ class _AdminOperatorsViewState extends State<AdminOperatorsView> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    operador['empresa']!,
+                    operadorMap['empresa']!,
                     style: GoogleFonts.outfit(
                       fontSize: 16,
                       fontWeight: FontWeight.bold,
@@ -514,7 +512,7 @@ class _AdminOperatorsViewState extends State<AdminOperatorsView> {
                     ),
                   ),
                   Text(
-                    operador['nombre']!,
+                    operadorMap['nombre']!,
                     style: GoogleFonts.outfit(
                       fontSize: 13,
                       color: const Color(0xFF888888),
@@ -529,60 +527,78 @@ class _AdminOperatorsViewState extends State<AdminOperatorsView> {
           mainAxisSize: MainAxisSize.min,
           children: [
             if (_selectedTab == 0) ...[
-              MouseRegion(
-                cursor: SystemMouseCursors.click,
-                onEnter: (_) => setState(() => _isHoveringAceptar = true),
-                onExit: (_) => setState(() => _isHoveringAceptar = false),
-                child: AnimatedContainer(
-                  duration: const Duration(milliseconds: 150),
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                  decoration: BoxDecoration(
-                    color: _isHoveringAceptar ? const Color(0xFF45A049) : const Color(0xFF4CAF50),
-                    borderRadius: BorderRadius.circular(20),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      const Icon(Icons.check, color: Colors.white, size: 16),
-                      const SizedBox(width: 4),
-                      Text(
-                        'Aceptar',
-                        style: GoogleFonts.outfit(
-                          fontSize: 12,
-                          fontWeight: FontWeight.w500,
-                          color: Colors.white,
+              GestureDetector(
+                onTap: _isProcessing ? null : () async {
+                  setState(() => _isProcessing = true);
+                  final error = await Provider.of<AuthController>(context, listen: false).approveOperator(operadorObj);
+                  setState(() => _isProcessing = false);
+                  if (error != null) _mostrarMensaje(error);
+                  else _mostrarMensaje('Operador aprobado correctamente');
+                },
+                child: MouseRegion(
+                  cursor: SystemMouseCursors.click,
+                  onEnter: (_) => setState(() => _isHoveringAceptar = true),
+                  onExit: (_) => setState(() => _isHoveringAceptar = false),
+                  child: AnimatedContainer(
+                    duration: const Duration(milliseconds: 150),
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                    decoration: BoxDecoration(
+                      color: _isHoveringAceptar ? const Color(0xFF45A049) : const Color(0xFF4CAF50),
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Icon(Icons.check, color: Colors.white, size: 16),
+                        const SizedBox(width: 4),
+                        Text(
+                          'Aceptar',
+                          style: GoogleFonts.outfit(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w500,
+                            color: Colors.white,
+                          ),
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
                 ),
               ),
               const SizedBox(width: 8),
-              MouseRegion(
-                cursor: SystemMouseCursors.click,
-                onEnter: (_) => setState(() => _isHoveringRechazar = true),
-                onExit: (_) => setState(() => _isHoveringRechazar = false),
-                child: AnimatedContainer(
-                  duration: const Duration(milliseconds: 150),
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                  decoration: BoxDecoration(
-                    color: _isHoveringRechazar ? const Color(0xFFE53935) : const Color(0xFFF44336),
-                    borderRadius: BorderRadius.circular(20),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      const Icon(Icons.close, color: Colors.white, size: 16),
-                      const SizedBox(width: 4),
-                      Text(
-                        'Rechazar',
-                        style: GoogleFonts.outfit(
-                          fontSize: 12,
-                          fontWeight: FontWeight.w500,
-                          color: Colors.white,
+              GestureDetector(
+                onTap: _isProcessing ? null : () async {
+                  setState(() => _isProcessing = true);
+                  final error = await Provider.of<AuthController>(context, listen: false).rejectOperator(operadorObj);
+                  setState(() => _isProcessing = false);
+                  if (error != null) _mostrarMensaje(error);
+                  else _mostrarMensaje('Operador rechazado');
+                },
+                child: MouseRegion(
+                  cursor: SystemMouseCursors.click,
+                  onEnter: (_) => setState(() => _isHoveringRechazar = true),
+                  onExit: (_) => setState(() => _isHoveringRechazar = false),
+                  child: AnimatedContainer(
+                    duration: const Duration(milliseconds: 150),
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                    decoration: BoxDecoration(
+                      color: _isHoveringRechazar ? const Color(0xFFE53935) : const Color(0xFFF44336),
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Icon(Icons.close, color: Colors.white, size: 16),
+                        const SizedBox(width: 4),
+                        Text(
+                          'Rechazar',
+                          style: GoogleFonts.outfit(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w500,
+                            color: Colors.white,
+                          ),
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
                 ),
               ),
@@ -627,13 +643,13 @@ class _AdminOperatorsViewState extends State<AdminOperatorsView> {
             children: [
               const Divider(),
               const SizedBox(height: 8),
-              _buildInfoRow('Representante:', operador['nombre']!),
-              _buildInfoRow('Correo:', operador['correo']!),
-              _buildInfoRow('Teléfono:', operador['telefono']!),
-              _buildInfoRow('RIF:', operador['rif']!),
-              _buildInfoRow('Descripción:', operador['descripcion']!),
-              _buildInfoRow('Fecha de Solicitud:', operador['fechaSolicitud']!),
-              _buildLicenciaRow(operador['licenciaUrl']!),
+              _buildInfoRow('Representante:', operadorMap['nombre']!),
+              _buildInfoRow('Correo:', operadorMap['correo']!),
+              _buildInfoRow('Teléfono:', operadorMap['telefono']!),
+              _buildInfoRow('RIF:', operadorMap['rif']!),
+              _buildInfoRow('Descripción:', operadorMap['descripcion']!),
+              _buildInfoRow('Fecha de Solicitud:', operadorMap['fechaSolicitud']!),
+              _buildLicenciaRow(operadorMap['licenciaUrl']!),
               const SizedBox(height: 8),
             ],
           ),

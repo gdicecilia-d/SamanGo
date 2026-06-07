@@ -2,6 +2,8 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:provider/provider.dart';
+import '../../controllers/auth_controller.dart';
 import 'auth_base_view.dart';
 import 'login_view.dart';
 
@@ -32,11 +34,20 @@ class _ForgotPasswordViewState extends State<ForgotPasswordView> {
     });
 
     try {
-      await FirebaseAuth.instance.sendPasswordResetEmail(
-        email: _emailController.text.trim(),
-      );
+      final authController = Provider.of<AuthController>(context, listen: false);
+      final error = await authController.recoverPassword(_emailController.text.trim());
       
       if (!mounted) return;
+      
+      if (error != null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(error),
+            backgroundColor: const Color(0xFFFC6707),
+          ),
+        );
+        return;
+      }
       
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(

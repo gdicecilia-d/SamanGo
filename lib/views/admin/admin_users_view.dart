@@ -304,10 +304,14 @@ class _AdminUsersViewState extends State<AdminUsersView> {
       cursor: SystemMouseCursors.click,
       child: GestureDetector(
         onTap: () {
-          Navigator.push(
-            context,
-            MaterialPageRoute(builder: (_) => const AdminOperatorsView()),
-          );
+          if (tipo == 'operadores') {
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const AdminOperatorsView()),
+            );
+          } else {
+            _mostrarMensaje('Gestión de estudiantes - Próximamente');
+          }
         },
         child: Container(
           padding: const EdgeInsets.all(24),
