@@ -384,7 +384,7 @@ class _DestinationDetailViewState extends State<DestinationDetailView> {
           // Divider
           const Divider(height: 1, thickness: 1, color: Color(0xFFE0E0E0)),
           const SizedBox(height: 24),
-          // ¿Qué incluye?
+          // Incluye
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 24),
             child: Column(

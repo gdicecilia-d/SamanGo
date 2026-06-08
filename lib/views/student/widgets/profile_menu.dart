@@ -72,7 +72,7 @@ class ProfileMenu extends StatelessWidget {
               label: 'Cerrar Sesión',
               onTap: () {
                 onClose();
-                // TODO: Cerrar sesión
+                // Cerrar sesión
                 Navigator.pushReplacementNamed(context, '/');
               },
             ),

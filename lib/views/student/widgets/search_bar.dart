@@ -90,7 +90,6 @@ void _buscar() {
     );
   }
 
-  // Crea un campo individual para el layout móvil
   // Si isDropdown es false, muestra un TextField; si es true, muestra un Dropdown
   Widget _buildMobileField(String hint, IconData icon, {List<String>? options, bool isDropdown = true}) {
     if (!isDropdown) {
@@ -145,7 +144,7 @@ void _buscar() {
     );
   }
 
-  // Layout escritorio: todos los campos en una sola fila con imagen de fondo
+  // Layout escritorio todos los campos en una sola fila con imagen de fondo
   Widget _buildDesktopLayout() {
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 24),
@@ -194,7 +193,7 @@ void _buscar() {
     );
   }
 
-  // Crea un campo individual para el layout escritorio
+  // Campo individual para el layout escritorio
   Widget _buildDesktopField(String hint, IconData icon, {List<String>? options, bool isDropdown = true}) {
     if (!isDropdown) {
       // Campo de texto libre para el destino

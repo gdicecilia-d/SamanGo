@@ -1,4 +1,4 @@
-// Enum de estados de reserva
+// Enumeracion de estados de reserva
 // Flujo: Solicitado → Aceptado → Pagado → Disfrutado
 enum EstadoReserva {
   solicitado,

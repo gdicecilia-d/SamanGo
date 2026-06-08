@@ -39,7 +39,7 @@ class _OperatorHomeViewState extends State<OperatorHomeView> {
         });
       });
     } else if (menu == 'Solicitudes') {
-      // SOLO MUESTRA MENSAJE - NO CAMBIA EL MENÚ ACTIVO
+      // Solo muestra el mensaje
       _mostrarMensaje('Solicitudes - Próximamente');
     } else if (menu == 'Inicio') {
       setState(() {

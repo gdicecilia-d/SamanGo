@@ -60,7 +60,7 @@ class CategoriesSection extends StatelessWidget {
       cursor: SystemMouseCursors.click,
       child: GestureDetector(
         onTap: () {
-          // TODO: Filtrar destinos por categoría
+          // Filtrar destinos por categoría
         },
         child: Container(
           height: isMobile ? 110 : 120,
