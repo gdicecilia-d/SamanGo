@@ -1,4 +1,3 @@
-// Pantalla principal del estudiante
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
@@ -9,6 +8,7 @@ import 'edit_profile_view.dart';
 import 'widgets/search_bar.dart';
 import 'widgets/categories.dart';
 import 'widgets/destination_card.dart';
+import 'widgets/horizontal_scroll_section.dart';
 import 'destination_detail_view.dart';
 import '../../views/shared/widgets/custom_dialog.dart';
 import '../auth/login_view.dart';
@@ -26,14 +26,11 @@ class _StudentHomeViewState extends State<StudentHomeView> {
   final List<String> _menuItems = ['Inicio', 'Mis Viajes', 'Favoritos'];
 
   void _handleMenuSelected(String menu) {
-    // No cambiar el menú activo si no es Inicio
     if (menu == 'Mis Viajes') {
       _mostrarMensaje('Mis Viajes - Próximamente');
     } else if (menu == 'Favoritos') {
       _mostrarMensaje('Favoritos - Próximamente');
     }
-    // Inicio no hace nada porque ya estamos ahí
-    // El menú activo siempre es 'Inicio'
   }
 
   void _handleEditProfile() {
@@ -102,7 +99,7 @@ class _StudentHomeViewState extends State<StudentHomeView> {
       body: Column(
         children: [
           AppHeader(
-            activeMenu: 'Inicio', // Siempre 'Inicio'
+            activeMenu: 'Inicio',
             onMenuSelected: _handleMenuSelected,
             onEditProfile: _handleEditProfile,
             onLogout: _handleLogout,
@@ -305,27 +302,12 @@ class _StudentHomeViewState extends State<StudentHomeView> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // Buscador
         Padding(
           padding: EdgeInsets.symmetric(horizontal: isMobile ? 16 : 24),
           child: const SearchBarWidget(),
         ),
         const SizedBox(height: 32),
 
-        // 1. Destinos Disponibles
-        Padding(
-          padding: EdgeInsets.symmetric(horizontal: isMobile ? 16 : 24),
-          child: Text(
-            'Destinos Disponibles',
-            style: GoogleFonts.outfit(
-              fontSize: isMobile ? 20 : 24,
-              fontWeight: FontWeight.bold,
-              color: const Color(0xFF333333),
-            ),
-          ),
-        ),
-        const SizedBox(height: 16),
-        
         StreamBuilder<QuerySnapshot>(
           stream: FirebaseFirestore.instance
               .collection('destinos')
@@ -333,134 +315,57 @@ class _StudentHomeViewState extends State<StudentHomeView> {
               .snapshots(),
           builder: (context, snapshot) {
             if (snapshot.connectionState == ConnectionState.waiting) {
-              return const Center(child: CircularProgressIndicator(color: Color(0xFFFC6707)));
-            }
-
-            if (snapshot.hasError) {
-              return Padding(
-                padding: EdgeInsets.symmetric(horizontal: isMobile ? 16 : 24),
-                child: Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.all(32),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFF8F8F8),
-                    borderRadius: BorderRadius.circular(16),
-                  ),
-                  child: const Center(
-                    child: Text(
-                      'Error al cargar destinos',
-                      style: TextStyle(fontSize: 14, color: Color(0xFF999999)),
-                    ),
-                  ),
-                ),
+              return const Padding(
+                padding: EdgeInsets.symmetric(horizontal: 24),
+                child: Center(child: CircularProgressIndicator(color: Color(0xFFFC6707))),
               );
             }
-
-            final todosDestinos = snapshot.data?.docs ?? [];
             
+            if (snapshot.hasError || !snapshot.hasData) {
+              return const SizedBox.shrink();
+            }
+            
+            final todosDestinos = snapshot.data!.docs;
             final destinosNormales = todosDestinos.where((doc) {
               final data = doc.data() as Map<String, dynamic>;
               return !_esOferta(data['isOffer']);
             }).toList();
             
-            final ofertas = todosDestinos.where((doc) {
+            final cards = destinosNormales.map((doc) {
               final data = doc.data() as Map<String, dynamic>;
-              return _esOferta(data['isOffer']);
+              return DestinationCard(
+                id: doc.id,
+                nombre: data['nombre'] ?? '',
+                ubicacion: data['ubicacion'] ?? '',
+                precio: (data['precio'] ?? 0).toDouble(),
+                duracion: data['duracion'] ?? 'Full Day',
+                imagenUrl: data['imagen'] ?? '',
+                isOffer: false,
+                cuposDisponibles: data['cuposDisponibles'] ?? 0,
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => DestinationDetailView(destinoId: doc.id),
+                    ),
+                  );
+                },
+              );
             }).toList();
             
-            if (todosDestinos.isEmpty) {
-              return Padding(
-                padding: EdgeInsets.symmetric(horizontal: isMobile ? 16 : 24),
-                child: Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.all(32),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFF8F8F8),
-                    borderRadius: BorderRadius.circular(16),
-                  ),
-                  child: const Center(
-                    child: Column(
-                      children: [
-                        Icon(Icons.explore_outlined, size: 48, color: Color(0xFFCCCCCC)),
-                        SizedBox(height: 12),
-                        Text(
-                          'No hay destinos disponibles aún',
-                          style: TextStyle(fontSize: 14, color: Color(0xFF999999)),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              );
-            }
-
-            return Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                if (destinosNormales.isNotEmpty)
-                  Padding(
-                    padding: EdgeInsets.symmetric(horizontal: isMobile ? 16 : 24),
-                    child: GridView.builder(
-                      shrinkWrap: true,
-                      physics: const NeverScrollableScrollPhysics(),
-                      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                        crossAxisCount: isMobile ? 2 : 4,
-                        crossAxisSpacing: 16,
-                        mainAxisSpacing: 16,
-                        childAspectRatio: 0.75,
-                      ),
-                      itemCount: destinosNormales.length,
-                      itemBuilder: (context, index) {
-                        final doc = destinosNormales[index];
-                        final data = doc.data() as Map<String, dynamic>;
-                        return DestinationCard(
-                          id: doc.id,
-                          nombre: data['nombre'] ?? '',
-                          ubicacion: data['ubicacion'] ?? '',
-                          precio: (data['precio'] ?? 0).toDouble(),
-                          duracion: data['duracion'] ?? 'Full Day',
-                          imagenUrl: data['imagen'] ?? '',
-                          isOffer: false,
-                          onTap: () {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (_) => DestinationDetailView(destinoId: doc.id),
-                              ),
-                            );
-                          },
-                        );
-                      },
-                    ),
-                  ),
-                
-                if (destinosNormales.isNotEmpty && ofertas.isNotEmpty)
-                  const SizedBox(height: 32),
-              ],
+            return HorizontalScrollSection(
+              title: 'Destinos Disponibles',
+              children: cards,
             );
           },
         ),
 
         const SizedBox(height: 32),
 
-        // 2. Explorar por Categorías
         const CategoriesSection(),
+
         const SizedBox(height: 32),
 
-        // 3. Ofertas Especiales
-        Padding(
-          padding: EdgeInsets.symmetric(horizontal: isMobile ? 16 : 24),
-          child: Text(
-            'Ofertas Especiales',
-            style: GoogleFonts.outfit(
-              fontSize: isMobile ? 20 : 24,
-              fontWeight: FontWeight.bold,
-              color: const Color(0xFF333333),
-            ),
-          ),
-        ),
-        const SizedBox(height: 16),
-        
         StreamBuilder<QuerySnapshot>(
           stream: FirebaseFirestore.instance
               .collection('destinos')
@@ -468,80 +373,47 @@ class _StudentHomeViewState extends State<StudentHomeView> {
               .snapshots(),
           builder: (context, snapshot) {
             if (snapshot.connectionState == ConnectionState.waiting) {
-              return const Center(child: CircularProgressIndicator(color: Color(0xFF9C27B0)));
+              return const Padding(
+                padding: EdgeInsets.symmetric(horizontal: 24),
+                child: Center(child: CircularProgressIndicator(color: Color(0xFF9C27B0))),
+              );
             }
-
-            if (snapshot.hasError) {
+            
+            if (snapshot.hasError || !snapshot.hasData) {
               return const SizedBox.shrink();
             }
-
-            final todosDestinos = snapshot.data?.docs ?? [];
             
+            final todosDestinos = snapshot.data!.docs;
             final ofertas = todosDestinos.where((doc) {
               final data = doc.data() as Map<String, dynamic>;
               return _esOferta(data['isOffer']);
             }).toList();
             
-            if (ofertas.isEmpty) {
-              return Padding(
-                padding: EdgeInsets.symmetric(horizontal: isMobile ? 16 : 24),
-                child: Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.all(32),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFF8F8F8),
-                    borderRadius: BorderRadius.circular(16),
-                  ),
-                  child: const Center(
-                    child: Column(
-                      children: [
-                        Icon(Icons.local_offer_outlined, size: 48, color: Color(0xFFCCCCCC)),
-                        SizedBox(height: 12),
-                        Text(
-                          'Próximamente ofertas especiales',
-                          style: TextStyle(fontSize: 14, color: Color(0xFF999999)),
-                        ),
-                      ],
+            final cards = ofertas.map((doc) {
+              final data = doc.data() as Map<String, dynamic>;
+              return DestinationCard(
+                id: doc.id,
+                nombre: data['nombre'] ?? '',
+                ubicacion: data['ubicacion'] ?? '',
+                precio: (data['precio'] ?? 0).toDouble(),
+                duracion: data['duracion'] ?? 'Full Day',
+                imagenUrl: data['imagen'] ?? '',
+                isOffer: true,
+                cuposDisponibles: data['cuposDisponibles'] ?? 0,
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => DestinationDetailView(destinoId: doc.id),
                     ),
-                  ),
-                ),
+                  );
+                },
               );
-            }
-
-            return Padding(
-              padding: EdgeInsets.symmetric(horizontal: isMobile ? 16 : 24),
-              child: SizedBox(
-                height: 280,
-                child: ListView.separated(
-                  scrollDirection: Axis.horizontal,
-                  itemCount: ofertas.length,
-                  separatorBuilder: (_, __) => const SizedBox(width: 16),
-                  itemBuilder: (context, index) {
-                    final doc = ofertas[index];
-                    final data = doc.data() as Map<String, dynamic>;
-                    return SizedBox(
-                      width: 220,
-                      child: DestinationCard(
-                        id: doc.id,
-                        nombre: data['nombre'] ?? '',
-                        ubicacion: data['ubicacion'] ?? '',
-                        precio: (data['precio'] ?? 0).toDouble(),
-                        duracion: data['duracion'] ?? 'Full Day',
-                        imagenUrl: data['imagen'] ?? '',
-                        isOffer: true,
-                        onTap: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (_) => DestinationDetailView(destinoId: doc.id),
-                            ),
-                          );
-                        },
-                      ),
-                    );
-                  },
-                ),
-              ),
+            }).toList();
+            
+            return HorizontalScrollSection(
+              title: 'Ofertas Especiales',
+              children: cards,
             );
           },
         ),

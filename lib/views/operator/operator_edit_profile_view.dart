@@ -25,7 +25,6 @@ class _OperatorEditProfileViewState extends State<OperatorEditProfileView> {
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
   final StorageService _storageService = StorageService();
   
-  // Controladores para campos
   final TextEditingController _empresaController = TextEditingController();
   final TextEditingController _representanteController = TextEditingController();
   final TextEditingController _rifController = TextEditingController();
@@ -33,9 +32,8 @@ class _OperatorEditProfileViewState extends State<OperatorEditProfileView> {
   final TextEditingController _servicioController = TextEditingController();
   final TextEditingController _telefonoNumeroController = TextEditingController();
   
-  // Selección de teléfono (con 0 al inicio)
   String _selectedTelefonoPrefijo = '0412';
-  final List<String> _telefonoOpciones = ['0212', '0412', '0414', '0416', '0424', '0426'];
+  final List<String> _telefonoOpciones = ['0412', '0414', '0416', '0424', '0426', '0212'];
   
   bool _isHoveringFoto = false;
   bool _isLoading = false;
@@ -68,14 +66,17 @@ class _OperatorEditProfileViewState extends State<OperatorEditProfileView> {
         _correoController.text = user.correo;
         _servicioController.text = user.descripcion ?? '';
         
-        // Parsear teléfono existente - formato esperado: 04121234567
+        // Parsear teléfono existente - formato esperado: 04121234567 (11 dígitos)
         if (user.telefono != null && user.telefono!.isNotEmpty) {
           String telefono = user.telefono!;
           telefono = telefono.replaceAll(RegExp(r'[^\d]'), '');
           
-          if (telefono.length >= 11) {
+          if (telefono.length == 11) {
             _selectedTelefonoPrefijo = telefono.substring(0, 4);
             _telefonoNumeroController.text = telefono.substring(4, 11);
+          } else if (telefono.length == 10) {
+            _selectedTelefonoPrefijo = '0${telefono.substring(0, 3)}';
+            _telefonoNumeroController.text = telefono.substring(3, 10);
           } else if (telefono.length == 7) {
             _telefonoNumeroController.text = telefono;
           }
@@ -113,10 +114,14 @@ class _OperatorEditProfileViewState extends State<OperatorEditProfileView> {
           : '';
       
       try {
-        await FirebaseFirestore.instance.collection('operadores').doc(userId).update({
+        final Map<String, dynamic> updates = {
           'descripcion': _servicioController.text,
-          if (telefonoCompleto.isNotEmpty) 'telefono': telefonoCompleto,
-        });
+        };
+        if (telefonoCompleto.isNotEmpty) {
+          updates['telefono'] = telefonoCompleto;
+        }
+        
+        await FirebaseFirestore.instance.collection('operadores').doc(userId).update(updates);
         
         await auth.reloadUser();
         

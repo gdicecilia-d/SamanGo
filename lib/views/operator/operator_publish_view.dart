@@ -29,6 +29,7 @@ class _OperatorPublishViewState extends State<OperatorPublishView> {
   final TextEditingController _tituloController = TextEditingController();
   final TextEditingController _ubicacionController = TextEditingController();
   final TextEditingController _precioController = TextEditingController();
+  final TextEditingController _cuposController = TextEditingController(); // NUEVO
   final TextEditingController _requisitosController = TextEditingController();
   final TextEditingController _noIncluyeController = TextEditingController();
   final TextEditingController _descripcionController = TextEditingController();
@@ -38,11 +39,18 @@ class _OperatorPublishViewState extends State<OperatorPublishView> {
   String _transporteSeleccionado = 'Bus';
   String _alojamientoSeleccionado = 'Hotel';
   String _duracionSeleccionada = 'Full Day';
+  String _selectedCategoria = 'Playas / Cayos';
   bool _isOffer = false;
   
   // Listas de opciones
   final List<String> _transportes = ['Bus', 'Avión', 'Barco', '4x4', 'Todos'];
   final List<String> _alojamientos = ['Hotel', 'Posada', 'Camping', 'Eco lodge', 'No incluye'];
+  final List<String> _categorias = [
+    'Playas / Cayos',
+    'Montañas / Trekking',
+    'Aventura / Ríos',
+    'Cultura / Ciudades',
+  ];
   
   // Checkboxes para Servicios incluidos
   bool _incluyeVuelos = false;
@@ -67,11 +75,26 @@ class _OperatorPublishViewState extends State<OperatorPublishView> {
     _tituloController.dispose();
     _ubicacionController.dispose();
     _precioController.dispose();
+    _cuposController.dispose();
     _requisitosController.dispose();
     _noIncluyeController.dispose();
     _descripcionController.dispose();
     _nochesController.dispose();
     super.dispose();
+  }
+
+  bool get _isFormValid {
+    // Validar cupos
+    final cuposValidos = _cuposController.text.isNotEmpty &&
+        int.tryParse(_cuposController.text) != null &&
+        int.parse(_cuposController.text) > 0;
+    
+    return _tituloController.text.trim().isNotEmpty &&
+        _ubicacionController.text.trim().isNotEmpty &&
+        _precioController.text.trim().isNotEmpty &&
+        cuposValidos &&
+        _portadaImagenBytes != null &&
+        (_duracionSeleccionada != 'Varias Noches' || _nochesController.text.trim().isNotEmpty);
   }
 
   Future<void> _seleccionarPortada() async {
@@ -119,6 +142,15 @@ class _OperatorPublishViewState extends State<OperatorPublishView> {
       _mostrarMensaje('Por favor ingresa el precio');
       return;
     }
+    if (_cuposController.text.trim().isEmpty) {
+      _mostrarMensaje('Por favor ingresa la cantidad de cupos disponibles');
+      return;
+    }
+    final cupos = int.tryParse(_cuposController.text.trim());
+    if (cupos == null || cupos <= 0) {
+      _mostrarMensaje('Los cupos deben ser un número mayor a 0');
+      return;
+    }
     if (_portadaImagenBytes == null) {
       _mostrarMensaje('Por favor selecciona una imagen de portada');
       return;
@@ -162,8 +194,11 @@ class _OperatorPublishViewState extends State<OperatorPublishView> {
         'nombre': _tituloController.text.trim(),
         'ubicacion': _ubicacionController.text.trim(),
         'precio': double.tryParse(_precioController.text.trim()) ?? 0.0,
+        'cuposTotales': cupos,
+        'cuposDisponibles': cupos,
         'transporte': _transporteSeleccionado,
         'alojamiento': _alojamientoSeleccionado,
+        'categoria': _selectedCategoria,
         'imagen': portadaUrl,
         'imagenesReferencia': referenciasUrls,
         'isOffer': _isOffer,
@@ -668,6 +703,18 @@ class _OperatorPublishViewState extends State<OperatorPublishView> {
             })),
             const SizedBox(width: 16),
             Expanded(child: _buildTextField('Precio (USD)', _precioController, 'Ej: 99', isNumber: true)),
+          ],
+        ),
+        const SizedBox(height: 16),
+        Row(
+          children: [
+            Expanded(child: _buildDropdown('Categoría', _categorias, _selectedCategoria, (value) {
+              setState(() => _selectedCategoria = value!);
+            })),
+            const SizedBox(width: 16),
+            Expanded(child: _buildTextField('Cupos disponibles', _cuposController, 'Ej: 20', isNumber: true)),
+            const SizedBox(width: 16),
+            Expanded(child: Container()), // Espaciador
           ],
         ),
         const SizedBox(height: 16),

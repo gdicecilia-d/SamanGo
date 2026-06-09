@@ -1,5 +1,4 @@
 // Pantalla principal del operador
-import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
@@ -8,6 +7,7 @@ import '../../controllers/auth_controller.dart';
 import '../shared/app_header.dart';
 import 'operator_edit_profile_view.dart';
 import 'operator_publish_view.dart';
+import 'widgets/operator_destination_card.dart';
 import '../../views/shared/widgets/custom_dialog.dart';
 import '../auth/login_view.dart';
 
@@ -39,7 +39,6 @@ class _OperatorHomeViewState extends State<OperatorHomeView> {
         });
       });
     } else if (menu == 'Solicitudes') {
-      // Solo muestra el mensaje
       _mostrarMensaje('Solicitudes - Próximamente');
     } else if (menu == 'Inicio') {
       setState(() {
@@ -90,6 +89,31 @@ class _OperatorHomeViewState extends State<OperatorHomeView> {
 
   void _openDrawer() {
     _scaffoldKey.currentState?.openEndDrawer();
+  }
+
+  Future<void> _eliminarPublicacion(String id, String nombre) async {
+    final confirm = await CustomConfirmDialog.show(
+      context: context,
+      title: 'Eliminar publicación',
+      message: '¿Estás seguro de que deseas eliminar "$nombre"? Esta acción no se puede deshacer.',
+      confirmText: 'Eliminar',
+      icon: Icons.delete,
+    );
+    
+    if (confirm == true) {
+      try {
+        await FirebaseFirestore.instance
+            .collection('destinos')
+            .doc(id)
+            .delete();
+        _mostrarMensaje('Publicación eliminada');
+        setState(() {
+          _refreshKey++;
+        });
+      } catch (e) {
+        _mostrarMensaje('Error al eliminar');
+      }
+    }
   }
 
   @override
@@ -335,6 +359,9 @@ class _OperatorHomeViewState extends State<OperatorHomeView> {
   }
 
   Widget _buildMainContent({required bool isMobile, required String operadorId}) {
+    // Determinar número de columnas según el tamaño
+    final crossAxisCount = isMobile ? 2 : 3;
+    
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -356,7 +383,6 @@ class _OperatorHomeViewState extends State<OperatorHomeView> {
           stream: FirebaseFirestore.instance
               .collection('destinos')
               .where('operadorId', isEqualTo: operadorId)
-              .where('activo', isEqualTo: true)
               .snapshots(),
           builder: (context, snapshot) {
             if (snapshot.connectionState == ConnectionState.waiting) {
@@ -421,169 +447,43 @@ class _OperatorHomeViewState extends State<OperatorHomeView> {
               );
             }
 
+            // Grid con 2 o 3 columnas
             return Padding(
               padding: EdgeInsets.symmetric(horizontal: isMobile ? 16 : 24),
-              child: ListView.separated(
+              child: GridView.builder(
                 shrinkWrap: true,
                 physics: const NeverScrollableScrollPhysics(),
+                gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                  crossAxisCount: crossAxisCount,
+                  crossAxisSpacing: 16,
+                  mainAxisSpacing: 16,
+                  childAspectRatio: 0.90,
+                ),
                 itemCount: destinos.length,
-                separatorBuilder: (_, __) => const SizedBox(height: 16),
                 itemBuilder: (context, index) {
                   final doc = destinos[index];
                   final data = doc.data() as Map<String, dynamic>;
-                  return _buildPublicationCard(data, doc.id, isMobile);
+                  return OperatorDestinationCard(
+                    id: doc.id,
+                    nombre: data['nombre'] ?? 'Sin título',
+                    ubicacion: data['ubicacion'] ?? '',
+                    precio: (data['precio'] ?? 0).toDouble(),
+                    duracion: data['duracion'] ?? 'Full Day',
+                    imagenUrl: data['imagen'] ?? '',
+                    isOffer: data['isOffer'] == true,
+                    activo: data['activo'] == true,
+                    cuposTotales: data['cuposTotales'] ?? 0,
+                    cuposDisponibles: data['cuposDisponibles'] ?? 0,
+                    onDelete: () {
+                      _eliminarPublicacion(doc.id, data['nombre'] ?? 'este destino');
+                    },
+                  );
                 },
               ),
             );
           },
         ),
       ],
-    );
-  }
-
-  Widget _buildPublicationCard(Map<String, dynamic> data, String id, bool isMobile) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: const Color(0xFFE0E0E0), width: 1),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: Row(
-        children: [
-          ClipRRect(
-            borderRadius: BorderRadius.circular(12),
-            child: SizedBox(
-              width: 80,
-              height: 80,
-              child: _buildImage(data['imagen'] ?? ''),
-            ),
-          ),
-          const SizedBox(width: 16),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  data['nombre'] ?? 'Sin título',
-                  style: GoogleFonts.outfit(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                    color: const Color(0xFF333333),
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  data['ubicacion'] ?? '',
-                  style: GoogleFonts.outfit(
-                    fontSize: 13,
-                    color: const Color(0xFF888888),
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Row(
-                  children: [
-                    Text(
-                      '\$${data['precio']?.toString() ?? '0'}',
-                      style: GoogleFonts.outfit(
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                        color: data['isOffer'] == true ? const Color(0xFF9C27B0) : const Color(0xFFFC6707),
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                      decoration: BoxDecoration(
-                        color: data['isOffer'] == true 
-                            ? const Color(0xFF9C27B0).withOpacity(0.1)
-                            : const Color(0xFFFC6707).withOpacity(0.1),
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: Text(
-                        data['isOffer'] == true ? 'Oferta' : 'Normal',
-                        style: GoogleFonts.outfit(
-                          fontSize: 10,
-                          fontWeight: FontWeight.w500,
-                          color: data['isOffer'] == true 
-                              ? const Color(0xFF9C27B0)
-                              : const Color(0xFFFC6707),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                      decoration: BoxDecoration(
-                        color: data['activo'] == true 
-                            ? const Color(0xFF4CAF50).withOpacity(0.1)
-                            : const Color(0xFFF44336).withOpacity(0.1),
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: Text(
-                        data['activo'] == true ? 'Activo' : 'Inactivo',
-                        style: GoogleFonts.outfit(
-                          fontSize: 10,
-                          fontWeight: FontWeight.w500,
-                          color: data['activo'] == true ? const Color(0xFF4CAF50) : const Color(0xFFF44336),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildImage(String imagenUrl) {
-    if (imagenUrl.isEmpty) {
-      return Container(
-        color: const Color(0xFFFDDBB3),
-        child: const Icon(Icons.image, color: Color(0xFFFC6707), size: 32),
-      );
-    }
-
-    if (imagenUrl.startsWith('data:image')) {
-      try {
-        final base64String = imagenUrl.split(',').last;
-        return Image.memory(
-          base64Decode(base64String),
-          width: 80,
-          height: 80,
-          fit: BoxFit.cover,
-          errorBuilder: (_, __, ___) => Container(
-            color: const Color(0xFFFDDBB3),
-            child: const Icon(Icons.image, color: Color(0xFFFC6707), size: 32),
-          ),
-        );
-      } catch (_) {
-        return Container(
-          color: const Color(0xFFFDDBB3),
-          child: const Icon(Icons.image, color: Color(0xFFFC6707), size: 32),
-        );
-      }
-    }
-
-    return Image.network(
-      imagenUrl,
-      width: 80,
-      height: 80,
-      fit: BoxFit.cover,
-      errorBuilder: (_, __, ___) => Container(
-        color: const Color(0xFFFDDBB3),
-        child: const Icon(Icons.image, color: Color(0xFFFC6707), size: 32),
-      ),
     );
   }
 

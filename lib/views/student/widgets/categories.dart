@@ -1,6 +1,8 @@
 // Sección Explorar por Categorías - Responsive
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import '../search_results_view.dart';
+import '../search_results_view.dart';
 
 class CategoriesSection extends StatelessWidget {
   const CategoriesSection({super.key});
@@ -30,24 +32,24 @@ class CategoriesSection extends StatelessWidget {
           child: isMobile
               ? Column(
                   children: [
-                    _buildCategoryCard('Playas / Cayos', 'assets/images/playas_cayos.png', isMobile),
+                    _buildCategoryCard('Playas / Cayos', 'assets/images/playas_cayos.png', isMobile, context),
                     const SizedBox(height: 16),
-                    _buildCategoryCard('Montañas / Trekking', 'assets/images/montañas_trekking.png', isMobile),
+                    _buildCategoryCard('Montañas / Trekking', 'assets/images/montañas_trekking.png', isMobile, context),
                     const SizedBox(height: 16),
-                    _buildCategoryCard('Aventura / Ríos', 'assets/images/aventuras_rios.png', isMobile),
+                    _buildCategoryCard('Aventura / Ríos', 'assets/images/aventuras_rios.png', isMobile, context),
                     const SizedBox(height: 16),
-                    _buildCategoryCard('Cultura / Ciudades', 'assets/images/cultura_ciudades.png', isMobile),
+                    _buildCategoryCard('Cultura / Ciudades', 'assets/images/cultura_ciudades.png', isMobile, context),
                   ],
                 )
               : Row(
                   children: [
-                    Expanded(child: _buildCategoryCard('Playas / Cayos', 'assets/images/playas_cayos.png', isMobile)),
+                    Expanded(child: _buildCategoryCard('Playas / Cayos', 'assets/images/playas_cayos.png', isMobile, context)),
                     const SizedBox(width: 16),
-                    Expanded(child: _buildCategoryCard('Montañas / Trekking', 'assets/images/montañas_trekking.png', isMobile)),
+                    Expanded(child: _buildCategoryCard('Montañas / Trekking', 'assets/images/montañas_trekking.png', isMobile, context)),
                     const SizedBox(width: 16),
-                    Expanded(child: _buildCategoryCard('Aventura / Ríos', 'assets/images/aventuras_rios.png', isMobile)),
+                    Expanded(child: _buildCategoryCard('Aventura / Ríos', 'assets/images/aventuras_rios.png', isMobile, context)),
                     const SizedBox(width: 16),
-                    Expanded(child: _buildCategoryCard('Cultura / Ciudades', 'assets/images/cultura_ciudades.png', isMobile)),
+                    Expanded(child: _buildCategoryCard('Cultura / Ciudades', 'assets/images/cultura_ciudades.png', isMobile, context)),
                   ],
                 ),
         ),
@@ -55,12 +57,23 @@ class CategoriesSection extends StatelessWidget {
     );
   }
 
-  Widget _buildCategoryCard(String title, String imagePath, bool isMobile) {
+  Widget _buildCategoryCard(String title, String imagePath, bool isMobile, BuildContext context) {
     return MouseRegion(
       cursor: SystemMouseCursors.click,
       child: GestureDetector(
         onTap: () {
-          // Filtrar destinos por categoría
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (_) => SearchResultsView(
+                destino: '',
+                transporte: null,
+                presupuesto: null,
+                alojamiento: null,
+                categoria: title,
+              ),
+            ),
+          );
         },
         child: Container(
           height: isMobile ? 110 : 120,

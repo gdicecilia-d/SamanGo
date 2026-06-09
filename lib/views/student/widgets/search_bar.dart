@@ -25,7 +25,7 @@ class _SearchBarWidgetState extends State<SearchBarWidget> {
   final List<String> _alojamientos = ['Todos', 'Hotel', 'Posada', 'Camping', 'Eco lodge'];
 
   // Abre la pantalla de resultados con los filtros que el usuario eligió
-void _buscar() {
+  void _buscar() {
     final ctx = context;
     WidgetsBinding.instance.addPostFrameCallback((_) {
       Navigator.of(ctx, rootNavigator: true).push(
@@ -35,6 +35,7 @@ void _buscar() {
             transporte: _selectedTransporte,
             presupuesto: _selectedPresupuesto,
             alojamiento: _selectedAlojamiento,
+            categoria: null,
           ),
         ),
       );

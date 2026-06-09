@@ -134,9 +134,9 @@ class FormValidators {
     if (value == null || value.isEmpty) {
       return 'El carnet es obligatorio';
     }
-    final regex = RegExp(r'^\d{7,11}$');
+    final regex = RegExp(r'^\d{10,11}$');
     if (!regex.hasMatch(value)) {
-      return 'El carnet debe tener entre 7 y 11 números (solo dígitos)';
+      return 'El carnet debe tener entre 10 y 11 números (solo dígitos)';
     }
     return null;
   }

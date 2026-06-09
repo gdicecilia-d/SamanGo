@@ -11,6 +11,7 @@ class SearchResultsView extends StatefulWidget {
   final String? transporte;
   final String? presupuesto;
   final String? alojamiento;
+  final String? categoria;
 
   const SearchResultsView({
     super.key,
@@ -18,6 +19,7 @@ class SearchResultsView extends StatefulWidget {
     this.transporte,
     this.presupuesto,
     this.alojamiento,
+    this.categoria,
   });
 
   @override
@@ -39,6 +41,10 @@ class _SearchResultsViewState extends State<SearchResultsView> {
     
     if (widget.alojamiento != null && widget.alojamiento != 'Todos') {
       query = query.where('alojamiento', isEqualTo: widget.alojamiento);
+    }
+    
+    if (widget.categoria != null && widget.categoria!.isNotEmpty) {
+      query = query.where('categoria', isEqualTo: widget.categoria);
     }
     
     final snapshot = await query.get();
@@ -77,6 +83,7 @@ class _SearchResultsViewState extends State<SearchResultsView> {
   Widget build(BuildContext context) {
     final screenWidth = MediaQuery.of(context).size.width;
     final isMobile = screenWidth < 850;
+    final crossAxisCount = isMobile ? 2 : 4;
 
     return Scaffold(
       key: _scaffoldKey,
@@ -127,7 +134,6 @@ class _SearchResultsViewState extends State<SearchResultsView> {
                 
                 return Column(
                   children: [
-                    // Barra superior con título y botón volver
                     Padding(
                       padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
                       child: Row(
@@ -159,7 +165,6 @@ class _SearchResultsViewState extends State<SearchResultsView> {
                       ),
                     ),
                     
-                    // Filtros activos (chips)
                     if (_getFiltrosActivos().isNotEmpty)
                       Padding(
                         padding: const EdgeInsets.symmetric(horizontal: 24),
@@ -188,7 +193,6 @@ class _SearchResultsViewState extends State<SearchResultsView> {
                     
                     const SizedBox(height: 16),
                     
-                    // Lista de resultados - SIN padding exterior para que las tarjetas usen su propio tamaño
                     Expanded(
                       child: resultados.isEmpty
                           ? Center(
@@ -208,37 +212,39 @@ class _SearchResultsViewState extends State<SearchResultsView> {
                                 ],
                               ),
                             )
-                          : GridView.builder(
+                          : Padding(
                               padding: const EdgeInsets.symmetric(horizontal: 24),
-                              gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                                crossAxisCount: isMobile ? 2 : 4,
-                                crossAxisSpacing: 16,
-                                mainAxisSpacing: 16,
-                                childAspectRatio: 0.99,
+                              child: GridView.builder(
+                                gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                                  crossAxisCount: crossAxisCount,
+                                  crossAxisSpacing: 16,
+                                  mainAxisSpacing: 16,
+                                  childAspectRatio: 0.99,
+                                ),
+                                itemCount: resultados.length,
+                                itemBuilder: (context, index) {
+                                  final doc = resultados[index];
+                                  final data = doc.data() as Map<String, dynamic>;
+                                  return DestinationCard(
+                                    id: doc.id,
+                                    nombre: data['nombre'] ?? 'Sin título',
+                                    ubicacion: data['ubicacion'] ?? '',
+                                    precio: (data['precio'] ?? 0).toDouble(),
+                                    duracion: data['duracion'] ?? 'Full Day',
+                                    imagenUrl: data['imagen'] ?? '',
+                                    isOffer: data['isOffer'] == true,
+                                    cuposDisponibles: data['cuposDisponibles'] ?? 0,
+                                    onTap: () {
+                                      Navigator.push(
+                                        context,
+                                        MaterialPageRoute(
+                                          builder: (_) => DestinationDetailView(destinoId: doc.id),
+                                        ),
+                                      );
+                                    },
+                                  );
+                                },
                               ),
-                              itemCount: resultados.length,
-                              itemBuilder: (context, index) {
-                                final doc = resultados[index];
-                                final data = doc.data() as Map<String, dynamic>;
-                                final isOffer = data['isOffer'] == true;
-                                return DestinationCard(
-                                  id: doc.id,
-                                  nombre: data['nombre'] ?? 'Sin título',
-                                  ubicacion: data['ubicacion'] ?? '',
-                                  precio: (data['precio'] ?? 0).toDouble(),
-                                  duracion: data['duracion'] ?? 'Full Day',
-                                  imagenUrl: data['imagen'] ?? '',
-                                  isOffer: isOffer,
-                                  onTap: () {
-                                    Navigator.push(
-                                      context,
-                                      MaterialPageRoute(
-                                        builder: (_) => DestinationDetailView(destinoId: doc.id),
-                                      ),
-                                    );
-                                  },
-                                );
-                              },
                             ),
                     ),
                   ],
@@ -257,6 +263,7 @@ class _SearchResultsViewState extends State<SearchResultsView> {
     if (widget.transporte != null && widget.transporte != 'Todos') filtros.add('Transporte: ${widget.transporte}');
     if (widget.presupuesto != null && widget.presupuesto != 'Todos') filtros.add('Presupuesto: ${widget.presupuesto}');
     if (widget.alojamiento != null && widget.alojamiento != 'Todos') filtros.add('Alojamiento: ${widget.alojamiento}');
+    if (widget.categoria != null && widget.categoria!.isNotEmpty) filtros.add('Categoría: ${widget.categoria}');
     return filtros;
   }
 }

@@ -114,7 +114,8 @@ class _RegisterOperatorViewState extends State<RegisterOperatorView> {
     }
 
     final nombreCompleto = _representanteController.text;
-    final telefonoCompleto = '$_selectedTelefonoPrefijo${_telefonoNumeroController.text}';
+    // CAMBIO: Se agrega el 0 al inicio para que se guarde como 04121234567
+    final telefonoCompleto = '0$_selectedTelefonoPrefijo${_telefonoNumeroController.text}';
     final rifCompleto = '$_selectedRifLetra${_rifNumeroController.text}';
 
     final errorMessage = await Provider.of<AuthController>(context, listen: false).registerOperator(
