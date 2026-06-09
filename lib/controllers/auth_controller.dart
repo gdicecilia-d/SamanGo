@@ -20,6 +20,57 @@ class AuthController extends ChangeNotifier {
     return _usuarioActual != null;
   }
 
+  // Login con Google
+  Future<dynamic> signInWithGoogle() async {
+    _setLoading(true);
+    try {
+      final result = await _authService.signInWithGoogle();
+      if (result is Usuario) {
+        _usuarioActual = result;
+        _setLoading(false);
+        return true;
+      } else if (result is Map) {
+        _setLoading(false);
+        return result;
+      } else {
+        _setLoading(false);
+        return false;
+      }
+    } catch (e) {
+      _setLoading(false);
+      return e.toString();
+    }
+  }
+
+  // Completa el perfil de Google
+  Future<String?> completeGoogleProfile({
+    required String uid,
+    required String email,
+    required String nombre,
+    required String apellido,
+    required String carnet,
+    required String fechaNacimiento,
+    String? photoUrl,
+  }) async {
+    _setLoading(true);
+    try {
+      _usuarioActual = await _authService.completeGoogleProfile(
+        uid: uid,
+        email: email,
+        nombre: nombre,
+        apellido: apellido,
+        carnet: carnet,
+        fechaNacimiento: fechaNacimiento,
+        photoUrl: photoUrl,
+      );
+      _setLoading(false);
+      return null;
+    } catch (e) {
+      _setLoading(false);
+      return e.toString();
+    }
+  }
+
   // Register Student
   Future<String?> registerStudent({
     required String email,

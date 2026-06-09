@@ -5,12 +5,92 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
+import 'package:google_sign_in/google_sign_in.dart';
 import '../models/usuario.dart';
 import 'storage_service.dart';
+import 'package:flutter/foundation.dart';
 
 class AuthService {
   final FirebaseAuth _auth = FirebaseAuth.instance;
   final FirebaseFirestore _db = FirebaseFirestore.instance;
+  final GoogleSignIn _googleSignIn = GoogleSignIn();
+
+  // Inicia sesión con Google
+  Future<dynamic> signInWithGoogle() async {
+    try {
+      UserCredential userCredential;
+
+      if (kIsWeb) {
+        GoogleAuthProvider authProvider = GoogleAuthProvider();
+        authProvider.setCustomParameters({'hd': 'correo.unimet.edu.ve'});
+        userCredential = await _auth.signInWithPopup(authProvider);
+      } else {
+        final GoogleSignInAccount? googleUser = await _googleSignIn.signIn();
+        if (googleUser == null) return null;
+
+        final GoogleSignInAuthentication googleAuth = await googleUser.authentication;
+        final OAuthCredential credential = GoogleAuthProvider.credential(
+          accessToken: googleAuth.accessToken,
+          idToken: googleAuth.idToken,
+        );
+
+        userCredential = await _auth.signInWithCredential(credential);
+      }
+
+      final email = userCredential.user!.email ?? '';
+      if (!email.endsWith('@correo.unimet.edu.ve') && !email.endsWith('@unimet.edu.ve')) {
+        await userCredential.user!.delete();
+        throw 'Solo se permiten correos institucionales de la UNIMET';
+      }
+
+      final uid = userCredential.user!.uid;
+
+      Usuario? usuario = await cargarUsuarioDeFirestore(uid);
+
+      if (usuario == null) {
+        // Devuelve mapa en vez de registrar
+        return {
+          'isNewUser': true,
+          'uid': uid,
+          'email': email,
+          'displayName': userCredential.user!.displayName ?? '',
+          'photoUrl': userCredential.user!.photoURL,
+        };
+      }
+
+      return usuario;
+    } catch (e) {
+      if (e is FirebaseAuthException && e.code == 'web-context-cancelled') {
+        return null; // El usuario cerró el popup de Google en web
+      }
+      print('Error en Google Sign-In: $e');
+      throw e.toString();
+    }
+  }
+
+  // Completa el perfil de Google
+  Future<Usuario> completeGoogleProfile({
+    required String uid,
+    required String email,
+    required String nombre,
+    required String apellido,
+    required String carnet,
+    required String fechaNacimiento,
+    String? photoUrl,
+  }) async {
+    final usuario = Usuario(
+      id: uid,
+      nombre: nombre,
+      apellido: apellido,
+      correo: email,
+      rol: 'estudiante',
+      carnet: carnet,
+      fechaNacimiento: fechaNacimiento,
+      fotoUrl: photoUrl,
+    );
+    await _db.collection('estudiantes').doc(uid).set(usuario.toMap());
+    return usuario;
+  }
 
   // Inicia sesión con email y contraseña
   Future<Usuario?> loginWithEmail(String email, String password) async {

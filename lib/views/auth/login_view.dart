@@ -10,6 +10,7 @@ import '../operator/operator_home_view.dart';
 import '../admin/admin_home_view.dart';
 import '../../controllers/auth_controller.dart';
 import 'package:provider/provider.dart';
+import 'complete_google_profile_view.dart';
 
 class LoginView extends StatefulWidget {
   const LoginView({super.key});
@@ -30,6 +31,60 @@ class _LoginViewState extends State<LoginView> {
     _emailController.dispose();
     _passwordController.dispose();
     super.dispose();
+  }
+
+  Future<void> _handleGoogleSignIn() async {
+    setState(() {
+      _isLoading = true;
+      _errorMessage = null;
+    });
+
+    final authController = Provider.of<AuthController>(context, listen: false);
+    final result = await authController.signInWithGoogle();
+
+    if (!mounted) return;
+
+    setState(() {
+      _isLoading = false;
+    });
+
+    if (result == true) {
+      final usuario = authController.usuarioActual!;
+      if (usuario.isEstudiante) {
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (_) => const StudentHomeView()),
+        );
+      } else if (usuario.isOperador) {
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (_) => const OperatorHomeView()),
+        );
+      } else if (usuario.isAdmin) {
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (_) => const AdminHomeView()),
+        );
+      } else {
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (_) => const StudentHomeView()),
+        );
+      }
+    } else if (result is Map && result['isNewUser'] == true) {
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) => CompleteGoogleProfileView(
+            userData: result as Map<String, dynamic>,
+          ),
+        ),
+      );
+    } else if (result is String) {
+      setState(() {
+        _errorMessage = result;
+      });
+    }
   }
 
   Future<void> _handleLogin() async {
@@ -270,11 +325,7 @@ class _LoginViewState extends State<LoginView> {
           SizedBox(
             width: double.infinity,
             child: OutlinedButton(
-              onPressed: () {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Google Sign-in - Próximamente'), backgroundColor: Color(0xFFFC6707)),
-                );
-              },
+              onPressed: _isLoading ? null : _handleGoogleSignIn,
               style: OutlinedButton.styleFrom(
                 backgroundColor: const Color(0xFFFDDBB3),
                 side: BorderSide.none,
