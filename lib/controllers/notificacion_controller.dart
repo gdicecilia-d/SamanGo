@@ -7,6 +7,7 @@ class NotificacionController extends ChangeNotifier {
   final NotificacionService _service = NotificacionService();
   StreamSubscription<List<Notificacion>>? _subscription;
   String? _estudianteId;
+  String _collectionName = 'estudiantes';
   
   List<Notificacion> _notificaciones = [];
   List<Notificacion> get notificaciones => _notificaciones;
@@ -14,10 +15,11 @@ class NotificacionController extends ChangeNotifier {
   int get noLeidasCount => _notificaciones.where((n) => !n.leida).length;
 
   // Iniciar escucha
-  void listenToNotificaciones(String estudianteId) {
-    _estudianteId = estudianteId;
+  void listenToNotificaciones(String userId, {String collectionName = 'estudiantes'}) {
+    _estudianteId = userId;
+    _collectionName = collectionName;
     _subscription?.cancel();
-    _subscription = _service.streamNotificaciones(estudianteId).listen((data) {
+    _subscription = _service.streamNotificaciones(userId, collection: collectionName).listen((data) {
       _notificaciones = data;
       notifyListeners();
     });
@@ -41,7 +43,7 @@ class NotificacionController extends ChangeNotifier {
         );
         notifyListeners();
       }
-      await _service.marcarComoLeida(_estudianteId!, notificacionId);
+      await _service.marcarComoLeida(_estudianteId!, notificacionId, collection: _collectionName);
     } catch (e) {
       print('Error al marcar leída: $e');
     }

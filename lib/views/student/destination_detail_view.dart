@@ -124,6 +124,7 @@ class _DestinationDetailViewState extends State<DestinationDetailView> {
                             operadorNombre,
                             operadorEmpresa,
                             primaryColor,
+                            data,
                           )
                         : _buildDesktopLayout(
                             nombre,
@@ -141,6 +142,7 @@ class _DestinationDetailViewState extends State<DestinationDetailView> {
                             operadorNombre,
                             operadorEmpresa,
                             primaryColor,
+                            data,
                           ),
                   ),
                 ],
@@ -208,6 +210,7 @@ class _DestinationDetailViewState extends State<DestinationDetailView> {
     String operadorNombre,
     String operadorEmpresa,
     Color primaryColor,
+    Map<String, dynamic> data,
   ) {
     return SingleChildScrollView(
       padding: const EdgeInsets.all(16),
@@ -232,7 +235,7 @@ class _DestinationDetailViewState extends State<DestinationDetailView> {
             isMobile: true,
           ),
           const SizedBox(height: 16),
-          _buildActionButton(primaryColor),
+          _buildActionButton(primaryColor, data),
           const SizedBox(height: 80),
         ],
       ),
@@ -255,6 +258,7 @@ class _DestinationDetailViewState extends State<DestinationDetailView> {
     String operadorNombre,
     String operadorEmpresa,
     Color primaryColor,
+    Map<String, dynamic> data,
   ) {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -289,7 +293,7 @@ class _DestinationDetailViewState extends State<DestinationDetailView> {
           flex: 3,
           child: Padding(
             padding: const EdgeInsets.only(top: 24, right: 24, bottom: 24),
-            child: _buildConversionCard(primaryColor, precio),
+            child: _buildConversionCard(primaryColor, precio, data),
           ),
         ),
       ],
@@ -593,7 +597,7 @@ class _DestinationDetailViewState extends State<DestinationDetailView> {
     );
   }
 
-  Widget _buildConversionCard(Color primaryColor, double precio) {
+  Widget _buildConversionCard(Color primaryColor, double precio, Map<String, dynamic> data) {
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
@@ -658,25 +662,17 @@ class _DestinationDetailViewState extends State<DestinationDetailView> {
           const SizedBox(height: 24),
           const Divider(height: 1, thickness: 1, color: Color(0xFFE0E0E0)),
           const SizedBox(height: 24),
-          _buildActionButton(primaryColor),
+          _buildActionButton(primaryColor, data),
         ],
       ),
     );
   }
 
-  Widget _buildActionButton(Color primaryColor) {
+  Widget _buildActionButton(Color primaryColor, Map<String, dynamic> data) {
     return SizedBox(
       width: double.infinity,
       child: ElevatedButton(
-        onPressed: () {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Próximamente podrás reservar este destino'),
-              backgroundColor: Color(0xFFFC6707),
-              duration: Duration(seconds: 2),
-            ),
-          );
-        },
+        onPressed: () => _reservarDestino(widget.destinoId, data),
         style: ElevatedButton.styleFrom(
           backgroundColor: primaryColor,
           foregroundColor: Colors.white,
@@ -694,5 +690,59 @@ class _DestinationDetailViewState extends State<DestinationDetailView> {
         ),
       ),
     );
+  }
+
+  Future<void> _reservarDestino(String destinoId, Map<String, dynamic> data) async {
+    final int cuposDisponibles = data['cuposDisponibles'] ?? 0;
+    if (cuposDisponibles <= 0) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Ya no hay cupos disponibles'), backgroundColor: Colors.red),
+      );
+      return;
+    }
+
+    try {
+      final nuevoCupo = cuposDisponibles - 1;
+      await FirebaseFirestore.instance.collection('destinos').doc(destinoId).update({
+        'cuposDisponibles': nuevoCupo,
+      });
+
+      if (nuevoCupo == 0) {
+        // Notificar al operador
+        final operadorId = data['operadorId'];
+        final nombrePaquete = data['nombre'] ?? 'un viaje';
+        if (operadorId != null) {
+          final notifRef = FirebaseFirestore.instance
+              .collection('operadores')
+              .doc(operadorId)
+              .collection('notificaciones')
+              .doc();
+              
+          await notifRef.set({
+            'titulo': '¡Cupos Agotados!',
+            'mensaje': 'Tu paquete "$nombrePaquete" se ha llenado por completo.',
+            'fechaCreacion': FieldValue.serverTimestamp(),
+            'leida': false,
+            'tipo': 'alerta_operador',
+            'idPaquete': destinoId,
+          });
+        }
+      }
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('¡Reserva exitosa!'), backgroundColor: Colors.green),
+      );
+      
+      // Recargar la vista
+      if (mounted) {
+        setState(() {
+          _destinoFuture = FirebaseFirestore.instance.collection('destinos').doc(widget.destinoId).get();
+        });
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error al reservar: $e'), backgroundColor: Colors.red),
+      );
+    }
   }
 }

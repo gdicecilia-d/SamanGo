@@ -4,11 +4,11 @@ import '../models/notificacion.dart';
 class NotificacionService {
   final FirebaseFirestore _db = FirebaseFirestore.instance;
 
-  // Obtener stream de notificaciones de un estudiante
-  Stream<List<Notificacion>> streamNotificaciones(String estudianteId) {
+  // Obtener stream de notificaciones
+  Stream<List<Notificacion>> streamNotificaciones(String userId, {String collection = 'estudiantes'}) {
     return _db
-        .collection('estudiantes')
-        .doc(estudianteId)
+        .collection(collection)
+        .doc(userId)
         .collection('notificaciones')
         .orderBy('fechaCreacion', descending: true)
         .snapshots()
@@ -18,20 +18,20 @@ class NotificacionService {
   }
 
   // Marcar como leída
-  Future<void> marcarComoLeida(String estudianteId, String notificacionId) async {
+  Future<void> marcarComoLeida(String userId, String notificacionId, {String collection = 'estudiantes'}) async {
     await _db
-        .collection('estudiantes')
-        .doc(estudianteId)
+        .collection(collection)
+        .doc(userId)
         .collection('notificaciones')
         .doc(notificacionId)
         .update({'leida': true});
   }
 
   // Eliminar notificación
-  Future<void> eliminarNotificacion(String estudianteId, String notificacionId) async {
+  Future<void> eliminarNotificacion(String userId, String notificacionId, {String collection = 'estudiantes'}) async {
     await _db
-        .collection('estudiantes')
-        .doc(estudianteId)
+        .collection(collection)
+        .doc(userId)
         .collection('notificaciones')
         .doc(notificacionId)
         .delete();
