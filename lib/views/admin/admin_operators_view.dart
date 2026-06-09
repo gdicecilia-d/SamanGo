@@ -25,7 +25,6 @@ class _AdminOperatorsViewState extends State<AdminOperatorsView> {
   final List<String> _menuItems = ['Dashboard', 'Gestión', 'Usuarios', 'Reportes'];
   
   int _selectedTab = 0;
-  int _hoveredTab = -1;
 
   void _handleMenuSelected(String menu) {
     if (menu == 'Dashboard') {
@@ -196,81 +195,93 @@ class _AdminOperatorsViewState extends State<AdminOperatorsView> {
   }
 
   Widget _buildMobileLayout() {
-    return Column(
-      children: [
-        Expanded(
-          child: SingleChildScrollView(
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        return SingleChildScrollView(
+          child: ConstrainedBox(
+            constraints: BoxConstraints(minHeight: constraints.maxHeight),
             child: Column(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                const SizedBox(height: 16),
-                _buildHeader(),
-                _buildOperatorsContent(isMobile: true),
-                const SizedBox(height: 40),
+                Column(
+                  children: [
+                    const SizedBox(height: 16),
+                    _buildHeader(),
+                    _buildOperatorsContent(isMobile: true),
+                    const SizedBox(height: 30),
+                  ],
+                ),
+                _buildFooter(true),
               ],
             ),
           ),
-        ),
-        _buildFooter(true),
-      ],
+        );
+      },
     );
   }
 
   Widget _buildDesktopLayout() {
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Expanded(
-          flex: 7,
-          child: Column(
-            children: [
-              Expanded(
-                child: SingleChildScrollView(
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        return Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Expanded(
+              flex: 7,
+              child: SingleChildScrollView(
+                child: ConstrainedBox(
+                  constraints: BoxConstraints(minHeight: constraints.maxHeight),
                   child: Column(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      const SizedBox(height: 16),
-                      _buildHeader(),
-                      _buildOperatorsContent(isMobile: false),
-                      const SizedBox(height: 40),
+                      Column(
+                        children: [
+                          const SizedBox(height: 16),
+                          _buildHeader(),
+                          _buildOperatorsContent(isMobile: false),
+                          const SizedBox(height: 30),
+                        ],
+                      ),
+                      _buildFooter(false),
                     ],
                   ),
                 ),
               ),
-              _buildFooter(false),
-            ],
-          ),
-        ),
-        Container(
-          width: 320,
-          decoration: BoxDecoration(
-            border: Border(
-              left: BorderSide(
-                color: Colors.grey.withOpacity(0.3),
-                width: 1.5,
-              ),
             ),
-          ),
-          child: Image.asset(
-            'assets/images/campus_admin.png',
-            width: 320,
-            height: double.infinity,
-            fit: BoxFit.cover,
-            errorBuilder: (_, __, ___) => Container(
+            Container(
               width: 320,
-              color: const Color(0xFFFDDBB3),
-              child: const Center(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(Icons.image, size: 48, color: Color(0xFFFC6707)),
-                    SizedBox(height: 8),
-                    Text('Imagen del Campus'),
-                  ],
+              decoration: BoxDecoration(
+                border: Border(
+                  left: BorderSide(
+                    color: Colors.grey.withOpacity(0.3),
+                    width: 1.5,
+                  ),
+                ),
+              ),
+              child: Image.asset(
+                'assets/images/campus_admin.png',
+                width: 320,
+                height: double.infinity,
+                fit: BoxFit.cover,
+                errorBuilder: (_, __, ___) => Container(
+                  width: 320,
+                  color: const Color(0xFFFDDBB3),
+                  child: const Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(Icons.image, size: 48, color: Color(0xFFFC6707)),
+                        SizedBox(height: 8),
+                        Text('Imagen del Campus'),
+                      ],
+                    ),
+                  ),
                 ),
               ),
             ),
-          ),
-        ),
-      ],
+          ],
+        );
+      },
     );
   }
 
@@ -341,26 +352,20 @@ class _AdminOperatorsViewState extends State<AdminOperatorsView> {
 
   Widget _buildTab(String title, int index, bool isMobile) {
     final isSelected = _selectedTab == index;
-    final isHovered = _hoveredTab == index;
     
     return Expanded(
       child: MouseRegion(
         cursor: SystemMouseCursors.click,
-        onEnter: (_) => setState(() => _hoveredTab = index),
-        onExit: (_) => setState(() => _hoveredTab = -1),
         child: GestureDetector(
           onTap: () {
             setState(() {
               _selectedTab = index;
             });
           },
-          child: AnimatedContainer(
-            duration: const Duration(milliseconds: 200),
+          child: Container(
             padding: EdgeInsets.symmetric(vertical: isMobile ? 10 : 12),
             decoration: BoxDecoration(
-              color: isSelected 
-                  ? const Color(0xFFFC6707) 
-                  : (isHovered ? const Color(0xFFFC6707).withOpacity(0.2) : Colors.transparent),
+              color: isSelected ? const Color(0xFFFC6707) : Colors.transparent,
               borderRadius: BorderRadius.circular(30),
             ),
             child: Center(
@@ -380,7 +385,17 @@ class _AdminOperatorsViewState extends State<AdminOperatorsView> {
   }
 
   Widget _buildOperatorsList(bool isMobile) {
+    String filtroEstado;
+    if (_selectedTab == 0) {
+      filtroEstado = 'pendiente';
+    } else if (_selectedTab == 1) {
+      filtroEstado = 'aprobado';
+    } else {
+      filtroEstado = 'rechazado';
+    }
+
     return StreamBuilder<QuerySnapshot>(
+      key: ValueKey('operators_list_$_selectedTab'),
       stream: FirebaseFirestore.instance.collection('operadores').snapshots(),
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
@@ -393,20 +408,11 @@ class _AdminOperatorsViewState extends State<AdminOperatorsView> {
         }
 
         if (snapshot.hasError) {
-          return Center(child: Text('Error: \${snapshot.error}'));
+          return Center(child: Text('Error: ${snapshot.error}'));
         }
 
         final docs = snapshot.data?.docs ?? [];
         
-        String filtroEstado;
-        if (_selectedTab == 0) {
-          filtroEstado = 'pendiente';
-        } else if (_selectedTab == 1) {
-          filtroEstado = 'aprobado';
-        } else {
-          filtroEstado = 'rechazado';
-        }
-
         final operadoresFiltrados = docs.where((doc) {
           final data = doc.data() as Map<String, dynamic>;
           return data['estado'] == filtroEstado;
@@ -446,22 +452,21 @@ class _AdminOperatorsViewState extends State<AdminOperatorsView> {
           itemBuilder: (context, index) {
             final doc = operadoresFiltrados[index];
             final data = doc.data() as Map<String, dynamic>;
-            final operadorMap = {
-              'id': doc.id,
-              'nombre': data['nombre'] ?? 'Sin nombre',
-              'empresa': data['empresa'] ?? 'Sin empresa',
-              'correo': data['correo'] ?? 'Sin correo',
-              'telefono': data['telefono'] ?? 'Sin teléfono',
-              'rif': data['rif'] ?? 'Sin RIF',
-              'descripcion': data['descripcion'] ?? 'Sin descripción',
-              'fechaSolicitud': data['fechaNacimiento'] ?? 'N/A',
-              'licenciaUrl': data['licenciaUrl'] ?? '',
-            };
             
             final operadorObj = Usuario.fromMap(doc.id, data);
 
             return OperatorCard(
-              operadorMap: operadorMap,
+              key: ValueKey('operator_${doc.id}_${_selectedTab}'),
+              operadorMap: {
+                'id': doc.id,
+                'nombre': data['nombre'] ?? 'Sin nombre',
+                'empresa': data['empresa'] ?? 'Sin empresa',
+                'correo': data['correo'] ?? 'Sin correo',
+                'telefono': data['telefono'] ?? 'Sin teléfono',
+                'rif': data['rif'] ?? 'Sin RIF',
+                'descripcion': data['descripcion'] ?? 'Sin descripción',
+                'licenciaUrl': data['licenciaUrl'] ?? '',
+              },
               operadorObj: operadorObj,
               selectedTab: _selectedTab,
               isMobile: isMobile,

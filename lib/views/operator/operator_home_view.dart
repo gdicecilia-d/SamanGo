@@ -246,120 +246,141 @@ class _OperatorHomeViewState extends State<OperatorHomeView> {
   }
 
   Widget _buildMobileLayout(String empresa, String operadorId) {
-    return Column(
-      children: [
-        Expanded(
-          child: SingleChildScrollView(
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        return SingleChildScrollView(
+          child: ConstrainedBox(
+            constraints: BoxConstraints(minHeight: constraints.maxHeight),
             child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                const SizedBox(height: 16),
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
-                  child: RichText(
-                    text: TextSpan(
-                      style: GoogleFonts.outfit(fontSize: 22, fontWeight: FontWeight.bold, color: const Color(0xFF333333)),
-                      children: [
-                        const TextSpan(text: '¡Hola '),
-                        TextSpan(text: empresa, style: const TextStyle(color: Color(0xFFFC6707))),
-                        const TextSpan(text: '! Revise el estado de sus servicios'),
-                      ],
+                Column(
+                  children: [
+                    const SizedBox(height: 16),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                      child: Row(
+                        children: [
+                          Expanded(
+                            child: RichText(
+                              text: TextSpan(
+                                style: GoogleFonts.outfit(fontSize: 22, fontWeight: FontWeight.bold, color: const Color(0xFF333333)),
+                                children: [
+                                  const TextSpan(text: '¡Hola '),
+                                  TextSpan(text: empresa, style: const TextStyle(color: Color(0xFFFC6707))),
+                                  const TextSpan(text: '! Revise el estado de sus servicios'),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
-                  ),
+                    const SizedBox(height: 24),
+                    _buildMainContent(isMobile: true, operadorId: operadorId),
+                    const SizedBox(height: 30),
+                  ],
                 ),
-                const SizedBox(height: 24),
-                _buildMainContent(isMobile: true, operadorId: operadorId),
-                const SizedBox(height: 40),
+                _buildFooter(true),
               ],
             ),
           ),
-        ),
-        _buildFooter(true),
-      ],
+        );
+      },
     );
   }
 
   Widget _buildDesktopLayout(String empresa, String operadorId) {
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Expanded(
-          flex: 7,
-          child: Column(
-            children: [
-              Expanded(
-                child: SingleChildScrollView(
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        return Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Expanded(
+              flex: 7,
+              child: SingleChildScrollView(
+                child: ConstrainedBox(
+                  constraints: BoxConstraints(minHeight: constraints.maxHeight),
                   child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      const SizedBox(height: 16),
-                      Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 24),
-                        child: RichText(
-                          text: TextSpan(
-                            style: GoogleFonts.outfit(fontSize: 28, fontWeight: FontWeight.bold, color: const Color(0xFF333333)),
-                            children: [
-                              const TextSpan(text: '¡Hola '),
-                              TextSpan(text: empresa, style: const TextStyle(color: Color(0xFFFC6707))),
-                              const TextSpan(text: '! Revise el estado de sus servicios'),
-                            ],
+                      Column(
+                        children: [
+                          const SizedBox(height: 16),
+                          Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 24),
+                            child: Row(
+                              children: [
+                                Expanded(
+                                  child: RichText(
+                                    text: TextSpan(
+                                      style: GoogleFonts.outfit(fontSize: 28, fontWeight: FontWeight.bold, color: const Color(0xFF333333)),
+                                      children: [
+                                        const TextSpan(text: '¡Hola '),
+                                        TextSpan(text: empresa, style: const TextStyle(color: Color(0xFFFC6707))),
+                                        const TextSpan(text: '! Revise el estado de sus servicios'),
+                                      ],
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
                           ),
-                        ),
+                          const SizedBox(height: 32),
+                          _buildMainContent(isMobile: false, operadorId: operadorId),
+                          const SizedBox(height: 30),
+                        ],
                       ),
-                      const SizedBox(height: 32),
-                      _buildMainContent(isMobile: false, operadorId: operadorId),
-                      const SizedBox(height: 40),
+                      _buildFooter(false),
                     ],
                   ),
                 ),
               ),
-              _buildFooter(false),
-            ],
-          ),
-        ),
-        Container(
-          width: 320,
-          decoration: BoxDecoration(
-            border: Border(
-              left: BorderSide(
-                color: Colors.grey.withOpacity(0.3),
-                width: 1.5,
+            ),
+            Container(
+              width: 320,
+              decoration: BoxDecoration(
+                border: Border(
+                  left: BorderSide(
+                    color: Colors.grey.withOpacity(0.3),
+                    width: 1.5,
+                  ),
+                ),
+              ),
+              child: Center(
+                child: SingleChildScrollView(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      const SizedBox(height: 80),
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 16),
+                        child: SizedBox(
+                          width: 260,
+                          child: _buildNotificationsPanel(),
+                        ),
+                      ),
+                      const SizedBox(height: 32),
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 16),
+                        child: SizedBox(
+                          width: 260,
+                          child: _buildTrendingChart(),
+                        ),
+                      ),
+                      const SizedBox(height: 80),
+                    ],
+                  ),
+                ),
               ),
             ),
-          ),
-          child: Center(
-            child: SingleChildScrollView(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  const SizedBox(height: 80),
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 16),
-                    child: SizedBox(
-                      width: 260,
-                      child: _buildNotificationsPanel(),
-                    ),
-                  ),
-                  const SizedBox(height: 32),
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 16),
-                    child: SizedBox(
-                      width: 260,
-                      child: _buildTrendingChart(),
-                    ),
-                  ),
-                  const SizedBox(height: 80),
-                ],
-              ),
-            ),
-          ),
-        ),
-      ],
+          ],
+        );
+      },
     );
   }
 
   Widget _buildMainContent({required bool isMobile, required String operadorId}) {
-    // Determinar número de columnas según el tamaño
     final crossAxisCount = isMobile ? 2 : 3;
     
     return Column(
@@ -447,7 +468,6 @@ class _OperatorHomeViewState extends State<OperatorHomeView> {
               );
             }
 
-            // Grid con 2 o 3 columnas
             return Padding(
               padding: EdgeInsets.symmetric(horizontal: isMobile ? 16 : 24),
               child: GridView.builder(
@@ -584,7 +604,6 @@ class _OperatorHomeViewState extends State<OperatorHomeView> {
     return Container(
       width: double.infinity,
       padding: EdgeInsets.symmetric(vertical: isMobile ? 16 : 20),
-      margin: const EdgeInsets.only(top: 40),
       decoration: const BoxDecoration(
         color: Color(0xFFFC6707),
         borderRadius: BorderRadius.only(

@@ -44,10 +44,19 @@ class OperatorDestinationCard extends StatelessWidget {
 
   int get _cuposReservados => cuposTotales - cuposDisponibles;
 
+  double _getImageHeight(BuildContext context) {
+    final screenWidth = MediaQuery.of(context).size.width;
+    return screenWidth < 400 ? 100 : 120;
+  }
+
   @override
   Widget build(BuildContext context) {
+    final screenWidth = MediaQuery.of(context).size.width;
+    final isSmallScreen = screenWidth < 400;
+    final imageHeight = _getImageHeight(context);
+
     return Container(
-      width: 220,
+      width: isSmallScreen ? double.infinity : 220,
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(20),
@@ -70,13 +79,13 @@ class OperatorDestinationCard extends StatelessWidget {
               topRight: Radius.circular(20),
             ),
             child: SizedBox(
-              height: 120,
+              height: imageHeight,
               width: double.infinity,
-              child: _buildImagen(),
+              child: _buildImagen(imageHeight),
             ),
           ),
           Padding(
-            padding: const EdgeInsets.fromLTRB(12, 10, 12, 12),
+            padding: const EdgeInsets.all(12),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisSize: MainAxisSize.min,
@@ -84,7 +93,7 @@ class OperatorDestinationCard extends StatelessWidget {
                 Text(
                   nombre,
                   style: GoogleFonts.outfit(
-                    fontSize: 16,
+                    fontSize: isSmallScreen ? 14 : 16,
                     fontWeight: FontWeight.bold,
                     color: const Color(0xFF333333),
                   ),
@@ -94,13 +103,13 @@ class OperatorDestinationCard extends StatelessWidget {
                 const SizedBox(height: 4),
                 Row(
                   children: [
-                    const Icon(Icons.access_time, size: 14, color: Color(0xFF888888)),
+                    const Icon(Icons.access_time, size: 12, color: Color(0xFF888888)),
                     const SizedBox(width: 4),
                     Expanded(
                       child: Text(
                         duracion,
                         style: GoogleFonts.outfit(
-                          fontSize: 12,
+                          fontSize: 11,
                           color: const Color(0xFF888888),
                         ),
                         maxLines: 1,
@@ -111,13 +120,13 @@ class OperatorDestinationCard extends StatelessWidget {
                 ),
                 Row(
                   children: [
-                    const Icon(Icons.location_on, size: 14, color: Color(0xFF888888)),
+                    const Icon(Icons.location_on, size: 12, color: Color(0xFF888888)),
                     const SizedBox(width: 4),
                     Expanded(
                       child: Text(
                         ubicacion,
                         style: GoogleFonts.outfit(
-                          fontSize: 12,
+                          fontSize: 11,
                           color: const Color(0xFF888888),
                         ),
                         maxLines: 1,
@@ -133,21 +142,21 @@ class OperatorDestinationCard extends StatelessWidget {
                     Text(
                       '\$${precio.toStringAsFixed(0)}',
                       style: GoogleFonts.outfit(
-                        fontSize: 20,
+                        fontSize: 18,
                         fontWeight: FontWeight.bold,
                         color: const Color(0xFF666666),
                       ),
                     ),
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                       decoration: BoxDecoration(
                         color: _estadoColor.withOpacity(0.15),
-                        borderRadius: BorderRadius.circular(12),
+                        borderRadius: BorderRadius.circular(10),
                       ),
                       child: Text(
                         _estadoTexto,
                         style: GoogleFonts.outfit(
-                          fontSize: 10,
+                          fontSize: 9,
                           fontWeight: FontWeight.w600,
                           color: _estadoColor,
                         ),
@@ -156,64 +165,66 @@ class OperatorDestinationCard extends StatelessWidget {
                   ],
                 ),
                 const SizedBox(height: 6),
-                if (isOffer) ...[
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.end,
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFF9C27B0).withOpacity(0.1),
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: Text(
-                          'Oferta',
-                          style: GoogleFonts.outfit(
-                            fontSize: 10,
-                            fontWeight: FontWeight.w600,
-                            color: const Color(0xFF9C27B0),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 8),
-                ],
                 Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  crossAxisAlignment: CrossAxisAlignment.center,
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     MouseRegion(
                       cursor: SystemMouseCursors.click,
                       child: GestureDetector(
                         onTap: onDelete,
                         child: Container(
-                          padding: const EdgeInsets.all(6),
+                          padding: const EdgeInsets.all(5),
                           decoration: BoxDecoration(
                             color: const Color(0xFFFC6707).withOpacity(0.1),
-                            borderRadius: BorderRadius.circular(20),
+                            borderRadius: BorderRadius.circular(16),
                           ),
                           child: const Icon(
                             Icons.delete_outline,
                             color: Color(0xFFFC6707),
-                            size: 16,
+                            size: 14,
                           ),
                         ),
                       ),
                     ),
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFFC6707).withOpacity(0.1),
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: Text(
-                        'Cupos: $_cuposReservados/$cuposTotales',
-                        style: GoogleFonts.outfit(
-                          fontSize: 10,
-                          fontWeight: FontWeight.w600,
-                          color: const Color(0xFFFC6707),
-                        ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.end,
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          if (isOffer)
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFF9C27B0).withOpacity(0.1),
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                              child: Text(
+                                'Oferta',
+                                style: GoogleFonts.outfit(
+                                  fontSize: 9,
+                                  fontWeight: FontWeight.w600,
+                                  color: const Color(0xFF9C27B0),
+                                ),
+                              ),
+                            ),
+                          if (isOffer) const SizedBox(height: 4),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFFC6707).withOpacity(0.1),
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                            child: Text(
+                              'Cupos: $_cuposReservados/$cuposTotales',
+                              style: GoogleFonts.outfit(
+                                fontSize: 9,
+                                fontWeight: FontWeight.w600,
+                                color: const Color(0xFFFC6707),
+                              ),
+                            ),
+                          ),
+                        ],
                       ),
                     ),
                   ],
@@ -226,11 +237,11 @@ class OperatorDestinationCard extends StatelessWidget {
     );
   }
 
-  Widget _buildImagen() {
+  Widget _buildImagen(double imageHeight) {
     if (imagenUrl.isEmpty) {
       return Container(
         width: double.infinity,
-        height: 120,
+        height: imageHeight,
         color: const Color(0xFFFDDBB3),
         child: const Icon(Icons.image, color: Color(0xFFFC6707), size: 40),
       );
@@ -241,11 +252,11 @@ class OperatorDestinationCard extends StatelessWidget {
         return Image.memory(
           _bytesBase64,
           width: double.infinity,
-          height: 120,
+          height: imageHeight,
           fit: BoxFit.cover,
           errorBuilder: (_, __, ___) => Container(
             width: double.infinity,
-            height: 120,
+            height: imageHeight,
             color: const Color(0xFFFDDBB3),
             child: const Icon(Icons.image, color: Color(0xFFFC6707), size: 40),
           ),
@@ -253,7 +264,7 @@ class OperatorDestinationCard extends StatelessWidget {
       } catch (_) {
         return Container(
           width: double.infinity,
-          height: 120,
+          height: imageHeight,
           color: const Color(0xFFFDDBB3),
           child: const Icon(Icons.image, color: Color(0xFFFC6707), size: 40),
         );
@@ -263,11 +274,11 @@ class OperatorDestinationCard extends StatelessWidget {
     return Image.network(
       imagenUrl,
       width: double.infinity,
-      height: 120,
+      height: imageHeight,
       fit: BoxFit.cover,
       errorBuilder: (_, __, ___) => Container(
         width: double.infinity,
-        height: 120,
+        height: imageHeight,
         color: const Color(0xFFFDDBB3),
         child: const Icon(Icons.image, color: Color(0xFFFC6707), size: 40),
       ),

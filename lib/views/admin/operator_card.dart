@@ -27,8 +27,6 @@ class OperatorCard extends StatefulWidget {
 }
 
 class _OperatorCardState extends State<OperatorCard> {
-  bool _isHoveringAceptar = false;
-  bool _isHoveringRechazar = false;
   bool _isProcessing = false;
 
   void _verLicencia(String url) {
@@ -75,7 +73,6 @@ class _OperatorCardState extends State<OperatorCard> {
         ],
       ),
       child: ExpansionTile(
-        key: PageStorageKey(widget.operadorMap['id']),
         tilePadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
         childrenPadding: const EdgeInsets.all(16),
         title: Row(
@@ -118,80 +115,42 @@ class _OperatorCardState extends State<OperatorCard> {
           mainAxisSize: MainAxisSize.min,
           children: [
             if (widget.selectedTab == 0) ...[
-              GestureDetector(
-                onTap: _isProcessing ? null : () async {
+              ElevatedButton(
+                onPressed: _isProcessing ? null : () async {
                   setState(() => _isProcessing = true);
                   final error = await Provider.of<AuthController>(context, listen: false).approveOperator(widget.operadorObj);
                   if (mounted) setState(() => _isProcessing = false);
-                  if (error != null) widget.onMessage(error);
-                  else widget.onMessage('Operador aprobado correctamente');
+                  if (error != null) {
+                    widget.onMessage(error);
+                  } else {
+                    widget.onMessage('Operador aprobado correctamente');
+                  }
                 },
-                child: MouseRegion(
-                  cursor: SystemMouseCursors.click,
-                  onEnter: (_) => setState(() => _isHoveringAceptar = true),
-                  onExit: (_) => setState(() => _isHoveringAceptar = false),
-                  child: AnimatedContainer(
-                    duration: const Duration(milliseconds: 150),
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                    decoration: BoxDecoration(
-                      color: _isHoveringAceptar ? const Color(0xFF45A049) : const Color(0xFF4CAF50),
-                      borderRadius: BorderRadius.circular(20),
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        const Icon(Icons.check, color: Colors.white, size: 16),
-                        const SizedBox(width: 4),
-                        Text(
-                          'Aceptar',
-                          style: GoogleFonts.outfit(
-                            fontSize: 12,
-                            fontWeight: FontWeight.w500,
-                            color: Colors.white,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFF4CAF50),
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
                 ),
+                child: const Text('Aceptar', style: TextStyle(fontSize: 12, color: Colors.white)),
               ),
               const SizedBox(width: 8),
-              GestureDetector(
-                onTap: _isProcessing ? null : () async {
+              ElevatedButton(
+                onPressed: _isProcessing ? null : () async {
                   setState(() => _isProcessing = true);
                   final error = await Provider.of<AuthController>(context, listen: false).rejectOperator(widget.operadorObj);
                   if (mounted) setState(() => _isProcessing = false);
-                  if (error != null) widget.onMessage(error);
-                  else widget.onMessage('Operador rechazado');
+                  if (error != null) {
+                    widget.onMessage(error);
+                  } else {
+                    widget.onMessage('Operador rechazado');
+                  }
                 },
-                child: MouseRegion(
-                  cursor: SystemMouseCursors.click,
-                  onEnter: (_) => setState(() => _isHoveringRechazar = true),
-                  onExit: (_) => setState(() => _isHoveringRechazar = false),
-                  child: AnimatedContainer(
-                    duration: const Duration(milliseconds: 150),
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                    decoration: BoxDecoration(
-                      color: _isHoveringRechazar ? const Color(0xFFE53935) : const Color(0xFFF44336),
-                      borderRadius: BorderRadius.circular(20),
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        const Icon(Icons.close, color: Colors.white, size: 16),
-                        const SizedBox(width: 4),
-                        Text(
-                          'Rechazar',
-                          style: GoogleFonts.outfit(
-                            fontSize: 12,
-                            fontWeight: FontWeight.w500,
-                            color: Colors.white,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFFF44336),
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
                 ),
+                child: const Text('Rechazar', style: TextStyle(fontSize: 12, color: Colors.white)),
               ),
             ] else if (widget.selectedTab == 1) ...[
               Container(
@@ -239,7 +198,6 @@ class _OperatorCardState extends State<OperatorCard> {
               _buildInfoRow('Teléfono:', widget.operadorMap['telefono']!),
               _buildInfoRow('RIF:', widget.operadorMap['rif']!),
               _buildInfoRow('Descripción:', widget.operadorMap['descripcion']!),
-              _buildInfoRow('Fecha de Nac.:', widget.operadorMap['fechaSolicitud']!),
               _buildLicenciaRow(widget.operadorMap['licenciaUrl']!),
               const SizedBox(height: 8),
             ],
