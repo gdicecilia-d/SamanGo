@@ -8,6 +8,7 @@ import 'package:provider/provider.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../shared/app_header.dart';
 import '../../services/storage_service.dart';
+import '../../services/notificacion_service.dart';
 import '../../controllers/auth_controller.dart';
 import 'operator_home_view.dart';
 import 'operator_edit_profile_view.dart';
@@ -218,7 +219,14 @@ class _OperatorPublishViewState extends State<OperatorPublishView> {
         'totalResenas': 0,
       };
 
-      await FirebaseFirestore.instance.collection('destinos').add(nuevoDestino);
+      final docRef = await FirebaseFirestore.instance.collection('destinos').add(nuevoDestino);
+
+      // Generar notificación masiva de manera automática
+      await NotificacionService().notificarNuevoPaquete(
+        titulo: _isOffer ? '¡Nueva Oferta de Viaje!' : '¡Nuevo Destino Disponible!',
+        mensaje: 'La empresa $operadorEmpresa acaba de publicar un viaje a ${_tituloController.text.trim()}. ¡Corre antes de que se agoten los cupos!',
+        idPaquete: docRef.id,
+      );
 
       setState(() => _isUploadingImages = false);
       _mostrarMensaje('¡Tour publicado exitosamente!');

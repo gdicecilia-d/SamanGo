@@ -12,6 +12,8 @@ import 'widgets/horizontal_scroll_section.dart';
 import 'destination_detail_view.dart';
 import '../../views/shared/widgets/custom_dialog.dart';
 import '../auth/login_view.dart';
+import '../../controllers/notificacion_controller.dart';
+import 'widgets/notifications_panel.dart';
 
 class StudentHomeView extends StatefulWidget {
   const StudentHomeView({super.key});
@@ -24,6 +26,19 @@ class _StudentHomeViewState extends State<StudentHomeView> {
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
   String _activeMenu = 'Inicio';
   final List<String> _menuItems = ['Inicio', 'Mis Viajes', 'Favoritos'];
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      final auth = Provider.of<AuthController>(context, listen: false);
+      final notifCtrl = Provider.of<NotificacionController>(context, listen: false);
+      if (auth.usuarioActual != null) {
+        notifCtrl.listenToNotificaciones(auth.usuarioActual!.id);
+      }
+    });
+  }
 
   void _handleMenuSelected(String menu) {
     if (menu == 'Mis Viajes') {
@@ -183,7 +198,7 @@ class _StudentHomeViewState extends State<StudentHomeView> {
                                   padding: const EdgeInsets.symmetric(horizontal: 16),
                                   child: SizedBox(
                                     width: 260,
-                                    child: _buildNotificationsPanel(),
+                                    child: const NotificationsPanel(),
                                   ),
                                 ),
                                 const SizedBox(height: 32),
@@ -418,60 +433,6 @@ class _StudentHomeViewState extends State<StudentHomeView> {
           },
         ),
       ],
-    );
-  }
-
-  Widget _buildNotificationsPanel() {
-    return Container(
-      width: double.infinity,
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: const Color(0xFFE0E0E0), width: 1),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Container(
-            width: double.infinity,
-            padding: const EdgeInsets.symmetric(vertical: 14),
-            decoration: const BoxDecoration(
-              color: Color(0xFFFC6707),
-              borderRadius: BorderRadius.only(
-                topLeft: Radius.circular(16),
-                topRight: Radius.circular(16),
-              ),
-            ),
-            child: Center(
-              child: Text(
-                'Notificaciones',
-                style: GoogleFonts.outfit(
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.white,
-                ),
-              ),
-            ),
-          ),
-          const Padding(
-            padding: EdgeInsets.all(32),
-            child: Center(
-              child: Text(
-                'No hay notificaciones por el momento',
-                textAlign: TextAlign.center,
-                style: TextStyle(fontSize: 14, color: Color(0xFF999999)),
-              ),
-            ),
-          ),
-        ],
-      ),
     );
   }
 

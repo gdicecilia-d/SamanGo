@@ -5,6 +5,7 @@ import 'package:provider/provider.dart';
 import 'firebase_options.dart';
 import 'controllers/auth_controller.dart';
 import 'controllers/profile_controller.dart';
+import 'controllers/notificacion_controller.dart';
 import 'views/home_view.dart';
 
 void main() async {
@@ -19,6 +20,7 @@ void main() async {
       providers: [
         ChangeNotifierProvider(create: (_) => AuthController()),
         ChangeNotifierProvider(create: (_) => ProfileController()),
+        ChangeNotifierProvider(create: (_) => NotificacionController()),
       ],
       child: const SamanGoApp(),
     ),
