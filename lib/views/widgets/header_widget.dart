@@ -26,10 +26,13 @@ class HeaderWidget extends StatefulWidget {
 class _HeaderWidgetState extends State<HeaderWidget> {
   @override
   Widget build(BuildContext context) {
+    final screenWidth = MediaQuery.of(context).size.width;
+    final isLargeScreen = screenWidth > 1600;
+    
     return Container(
       color: Colors.white,
       padding: EdgeInsets.symmetric(
-        horizontal: Responsive.padding(context, 24),
+        horizontal: Responsive.padding(context, isLargeScreen ? 60 : 24),
         vertical: Responsive.padding(context, 12),
       ),
       child: Row(
@@ -41,20 +44,20 @@ class _HeaderWidgetState extends State<HeaderWidget> {
             child: Row(
               children: [
                 Transform.scale(
-                  scale: 1.5,
+                  scale: isLargeScreen ? 1.8 : 1.5,
                   child: Image.asset(
                     'assets/images/logo.png',
-                    width: Responsive.width(context, 60),
-                    height: Responsive.height(context, 60),
+                    width: Responsive.width(context, isLargeScreen ? 70 : 60),
+                    height: Responsive.height(context, isLargeScreen ? 70 : 60),
                     fit: BoxFit.contain,
                   ),
                 ),
-                SizedBox(width: Responsive.padding(context, 4)),
+                SizedBox(width: Responsive.padding(context, isLargeScreen ? 8 : 4)),
                 Padding(
-                  padding: EdgeInsets.only(top: Responsive.padding(context, 8)),
+                  padding: EdgeInsets.only(top: Responsive.padding(context, isLargeScreen ? 12 : 8)),
                   child: Image.asset(
                     'assets/images/Nombre.png',
-                    height: Responsive.height(context, 25),
+                    height: Responsive.height(context, isLargeScreen ? 32 : 25),
                     fit: BoxFit.contain,
                   ),
                 ),
@@ -63,16 +66,19 @@ class _HeaderWidgetState extends State<HeaderWidget> {
           ),
           // Menú desktop
           if (!widget.isMobile) ...[
-            Row(
-              children: [
-                _buildNavLink('Inicio'),
-                SizedBox(width: Responsive.padding(context, 28)),
-                _buildNavLink('Sobre Nosotros'),
-                SizedBox(width: Responsive.padding(context, 28)),
-                _buildNavLink('Destinos'),
-                SizedBox(width: Responsive.padding(context, 28)),
-                _buildNavLink('Contacto'),
-              ],
+            Flexible(
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  _buildNavLink('Inicio', isLargeScreen),
+                  SizedBox(width: Responsive.width(context, isLargeScreen ? 40 : 28)),
+                  _buildNavLink('Sobre Nosotros', isLargeScreen),
+                  SizedBox(width: Responsive.width(context, isLargeScreen ? 40 : 28)),
+                  _buildNavLink('Destinos', isLargeScreen),
+                  SizedBox(width: Responsive.width(context, isLargeScreen ? 40 : 28)),
+                  _buildNavLink('Contacto', isLargeScreen),
+                ],
+              ),
             ),
             Row(
               children: [
@@ -81,8 +87,8 @@ class _HeaderWidgetState extends State<HeaderWidget> {
                   style: OutlinedButton.styleFrom(
                     side: const BorderSide(color: Color(0xFFFC6707), width: 1.5),
                     padding: EdgeInsets.symmetric(
-                      horizontal: Responsive.padding(context, 20),
-                      vertical: Responsive.padding(context, 12),
+                      horizontal: Responsive.padding(context, isLargeScreen ? 28 : 20),
+                      vertical: Responsive.padding(context, isLargeScreen ? 14 : 12),
                     ),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(Responsive.padding(context, 10)),
@@ -93,19 +99,19 @@ class _HeaderWidgetState extends State<HeaderWidget> {
                     style: GoogleFonts.outfit(
                       color: const Color(0xFFFC6707),
                       fontWeight: FontWeight.w600,
-                      fontSize: Responsive.fontSize(context, 14),
+                      fontSize: Responsive.fontSize(context, isLargeScreen ? 16 : 14),
                     ),
                   ),
                 ),
-                SizedBox(width: Responsive.padding(context, 12)),
+                SizedBox(width: Responsive.padding(context, isLargeScreen ? 16 : 12)),
                 ElevatedButton(
                   onPressed: widget.onRegisterPressed,
                   style: ElevatedButton.styleFrom(
                     backgroundColor: const Color(0xFFFC6707),
                     foregroundColor: Colors.white,
                     padding: EdgeInsets.symmetric(
-                      horizontal: Responsive.padding(context, 20),
-                      vertical: Responsive.padding(context, 12),
+                      horizontal: Responsive.padding(context, isLargeScreen ? 28 : 20),
+                      vertical: Responsive.padding(context, isLargeScreen ? 14 : 12),
                     ),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(Responsive.padding(context, 10)),
@@ -115,7 +121,7 @@ class _HeaderWidgetState extends State<HeaderWidget> {
                     'Registrarse',
                     style: GoogleFonts.outfit(
                       fontWeight: FontWeight.w600,
-                      fontSize: Responsive.fontSize(context, 14),
+                      fontSize: Responsive.fontSize(context, isLargeScreen ? 16 : 14),
                     ),
                   ),
                 ),
@@ -135,7 +141,7 @@ class _HeaderWidgetState extends State<HeaderWidget> {
     );
   }
 
-  Widget _buildNavLink(String title) {
+  Widget _buildNavLink(String title, bool isLargeScreen) {
     final isActive = widget.activeMenu == title;
     return InkWell(
       onTap: () => widget.onMenuSelected(title),
@@ -145,7 +151,7 @@ class _HeaderWidgetState extends State<HeaderWidget> {
           Text(
             title,
             style: GoogleFonts.outfit(
-              fontSize: Responsive.fontSize(context, 16),
+              fontSize: Responsive.fontSize(context, isLargeScreen ? 18 : 16),
               fontWeight: isActive ? FontWeight.w700 : FontWeight.w500,
               color: isActive ? const Color(0xFFFC6707) : const Color(0xFF555555),
             ),

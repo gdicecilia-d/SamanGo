@@ -77,17 +77,15 @@ class AuthBaseView extends StatelessWidget {
 
   Widget _buildDesktopLayout(BuildContext context) {
     final screenWidth = MediaQuery.of(context).size.width;
-    final double scale = (screenWidth / Responsive.designWidth).clamp(0.55, 1.25);
+    final isLargeScreen = screenWidth > 1600;
     
-    // Ancho del formulario 
-    final double formWidth = 520 * scale;
-    // Tamaño del círculo 
-    final double circleSize = 580 * scale;
-    // Posición izquierda 
-    final double leftOffset = -85 * scale;
-    // Padding laterales 
-    final double leftPadding = 40 * scale;
-    final double rightPadding = 60 * scale;
+    final double scale = (screenWidth / Responsive.designWidth).clamp(0.65, 1.4);
+    
+    final double formWidth = (520 * scale).clamp(400.0, 700.0);
+    final double circleSize = (580 * scale).clamp(380.0, 750.0);
+    final double leftOffset = (-85 * scale).clamp(-120.0, -50.0);
+    final double leftPadding = (40 * scale).clamp(20.0, 80.0);
+    final double rightPadding = (60 * scale).clamp(30.0, 100.0);
 
     return Scaffold(
       backgroundColor: Colors.white,
