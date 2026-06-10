@@ -14,7 +14,6 @@ class NotificacionController extends ChangeNotifier {
 
   int get noLeidasCount => _notificaciones.where((n) => !n.leida).length;
 
-  // Iniciar escucha
   void listenToNotificaciones(String userId, {String collectionName = 'estudiantes'}) {
     _estudianteId = userId;
     _collectionName = collectionName;
@@ -25,11 +24,9 @@ class NotificacionController extends ChangeNotifier {
     });
   }
 
-  // Marcar leída
   Future<void> marcarComoLeida(String notificacionId) async {
     if (_estudianteId == null) return;
     try {
-      // Optimistic update
       final index = _notificaciones.indexWhere((n) => n.id == notificacionId);
       if (index != -1) {
         _notificaciones[index] = Notificacion(
@@ -49,7 +46,17 @@ class NotificacionController extends ChangeNotifier {
     }
   }
 
-  // Detener escucha
+  Future<void> eliminarNotificacion(String notificacionId) async {
+    if (_estudianteId == null) return;
+    try {
+      _notificaciones.removeWhere((n) => n.id == notificacionId);
+      notifyListeners();
+      await _service.eliminarNotificacion(_estudianteId!, notificacionId, collection: _collectionName);
+    } catch (e) {
+      print('Error al eliminar notificación: $e');
+    }
+  }
+
   @override
   void dispose() {
     _subscription?.cancel();

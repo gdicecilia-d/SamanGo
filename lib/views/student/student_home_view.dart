@@ -151,67 +151,57 @@ class _StudentHomeViewState extends State<StudentHomeView> {
                 : Row(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
+                      // Panel izquierdo 
                       Expanded(
                         flex: 7,
-                        child: SingleChildScrollView(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              const SizedBox(height: 16),
-                              Padding(
-                                padding: const EdgeInsets.symmetric(horizontal: 24),
-                                child: RichText(
-                                  text: TextSpan(
-                                    style: GoogleFonts.outfit(fontSize: 28, fontWeight: FontWeight.bold, color: const Color(0xFF333333)),
-                                    children: [
-                                      const TextSpan(text: '¡Hola '),
-                                      TextSpan(text: primerNombre, style: const TextStyle(color: Color(0xFFFC6707))),
-                                      const TextSpan(text: '! ¿A dónde quieres viajar hoy?'),
-                                    ],
-                                  ),
-                                ),
+                        child: Container(
+                          decoration: const BoxDecoration(
+                            border: Border(
+                              right: BorderSide(
+                                color: Color(0xFFE0E0E0),
+                                width: 1.5,
                               ),
-                              const SizedBox(height: 32),
-                              _buildMainContent(isMobile: false),
-                              _buildFooter(false),
-                            ],
-                          ),
-                        ),
-                      ),
-                      Container(
-                        width: 320,
-                        decoration: BoxDecoration(
-                          border: Border(
-                            left: BorderSide(
-                              color: Colors.grey.withOpacity(0.3),
-                              width: 1.5,
                             ),
                           ),
-                        ),
-                        child: Center(
                           child: SingleChildScrollView(
                             child: Column(
-                              mainAxisAlignment: MainAxisAlignment.center,
+                              crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                const SizedBox(height: 80),
+                                const SizedBox(height: 16),
                                 Padding(
-                                  padding: const EdgeInsets.symmetric(horizontal: 16),
-                                  child: SizedBox(
-                                    width: 260,
-                                    child: const NotificationsPanel(),
+                                  padding: const EdgeInsets.symmetric(horizontal: 24),
+                                  child: RichText(
+                                    text: TextSpan(
+                                      style: GoogleFonts.outfit(fontSize: 28, fontWeight: FontWeight.bold, color: const Color(0xFF333333)),
+                                      children: [
+                                        const TextSpan(text: '¡Hola '),
+                                        TextSpan(text: primerNombre, style: const TextStyle(color: Color(0xFFFC6707))),
+                                        const TextSpan(text: '! ¿A dónde quieres viajar hoy?'),
+                                      ],
+                                    ),
                                   ),
                                 ),
                                 const SizedBox(height: 32),
-                                Padding(
-                                  padding: const EdgeInsets.symmetric(horizontal: 16),
-                                  child: SizedBox(
-                                    width: 260,
-                                    child: _buildTrendingChart(),
-                                  ),
-                                ),
-                                const SizedBox(height: 80),
+                                _buildMainContent(isMobile: false),
+                                _buildFooter(false),
                               ],
                             ),
+                          ),
+                        ),
+                      ),
+                      // Panel derecho 
+                      Container(
+                        width: 320,
+                        child: SingleChildScrollView(
+                          padding: const EdgeInsets.symmetric(vertical: 20),
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.start,
+                            children: [
+                              const NotificationsPanel(),
+                              const SizedBox(height: 24),
+                              _buildTrendingChart(),
+                              const SizedBox(height: 80),
+                            ],
                           ),
                         ),
                       ),
@@ -438,11 +428,11 @@ class _StudentHomeViewState extends State<StudentHomeView> {
 
   Widget _buildTrendingChart() {
     return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(20),
+      width: 280,
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(20),
         border: Border.all(color: const Color(0xFFE0E0E0), width: 1),
         boxShadow: [
           BoxShadow(

@@ -14,16 +14,16 @@ class NotificationsPanel extends StatelessWidget {
         final notificaciones = notificacionController.notificaciones;
         
         return Container(
-          width: double.infinity,
+          width: 280,
           decoration: BoxDecoration(
             color: Colors.white,
-            borderRadius: BorderRadius.circular(16),
+            borderRadius: BorderRadius.circular(20),
             border: Border.all(color: const Color(0xFFE0E0E0), width: 1),
             boxShadow: [
               BoxShadow(
                 color: Colors.black.withOpacity(0.05),
-                blurRadius: 8,
-                offset: const Offset(0, 2),
+                blurRadius: 12,
+                offset: const Offset(0, 4),
               ),
             ],
           ),
@@ -37,8 +37,8 @@ class NotificationsPanel extends StatelessWidget {
                 decoration: const BoxDecoration(
                   color: Color(0xFFFC6707),
                   borderRadius: BorderRadius.only(
-                    topLeft: Radius.circular(16),
-                    topRight: Radius.circular(16),
+                    topLeft: Radius.circular(20),
+                    topRight: Radius.circular(20),
                   ),
                 ),
                 child: Center(
@@ -54,7 +54,7 @@ class NotificationsPanel extends StatelessWidget {
               ),
               if (notificaciones.isEmpty)
                 const Padding(
-                  padding: EdgeInsets.all(32),
+                  padding: EdgeInsets.all(40),
                   child: Center(
                     child: Text(
                       'No hay notificaciones por el momento',
@@ -64,87 +64,94 @@ class NotificationsPanel extends StatelessWidget {
                   ),
                 )
               else
-                Flexible(
-                  child: ListView.builder(
-                    shrinkWrap: true,
-                    physics: const BouncingScrollPhysics(),
-                    padding: EdgeInsets.zero,
-                    itemCount: notificaciones.length > 5 ? 5 : notificaciones.length,
-                    itemBuilder: (context, index) {
-                      final notificacion = notificaciones[index];
-                      return Material(
-                        color: Colors.transparent,
-                        child: InkWell(
-                          onTap: () {
-                            if (!notificacion.leida) {
-                              notificacionController.marcarComoLeida(notificacion.id);
-                            }
-                            if (notificacion.idPaquete != null && notificacion.idPaquete!.isNotEmpty) {
-                              Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (_) => DestinationDetailView(destinoId: notificacion.idPaquete!),
-                                ),
-                              );
-                            }
-                          },
-                          child: Container(
-                            padding: const EdgeInsets.all(16),
-                            decoration: BoxDecoration(
-                              color: notificacion.leida ? Colors.white : const Color(0xFFFFF4EB),
-                              border: const Border(
-                                bottom: BorderSide(color: Color(0xFFEEEEEE)),
-                              ),
-                            ),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  notificacion.titulo,
-                                  style: GoogleFonts.outfit(
-                                    fontSize: 14,
-                                    fontWeight: notificacion.leida ? FontWeight.w500 : FontWeight.bold,
-                                    color: const Color(0xFF333333),
-                                  ),
-                                ),
-                                const SizedBox(height: 4),
-                                Text(
-                                  notificacion.mensaje,
-                                  style: GoogleFonts.outfit(
-                                    fontSize: 12,
-                                    color: const Color(0xFF666666),
-                                  ),
-                                  maxLines: 2,
-                                  overflow: TextOverflow.ellipsis,
-                                ),
-                              ],
-                            ),
+                ListView.builder(
+                  shrinkWrap: true,
+                  physics: const NeverScrollableScrollPhysics(),
+                  padding: EdgeInsets.zero,
+                  itemCount: notificaciones.length,
+                  itemBuilder: (context, index) {
+                    final notificacion = notificaciones[index];
+                    final isLast = index == notificaciones.length - 1;
+                    return Container(
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        border: Border(
+                          bottom: BorderSide(
+                            color: const Color(0xFFFC6707).withOpacity(0.3),
+                            width: 0.5,
                           ),
                         ),
-                      );
-                    },
-                  ),
-                ),
-              if (notificaciones.isNotEmpty)
-                InkWell(
-                  onTap: () {},
-                  child: Container(
-                    width: double.infinity,
-                    padding: const EdgeInsets.symmetric(vertical: 12),
-                    decoration: const BoxDecoration(
-                      border: Border(top: BorderSide(color: Color(0xFFEEEEEE))),
-                    ),
-                    child: Center(
-                      child: Text(
-                        'Ver todas',
-                        style: GoogleFonts.outfit(
-                          fontSize: 13,
-                          fontWeight: FontWeight.w500,
-                          color: const Color(0xFFFC6707),
+                        borderRadius: isLast
+                            ? const BorderRadius.only(
+                                bottomLeft: Radius.circular(20),
+                                bottomRight: Radius.circular(20),
+                              )
+                            : null,
+                      ),
+                      child: InkWell(
+                        onTap: () {
+                          if (!notificacion.leida) {
+                            notificacionController.marcarComoLeida(notificacion.id);
+                          }
+                          if (notificacion.idPaquete != null && notificacion.idPaquete!.isNotEmpty) {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) => DestinationDetailView(destinoId: notificacion.idPaquete!),
+                              ),
+                            );
+                          }
+                        },
+                        child: Padding(
+                          padding: const EdgeInsets.all(12),
+                          child: Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      notificacion.titulo,
+                                      style: GoogleFonts.outfit(
+                                        fontSize: 13,
+                                        fontWeight: notificacion.leida ? FontWeight.w500 : FontWeight.bold,
+                                        color: const Color(0xFF333333),
+                                      ),
+                                    ),
+                                    const SizedBox(height: 4),
+                                    Text(
+                                      notificacion.mensaje,
+                                      style: GoogleFonts.outfit(
+                                        fontSize: 11,
+                                        color: const Color(0xFF666666),
+                                      ),
+                                      maxLines: 2,
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                              GestureDetector(
+                                onTap: () {
+                                  notificacionController.eliminarNotificacion(notificacion.id);
+                                },
+                                child: Container(
+                                  padding: const EdgeInsets.all(4),
+                                  child: Icon(
+                                    Icons.delete_outline,
+                                    size: 16,
+                                    color: const Color(0xFFFC6707).withOpacity(0.6),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
                         ),
                       ),
-                    ),
-                  ),
+                    );
+                  },
                 ),
             ],
           ),

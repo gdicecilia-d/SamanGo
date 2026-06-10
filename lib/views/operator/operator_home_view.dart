@@ -50,6 +50,7 @@ class _OperatorHomeViewState extends State<OperatorHomeView> {
         MaterialPageRoute(builder: (_) => const OperatorPublishView()),
       ).then((_) {
         setState(() {
+          _activeMenu = 'Inicio';
           _refreshKey++;
         });
       });
@@ -261,137 +262,101 @@ class _OperatorHomeViewState extends State<OperatorHomeView> {
   }
 
   Widget _buildMobileLayout(String empresa, String operadorId) {
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        return SingleChildScrollView(
-          child: ConstrainedBox(
-            constraints: BoxConstraints(minHeight: constraints.maxHeight),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+    return SingleChildScrollView(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const SizedBox(height: 16),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: Row(
               children: [
-                Column(
-                  children: [
-                    const SizedBox(height: 16),
-                    Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 16),
-                      child: Row(
-                        children: [
-                          Expanded(
-                            child: RichText(
-                              text: TextSpan(
-                                style: GoogleFonts.outfit(fontSize: 22, fontWeight: FontWeight.bold, color: const Color(0xFF333333)),
-                                children: [
-                                  const TextSpan(text: '¡Hola '),
-                                  TextSpan(text: empresa, style: const TextStyle(color: Color(0xFFFC6707))),
-                                  const TextSpan(text: '! Revise el estado de sus servicios'),
-                                ],
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
+                Expanded(
+                  child: RichText(
+                    text: TextSpan(
+                      style: GoogleFonts.outfit(fontSize: 22, fontWeight: FontWeight.bold, color: const Color(0xFF333333)),
+                      children: [
+                        const TextSpan(text: '¡Hola '),
+                        TextSpan(text: empresa, style: const TextStyle(color: Color(0xFFFC6707))),
+                        const TextSpan(text: '! Revise el estado de sus servicios'),
+                      ],
                     ),
-                    const SizedBox(height: 24),
-                    _buildMainContent(isMobile: true, operadorId: operadorId),
-                    const SizedBox(height: 30),
-                  ],
+                  ),
                 ),
-                _buildFooter(true),
               ],
             ),
           ),
-        );
-      },
+          const SizedBox(height: 24),
+          _buildMainContent(isMobile: true, operadorId: operadorId),
+          _buildFooter(true),
+        ],
+      ),
     );
   }
 
   Widget _buildDesktopLayout(String empresa, String operadorId) {
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        return Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Expanded(
-              flex: 7,
-              child: SingleChildScrollView(
-                child: ConstrainedBox(
-                  constraints: BoxConstraints(minHeight: constraints.maxHeight),
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Column(
-                        children: [
-                          const SizedBox(height: 16),
-                          Padding(
-                            padding: const EdgeInsets.symmetric(horizontal: 24),
-                            child: Row(
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Expanded(
+          flex: 7,
+          child: Container(
+            decoration: const BoxDecoration(
+              border: Border(
+                right: BorderSide(
+                  color: Color(0xFFE0E0E0),
+                  width: 1.5,
+                ),
+              ),
+            ),
+            child: SingleChildScrollView(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const SizedBox(height: 16),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 24),
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: RichText(
+                            text: TextSpan(
+                              style: GoogleFonts.outfit(fontSize: 28, fontWeight: FontWeight.bold, color: const Color(0xFF333333)),
                               children: [
-                                Expanded(
-                                  child: RichText(
-                                    text: TextSpan(
-                                      style: GoogleFonts.outfit(fontSize: 28, fontWeight: FontWeight.bold, color: const Color(0xFF333333)),
-                                      children: [
-                                        const TextSpan(text: '¡Hola '),
-                                        TextSpan(text: empresa, style: const TextStyle(color: Color(0xFFFC6707))),
-                                        const TextSpan(text: '! Revise el estado de sus servicios'),
-                                      ],
-                                    ),
-                                  ),
-                                ),
+                                const TextSpan(text: '¡Hola '),
+                                TextSpan(text: empresa, style: const TextStyle(color: Color(0xFFFC6707))),
+                                const TextSpan(text: '! Revise el estado de sus servicios'),
                               ],
                             ),
                           ),
-                          const SizedBox(height: 32),
-                          _buildMainContent(isMobile: false, operadorId: operadorId),
-                          const SizedBox(height: 30),
-                        ],
-                      ),
-                      _buildFooter(false),
-                    ],
+                        ),
+                      ],
+                    ),
                   ),
-                ),
+                  const SizedBox(height: 32),
+                  _buildMainContent(isMobile: false, operadorId: operadorId),
+                  _buildFooter(false),
+                ],
               ),
             ),
-            Container(
-              width: 320,
-              decoration: BoxDecoration(
-                border: Border(
-                  left: BorderSide(
-                    color: Colors.grey.withOpacity(0.3),
-                    width: 1.5,
-                  ),
-                ),
-              ),
-              child: Center(
-                child: SingleChildScrollView(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      const SizedBox(height: 80),
-                      Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 16),
-                        child: SizedBox(
-                          width: 260,
-                          child: const NotificationsPanel(),
-                        ),
-                      ),
-                      const SizedBox(height: 32),
-                      Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 16),
-                        child: SizedBox(
-                          width: 260,
-                          child: _buildTrendingChart(),
-                        ),
-                      ),
-                      const SizedBox(height: 80),
-                    ],
-                  ),
-                ),
-              ),
+          ),
+        ),
+        Container(
+          width: 320,
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.symmetric(vertical: 20),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.start,
+              children: [
+                const NotificationsPanel(),
+                const SizedBox(height: 24),
+                _buildTrendingChart(),
+                const SizedBox(height: 80),
+              ],
             ),
-          ],
-        );
-      },
+          ),
+        ),
+      ],
     );
   }
 
@@ -524,11 +489,11 @@ class _OperatorHomeViewState extends State<OperatorHomeView> {
 
   Widget _buildTrendingChart() {
     return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(20),
+      width: 280,
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(20),
         border: Border.all(color: const Color(0xFFE0E0E0), width: 1),
         boxShadow: [
           BoxShadow(
@@ -565,6 +530,7 @@ class _OperatorHomeViewState extends State<OperatorHomeView> {
     return Container(
       width: double.infinity,
       padding: EdgeInsets.symmetric(vertical: isMobile ? 16 : 20),
+      margin: const EdgeInsets.only(top: 40),
       decoration: const BoxDecoration(
         color: Color(0xFFFC6707),
         borderRadius: BorderRadius.only(

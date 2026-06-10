@@ -1,3 +1,7 @@
+// Ejecutar con 'flutter run -d chrome --web-port=5000' 
+// ya que Google Sign-In requiere este puerto fijo autorizado 
+// para evitar bloqueos de seguridad locales
+
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -7,6 +11,7 @@ import 'controllers/auth_controller.dart';
 import 'controllers/profile_controller.dart';
 import 'controllers/notificacion_controller.dart';
 import 'views/home_view.dart';
+import 'services/tips_notificacion_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -14,6 +19,9 @@ void main() async {
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
   );
+  
+  // Iniciar el envío automático de tips 
+  await TipsNotificacionService.iniciarTipsAutomaticos();
   
   runApp(
     MultiProvider(

@@ -1,7 +1,7 @@
 // Pantalla de iniciar sesión
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import '../../services/auth_service.dart';
+import 'package:provider/provider.dart';
 import 'auth_base_view.dart';
 import 'forgot_password_view.dart';
 import 'select_role_view.dart';
@@ -9,7 +9,6 @@ import '../student/student_home_view.dart';
 import '../operator/operator_home_view.dart';
 import '../admin/admin_home_view.dart';
 import '../../controllers/auth_controller.dart';
-import 'package:provider/provider.dart';
 import 'complete_google_profile_view.dart';
 
 class LoginView extends StatefulWidget {
@@ -31,6 +30,16 @@ class _LoginViewState extends State<LoginView> {
     _emailController.dispose();
     _passwordController.dispose();
     super.dispose();
+  }
+
+  void _mostrarMensaje(String mensaje, {bool isError = true}) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(mensaje),
+        backgroundColor: const Color(0xFFFC6707),
+        duration: const Duration(seconds: 2),
+      ),
+    );
   }
 
   Future<void> _handleGoogleSignIn() async {
@@ -81,9 +90,9 @@ class _LoginViewState extends State<LoginView> {
         ),
       );
     } else if (result is String) {
-      setState(() {
-        _errorMessage = result;
-      });
+      _mostrarMensaje(result, isError: true);
+    } else if (result == null) {
+      _mostrarMensaje('Inicio de sesión cancelado', isError: true);
     }
   }
 
@@ -139,6 +148,7 @@ class _LoginViewState extends State<LoginView> {
       setState(() {
         _errorMessage = 'Correo o contraseña incorrectos';
       });
+      _mostrarMensaje('Correo o contraseña incorrectos', isError: true);
     }
   }
 
@@ -166,7 +176,6 @@ class _LoginViewState extends State<LoginView> {
           ),
           const SizedBox(height: 32),
 
-          // Campo Correo
           Align(
             alignment: Alignment.centerLeft,
             child: Text(
@@ -212,7 +221,6 @@ class _LoginViewState extends State<LoginView> {
           ),
           const SizedBox(height: 16),
 
-          // Campo Contraseña
           Align(
             alignment: Alignment.centerLeft,
             child: Text(
@@ -263,7 +271,6 @@ class _LoginViewState extends State<LoginView> {
           ),
           const SizedBox(height: 8),
 
-          // Link olvidé contraseña
           Align(
             alignment: Alignment.centerRight,
             child: MouseRegion(
@@ -293,7 +300,6 @@ class _LoginViewState extends State<LoginView> {
           ),
           const SizedBox(height: 24),
 
-          // Mensaje de error
           if (_errorMessage != null)
             Padding(
               padding: const EdgeInsets.only(bottom: 12),
@@ -303,7 +309,6 @@ class _LoginViewState extends State<LoginView> {
               ),
             ),
 
-          // Botón Iniciar Sesión
           SizedBox(
             width: double.infinity,
             child: TextButton(
@@ -321,7 +326,6 @@ class _LoginViewState extends State<LoginView> {
           ),
           const SizedBox(height: 12),
 
-          // Botón Google
           SizedBox(
             width: double.infinity,
             child: OutlinedButton(

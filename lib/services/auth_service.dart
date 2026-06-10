@@ -40,7 +40,7 @@ class AuthService {
       final email = userCredential.user!.email ?? '';
       if (!email.endsWith('@correo.unimet.edu.ve') && !email.endsWith('@unimet.edu.ve')) {
         await userCredential.user!.delete();
-        throw 'Solo se permiten correos institucionales de la UNIMET';
+        return 'Solo se permiten correos institucionales de la UNIMET';
       }
 
       final uid = userCredential.user!.uid;
@@ -48,7 +48,6 @@ class AuthService {
       Usuario? usuario = await cargarUsuarioDeFirestore(uid);
 
       if (usuario == null) {
-        // Devuelve mapa en vez de registrar
         return {
           'isNewUser': true,
           'uid': uid,
@@ -61,10 +60,10 @@ class AuthService {
       return usuario;
     } catch (e) {
       if (e is FirebaseAuthException && e.code == 'web-context-cancelled') {
-        return null; // El usuario cerró el popup de Google en web
+        return null;
       }
       print('Error en Google Sign-In: $e');
-      throw e.toString();
+      return e.toString();
     }
   }
 
@@ -179,7 +178,7 @@ class AuthService {
         rif: rif,
         telefono: telefono,
         descripcion: descripcion,
-        fechaNacimiento: '', // Campo vacío
+        fechaNacimiento: '',
         estado: 'pendiente',
         licenciaUrl: licenciaUrl,
       );
@@ -193,12 +192,10 @@ class AuthService {
   // Aprobar Operador
   Future<void> approveOperator(Usuario operador) async {
     try {
-      // 1. Generar contraseña aleatoria
       const chars = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#\$';
       final rnd = Random.secure();
       final password = String.fromCharCodes(Iterable.generate(8, (_) => chars.codeUnitAt(rnd.nextInt(chars.length))));
 
-      // 2. Crear usuario en Firebase Auth usando una app secundaria para no desloguear al Admin
       FirebaseApp tempApp = await Firebase.initializeApp(
         name: 'tempAuth',
         options: Firebase.app().options,
@@ -213,13 +210,11 @@ class AuthService {
       final authUid = credential.user!.uid;
       await tempApp.delete();
 
-      // 3. Actualizar documento
       await _db.collection('operadores').doc(operador.id).update({
         'estado': 'aprobado',
         'authId': authUid,
       });
 
-      // 4. Enviar correo electrónico
       await _sendEmail(
         to: operador.correo,
         subject: '¡Solicitud Aprobada! Bienvenido a SamanGo',
@@ -353,7 +348,6 @@ class AuthService {
   // Carga los datos del usuario desde Firestore
   Future<Usuario?> cargarUsuarioDeFirestore(String uid) async {
     try {
-      // Intentar buscar por authId primero (para operadores)
       var operAuthQuery = await _db.collection('operadores').where('authId', isEqualTo: uid).limit(1).get();
       if (operAuthQuery.docs.isNotEmpty) {
         return Usuario.fromMap(operAuthQuery.docs.first.id, operAuthQuery.docs.first.data());
@@ -381,6 +375,10 @@ class AuthService {
   // Cierra sesión
   Future<void> logout() async {
     await _auth.signOut();
+    // Solo llamar a googleSignOut si no estamos en web o si hay usuario de Google
+    if (!kIsWeb) {
+      await _googleSignIn.signOut();
+    }
   }
 
   // Enviar correo de restablecimiento

@@ -8,8 +8,8 @@ import 'package:provider/provider.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../shared/app_header.dart';
 import '../../services/storage_service.dart';
-import '../../services/notificacion_service.dart';
 import '../../controllers/auth_controller.dart';
+import '../../services/notificacion_service.dart';
 import 'operator_home_view.dart';
 import 'operator_edit_profile_view.dart';
 import '../../views/shared/widgets/custom_dialog.dart';
@@ -26,24 +26,21 @@ class _OperatorPublishViewState extends State<OperatorPublishView> {
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
   final StorageService _storageService = StorageService();
   
-  // Controladores de texto
   final TextEditingController _tituloController = TextEditingController();
   final TextEditingController _ubicacionController = TextEditingController();
   final TextEditingController _precioController = TextEditingController();
-  final TextEditingController _cuposController = TextEditingController(); // NUEVO
+  final TextEditingController _cuposController = TextEditingController();
   final TextEditingController _requisitosController = TextEditingController();
   final TextEditingController _noIncluyeController = TextEditingController();
   final TextEditingController _descripcionController = TextEditingController();
   final TextEditingController _nochesController = TextEditingController();
   
-  // Variables de selección
   String _transporteSeleccionado = 'Bus';
   String _alojamientoSeleccionado = 'Hotel';
   String _duracionSeleccionada = 'Full Day';
   String _selectedCategoria = 'Playas / Cayos';
   bool _isOffer = false;
   
-  // Listas de opciones
   final List<String> _transportes = ['Bus', 'Avión', 'Barco', '4x4', 'Todos'];
   final List<String> _alojamientos = ['Hotel', 'Posada', 'Camping', 'Eco lodge', 'No incluye'];
   final List<String> _categorias = [
@@ -53,22 +50,18 @@ class _OperatorPublishViewState extends State<OperatorPublishView> {
     'Cultura / Ciudades',
   ];
   
-  // Checkboxes para Servicios incluidos
   bool _incluyeVuelos = false;
   bool _incluyeTraslados = false;
   bool _incluyeHospedaje = false;
   bool _incluyeComidas = false;
   
-  // Imágenes - Usar Uint8List para Web
   Uint8List? _portadaImagenBytes;
   final List<Uint8List?> _referenciasImagenesBytes = [null, null, null];
   bool _isLoading = false;
   bool _isUploadingImages = false;
   
-  // Variables para la UI
   bool _isHoveringPublicar = false;
   bool _isHoveringDescartar = false;
-  bool _isHoveringVolver = false;
   bool _isHoveringPortada = false;
 
   @override
@@ -85,7 +78,6 @@ class _OperatorPublishViewState extends State<OperatorPublishView> {
   }
 
   bool get _isFormValid {
-    // Validar cupos
     final cuposValidos = _cuposController.text.isNotEmpty &&
         int.tryParse(_cuposController.text) != null &&
         int.parse(_cuposController.text) > 0;
@@ -130,7 +122,6 @@ class _OperatorPublishViewState extends State<OperatorPublishView> {
   }
 
   Future<void> _publicarTour() async {
-    // Validaciones
     if (_tituloController.text.trim().isEmpty) {
       _mostrarMensaje('Por favor ingresa el título del tour');
       return;
@@ -172,7 +163,6 @@ class _OperatorPublishViewState extends State<OperatorPublishView> {
       final operadorNombre = auth.usuarioActual?.nombre ?? 'Operador';
       final operadorEmpresa = auth.usuarioActual?.empresa ?? '';
 
-      // Convertir portada a Base64 (comprimida)
       String portadaUrl = '';
       if (_portadaImagenBytes != null) {
         final comprimidos = _storageService.comprimirImagen(_portadaImagenBytes!);
@@ -180,7 +170,6 @@ class _OperatorPublishViewState extends State<OperatorPublishView> {
         portadaUrl = 'data:image/jpeg;base64,$base64';
       }
 
-      // Convertir imágenes de referencia a Base64 (comprimidas)
       List<String> referenciasUrls = [];
       for (int i = 0; i < _referenciasImagenesBytes.length; i++) {
         if (_referenciasImagenesBytes[i] != null) {
@@ -190,7 +179,6 @@ class _OperatorPublishViewState extends State<OperatorPublishView> {
         }
       }
 
-      // Crear documento en Firestore - colección 'destinos'
       final nuevoDestino = {
         'nombre': _tituloController.text.trim(),
         'ubicacion': _ubicacionController.text.trim(),
@@ -220,22 +208,18 @@ class _OperatorPublishViewState extends State<OperatorPublishView> {
       };
 
       final docRef = await FirebaseFirestore.instance.collection('destinos').add(nuevoDestino);
+      final nuevoDestinoId = docRef.id;
 
-      // Generar notificación masiva de manera automática
       await NotificacionService().notificarNuevoPaquete(
-        titulo: _isOffer ? '¡Nueva Oferta de Viaje!' : '¡Nuevo Destino Disponible!',
-        mensaje: 'La empresa $operadorEmpresa acaba de publicar un viaje a ${_tituloController.text.trim()}. ¡Corre antes de que se agoten los cupos!',
-        idPaquete: docRef.id,
+        nombrePaquete: _tituloController.text.trim(),
+        idPaquete: nuevoDestinoId,
       );
 
       setState(() => _isUploadingImages = false);
       _mostrarMensaje('¡Tour publicado exitosamente!');
       
       if (!mounted) return;
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(builder: (_) => const OperatorHomeView()),
-      );
+      Navigator.pop(context, true);
     } catch (e) {
       setState(() => _isUploadingImages = false);
       _mostrarMensaje('Error al publicar: ${e.toString()}');
@@ -256,10 +240,7 @@ class _OperatorPublishViewState extends State<OperatorPublishView> {
 
   void _handleMenuSelected(String menu, BuildContext context) {
     if (menu == 'Inicio') {
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(builder: (_) => const OperatorHomeView()),
-      );
+      Navigator.pop(context, true);
     } else if (menu == 'Solicitudes') {
       _mostrarMensaje('Solicitudes - Próximamente');
     }
@@ -461,17 +442,14 @@ class _OperatorPublishViewState extends State<OperatorPublishView> {
         ),
         MouseRegion(
           cursor: SystemMouseCursors.click,
-          onEnter: (_) => setState(() => _isHoveringVolver = true),
-          onExit: (_) => setState(() => _isHoveringVolver = false),
           child: GestureDetector(
-            onTap: () => Navigator.pop(context),
+            onTap: () => Navigator.pop(context, true),
             child: Text(
               'Volver',
               style: GoogleFonts.outfit(
-                fontSize: isMobile ? 14 : 16,
+                fontSize: 14,
                 color: const Color(0xFFFC6707),
-                fontWeight: _isHoveringVolver ? FontWeight.bold : FontWeight.w500,
-                decoration: _isHoveringVolver ? TextDecoration.underline : null,
+                fontWeight: FontWeight.w500,
               ),
             ),
           ),
@@ -524,7 +502,6 @@ class _OperatorPublishViewState extends State<OperatorPublishView> {
           ),
         ),
         const SizedBox(height: 16),
-        // Imagen de Portada
         MouseRegion(
           cursor: SystemMouseCursors.click,
           onEnter: (_) => setState(() => _isHoveringPortada = true),
@@ -615,7 +592,6 @@ class _OperatorPublishViewState extends State<OperatorPublishView> {
           ),
         ),
         const SizedBox(height: 16),
-        // Imágenes de referencia
         Text(
           'Imágenes de referencia',
           style: GoogleFonts.outfit(
@@ -722,7 +698,7 @@ class _OperatorPublishViewState extends State<OperatorPublishView> {
             const SizedBox(width: 16),
             Expanded(child: _buildTextField('Cupos disponibles', _cuposController, 'Ej: 20', isNumber: true)),
             const SizedBox(width: 16),
-            Expanded(child: Container()), // Espaciador
+            Expanded(child: Container()),
           ],
         ),
         const SizedBox(height: 16),
@@ -931,7 +907,7 @@ class _OperatorPublishViewState extends State<OperatorPublishView> {
           child: AnimatedContainer(
             duration: const Duration(milliseconds: 200),
             child: ElevatedButton(
-              onPressed: () => Navigator.pop(context),
+              onPressed: () => Navigator.pop(context, true),
               style: ElevatedButton.styleFrom(
                 backgroundColor: const Color(0xFFFDDBB3),
                 foregroundColor: const Color(0xFFFC6707),

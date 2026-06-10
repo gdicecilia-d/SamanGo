@@ -1,11 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'auth_base_view.dart';
-import '../student/student_home_view.dart';
-import '../../models/validators.dart';
 import 'package:provider/provider.dart';
+import 'auth_base_view.dart';
+import '../../models/validators.dart';
 import '../../controllers/auth_controller.dart';
+import '../student/student_home_view.dart';
+import 'login_view.dart';
 
 class CompleteGoogleProfileView extends StatefulWidget {
   final Map<String, dynamic> userData;
@@ -20,25 +21,27 @@ class _CompleteGoogleProfileViewState extends State<CompleteGoogleProfileView> {
   final TextEditingController _nombresController = TextEditingController();
   final TextEditingController _apellidosController = TextEditingController();
   final TextEditingController _carnetController = TextEditingController();
-
+  
   DateTime? _selectedFechaNacimiento;
+  bool _isLoading = false;
   bool _acceptTerms = false;
   bool _showErrors = false;
 
   @override
   void initState() {
     super.initState();
-    // Pre-rellenar nombres si están disponibles desde Google
-    final fullName = widget.userData['displayName'] as String;
-    if (fullName.isNotEmpty) {
-      final parts = fullName.split(' ');
-      if (parts.length > 1) {
-        _nombresController.text = parts[0];
-        _apellidosController.text = parts.sublist(1).join(' ');
-      } else {
-        _nombresController.text = fullName;
-      }
+    if (widget.userData['displayName'] != null && widget.userData['displayName'].isNotEmpty) {
+      final names = widget.userData['displayName'].split(' ');
+      if (names.isNotEmpty) _nombresController.text = names[0];
+      if (names.length > 1) _apellidosController.text = names.sublist(1).join(' ');
     }
+  }
+
+  String get _fechaNacimientoTexto {
+    if (_selectedFechaNacimiento == null) return '';
+    return "${_selectedFechaNacimiento!.day.toString().padLeft(2, '0')}/"
+        "${_selectedFechaNacimiento!.month.toString().padLeft(2, '0')}/"
+        "${_selectedFechaNacimiento!.year}";
   }
 
   bool get _isFormValid {
@@ -51,11 +54,14 @@ class _CompleteGoogleProfileViewState extends State<CompleteGoogleProfileView> {
         _acceptTerms;
   }
 
-  String get _fechaNacimientoTexto {
-    if (_selectedFechaNacimiento == null) return '';
-    return "${_selectedFechaNacimiento!.day.toString().padLeft(2, '0')}/"
-        "${_selectedFechaNacimiento!.month.toString().padLeft(2, '0')}/"
-        "${_selectedFechaNacimiento!.year}";
+  void _mostrarMensaje(String mensaje, {bool isError = true}) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(mensaje),
+        backgroundColor: const Color(0xFFFC6707),
+        duration: const Duration(seconds: 2),
+      ),
+    );
   }
 
   Future<void> _seleccionarFecha() async {
@@ -77,7 +83,7 @@ class _CompleteGoogleProfileViewState extends State<CompleteGoogleProfileView> {
         );
       },
     );
-
+    
     if (picked != null) {
       setState(() {
         _selectedFechaNacimiento = picked;
@@ -85,64 +91,64 @@ class _CompleteGoogleProfileViewState extends State<CompleteGoogleProfileView> {
     }
   }
 
-  void _submitForm() async {
+  Future<void> _submitForm() async {
     setState(() {
       _showErrors = true;
     });
+    
     if (!_isFormValid) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Por favor completa todos los campos correctamente'),
-          backgroundColor: Color(0xFFFC6707),
-        ),
-      );
+      _mostrarMensaje('Por favor completa todos los campos correctamente', isError: true);
       return;
     }
 
-    final errorMessage = await Provider.of<AuthController>(context, listen: false).completeGoogleProfile(
+    setState(() {
+      _isLoading = true;
+    });
+
+    final authController = Provider.of<AuthController>(context, listen: false);
+    final error = await authController.completeGoogleProfile(
       uid: widget.userData['uid'],
       email: widget.userData['email'],
-      nombre: _nombresController.text,
-      apellido: _apellidosController.text,
-      carnet: _carnetController.text,
+      nombre: _nombresController.text.trim(),
+      apellido: _apellidosController.text.trim(),
+      carnet: _carnetController.text.trim(),
       fechaNacimiento: _fechaNacimientoTexto,
       photoUrl: widget.userData['photoUrl'],
     );
 
     if (!mounted) return;
 
-    if (errorMessage == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('¡Bienvenido!'),
-          backgroundColor: Colors.green,
-        ),
-      );
-      Navigator.pushAndRemoveUntil(
+    setState(() {
+      _isLoading = false;
+    });
+
+    if (error == null) {
+      _mostrarMensaje('Perfil completado exitosamente', isError: false);
+      if (!mounted) return;
+      Navigator.pushReplacement(
         context,
         MaterialPageRoute(builder: (_) => const StudentHomeView()),
-        (route) => false,
       );
     } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(errorMessage),
-          backgroundColor: const Color(0xFFFC6707),
-        ),
-      );
+      _mostrarMensaje(error, isError: true);
     }
   }
 
   @override
   Widget build(BuildContext context) {
     return AuthBaseView(
-      onBackPressed: () => Navigator.pop(context),
+      onBackPressed: () {
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (_) => const LoginView()),
+        );
+      },
       formContent: SingleChildScrollView(
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.center,
           children: [
             Text(
-              'Completa tu Perfil',
+              'Completa tu perfil',
               style: GoogleFonts.outfit(
                 fontSize: 24,
                 fontWeight: FontWeight.bold,
@@ -152,7 +158,7 @@ class _CompleteGoogleProfileViewState extends State<CompleteGoogleProfileView> {
             ),
             const SizedBox(height: 8),
             Text(
-              'Necesitamos algunos datos más para terminar tu registro',
+              'Ingresa tus datos para continuar',
               style: GoogleFonts.outfit(
                 fontSize: 14,
                 fontWeight: FontWeight.w400,
@@ -162,23 +168,29 @@ class _CompleteGoogleProfileViewState extends State<CompleteGoogleProfileView> {
             ),
             const SizedBox(height: 28),
 
-            // Nombres y Apellidos
             Row(
               children: [
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text('Nombres', style: GoogleFonts.outfit(fontSize: 14, fontWeight: FontWeight.w500, color: const Color(0xFF333333))),
+                      Text(
+                        'Nombres',
+                        style: GoogleFonts.outfit(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w500,
+                          color: const Color(0xFF333333),
+                        ),
+                      ),
                       const SizedBox(height: 8),
                       TextFormField(
                         controller: _nombresController,
                         onChanged: (_) => setState(() {}),
                         style: GoogleFonts.outfit(fontSize: 14),
                         decoration: _inputDecoration(
-                          hint: 'Ej: Juan',
+                          hint: 'Ej: Juan David',
                           errorText: (_showErrors && _nombresController.text.isEmpty) ||
-                                  (_nombresController.text.isNotEmpty && _nombresController.text.length < 3)
+                              (_nombresController.text.isNotEmpty && _nombresController.text.length < 3)
                               ? 'Mínimo 3 caracteres'
                               : null,
                         ),
@@ -191,16 +203,23 @@ class _CompleteGoogleProfileViewState extends State<CompleteGoogleProfileView> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text('Apellidos', style: GoogleFonts.outfit(fontSize: 14, fontWeight: FontWeight.w500, color: const Color(0xFF333333))),
+                      Text(
+                        'Apellidos',
+                        style: GoogleFonts.outfit(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w500,
+                          color: const Color(0xFF333333),
+                        ),
+                      ),
                       const SizedBox(height: 8),
                       TextFormField(
                         controller: _apellidosController,
                         onChanged: (_) => setState(() {}),
                         style: GoogleFonts.outfit(fontSize: 14),
                         decoration: _inputDecoration(
-                          hint: 'Ej: Pérez',
+                          hint: 'Ej: Pérez Díaz',
                           errorText: (_showErrors && _apellidosController.text.isEmpty) ||
-                                  (_apellidosController.text.isNotEmpty && _apellidosController.text.length < 3)
+                              (_apellidosController.text.isNotEmpty && _apellidosController.text.length < 3)
                               ? 'Mínimo 3 caracteres'
                               : null,
                         ),
@@ -212,8 +231,17 @@ class _CompleteGoogleProfileViewState extends State<CompleteGoogleProfileView> {
             ),
             const SizedBox(height: 16),
 
-            // Fecha de Nacimiento
-            Align(alignment: Alignment.centerLeft, child: Text('Fecha de Nacimiento', style: GoogleFonts.outfit(fontSize: 14, fontWeight: FontWeight.w500, color: const Color(0xFF333333)))),
+            Align(
+              alignment: Alignment.centerLeft,
+              child: Text(
+                'Fecha de Nacimiento',
+                style: GoogleFonts.outfit(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w500,
+                  color: const Color(0xFF333333),
+                ),
+              ),
+            ),
             const SizedBox(height: 8),
             GestureDetector(
               onTap: _seleccionarFecha,
@@ -222,26 +250,51 @@ class _CompleteGoogleProfileViewState extends State<CompleteGoogleProfileView> {
                 decoration: BoxDecoration(
                   color: const Color(0xFFF5F5F5),
                   borderRadius: BorderRadius.circular(12),
-                  border: (_showErrors && _selectedFechaNacimiento == null) ? Border.all(color: const Color(0xFFFC6707), width: 1.5) : null,
+                  border: (_showErrors && _selectedFechaNacimiento == null)
+                      ? Border.all(color: const Color(0xFFFC6707), width: 1.5)
+                      : null,
                 ),
                 child: Row(
                   children: [
                     const Icon(Icons.calendar_today, color: Color(0xFFFC6707), size: 20),
                     const SizedBox(width: 12),
                     Text(
-                      _fechaNacimientoTexto.isEmpty ? 'Selecciona tu fecha' : _fechaNacimientoTexto,
-                      style: GoogleFonts.outfit(fontSize: 14, color: _fechaNacimientoTexto.isEmpty ? const Color(0xFF999999) : const Color(0xFF333333)),
+                      _fechaNacimientoTexto.isEmpty ? 'Selecciona tu fecha de nacimiento' : _fechaNacimientoTexto,
+                      style: GoogleFonts.outfit(
+                        fontSize: 14,
+                        color: _fechaNacimientoTexto.isEmpty 
+                            ? const Color(0xFF999999) 
+                            : const Color(0xFF333333),
+                      ),
                     ),
                   ],
                 ),
               ),
             ),
             if (_showErrors && _selectedFechaNacimiento == null)
-              Padding(padding: const EdgeInsets.only(top: 4, left: 16), child: Align(alignment: Alignment.centerLeft, child: Text('La fecha es obligatoria', style: GoogleFonts.outfit(color: const Color(0xFFFC6707), fontSize: 12)))),
+              Padding(
+                padding: const EdgeInsets.only(top: 4, left: 16),
+                child: Align(
+                  alignment: Alignment.centerLeft,
+                  child: Text(
+                    'La fecha de nacimiento es obligatoria',
+                    style: GoogleFonts.outfit(color: const Color(0xFFFC6707), fontSize: 12),
+                  ),
+                ),
+              ),
             const SizedBox(height: 16),
 
-            // Carnet
-            Align(alignment: Alignment.centerLeft, child: Text('Número de Carnet Unimet', style: GoogleFonts.outfit(fontSize: 14, fontWeight: FontWeight.w500, color: const Color(0xFF333333)))),
+            Align(
+              alignment: Alignment.centerLeft,
+              child: Text(
+                'Número de Carnet Unimet',
+                style: GoogleFonts.outfit(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w500,
+                  color: const Color(0xFF333333),
+                ),
+              ),
+            ),
             const SizedBox(height: 8),
             TextFormField(
               controller: _carnetController,
@@ -251,12 +304,13 @@ class _CompleteGoogleProfileViewState extends State<CompleteGoogleProfileView> {
               style: GoogleFonts.outfit(fontSize: 14),
               decoration: _inputDecoration(
                 hint: 'Ej: 20251234567',
-                errorText: (_showErrors && _carnetController.text.isNotEmpty) ? FormValidators.validarCarnet(_carnetController.text) : null,
+                errorText: (_showErrors && _carnetController.text.isNotEmpty)
+                    ? FormValidators.validarCarnet(_carnetController.text)
+                    : null,
               ),
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: 24),
 
-            // Checkbox Términos
             Row(
               children: [
                 GestureDetector(
@@ -264,28 +318,64 @@ class _CompleteGoogleProfileViewState extends State<CompleteGoogleProfileView> {
                   child: Container(
                     width: 22,
                     height: 22,
-                    decoration: BoxDecoration(color: _acceptTerms ? const Color(0xFFFC6707) : const Color(0xFFFDDBB3), borderRadius: BorderRadius.circular(4)),
-                    child: _acceptTerms ? const Icon(Icons.check, size: 16, color: Colors.white) : null,
+                    decoration: BoxDecoration(
+                      color: _acceptTerms ? const Color(0xFFFC6707) : const Color(0xFFFDDBB3),
+                      borderRadius: BorderRadius.circular(4),
+                      border: Border.all(color: Colors.transparent),
+                    ),
+                    child: _acceptTerms
+                        ? const Icon(Icons.check, size: 16, color: Colors.white)
+                        : null,
                   ),
                 ),
                 const SizedBox(width: 8),
-                Expanded(child: Text('He leído y acepto los Términos de Servicio', style: GoogleFonts.outfit(fontSize: 12, fontWeight: FontWeight.w400, color: Colors.blue))),
+                Expanded(
+                  child: GestureDetector(
+                    onTap: () {
+                      showDialog(
+                        context: context,
+                        builder: (context) => AlertDialog(
+                          title: Text('Términos y Condiciones', style: GoogleFonts.outfit(fontWeight: FontWeight.bold)),
+                          content: SingleChildScrollView(
+                            child: Text('Términos y condiciones de SamanGo...', style: GoogleFonts.outfit()),
+                          ),
+                          actions: [
+                            TextButton(
+                              onPressed: () => Navigator.pop(context),
+                              child: Text('Cerrar', style: GoogleFonts.outfit(color: const Color(0xFFFC6707))),
+                            ),
+                          ],
+                        ),
+                      );
+                    },
+                    child: Text(
+                      'He leído y acepto los Términos de Servicio y la Política de Privacidad',
+                      style: GoogleFonts.outfit(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w400,
+                        color: Colors.blue,
+                        decoration: TextDecoration.underline,
+                      ),
+                    ),
+                  ),
+                ),
               ],
             ),
             const SizedBox(height: 24),
 
-            // Botón Completar
             SizedBox(
               width: double.infinity,
               child: TextButton(
-                onPressed: _submitForm,
+                onPressed: _isLoading ? null : _submitForm,
                 style: TextButton.styleFrom(
                   backgroundColor: _isFormValid ? const Color(0xFFFC6707) : const Color(0xFFFDDBB3),
                   foregroundColor: Colors.white,
                   padding: const EdgeInsets.symmetric(vertical: 16),
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                 ),
-                child: Text('Completar Registro', style: GoogleFonts.outfit(fontSize: 16, fontWeight: FontWeight.bold)),
+                child: _isLoading
+                    ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                    : Text('Continuar', style: GoogleFonts.outfit(fontSize: 16, fontWeight: FontWeight.bold)),
               ),
             ),
           ],

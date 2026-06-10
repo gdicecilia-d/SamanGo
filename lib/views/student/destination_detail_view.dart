@@ -76,7 +76,6 @@ class _DestinationDetailViewState extends State<DestinationDetailView> {
 
           return Stack(
             children: [
-              // Fondo con imagen difuminada - MENOS BLANCO
               Container(
                 decoration: BoxDecoration(
                   image: imagenPortada.isNotEmpty
@@ -85,10 +84,10 @@ class _DestinationDetailViewState extends State<DestinationDetailView> {
                               ? MemoryImage(_decodificarBase64(imagenPortada))
                               : NetworkImage(imagenPortada) as ImageProvider,
                           fit: BoxFit.cover,
-                          opacity: 0.4, // Antes 0.15
+                          opacity: 0.4,
                         )
                       : null,
-                  color: const Color(0xFFE8E8E8), // Antes F8F8F8
+                  color: const Color(0xFFE8E8E8),
                 ),
               ),
               Column(
@@ -124,7 +123,6 @@ class _DestinationDetailViewState extends State<DestinationDetailView> {
                             operadorNombre,
                             operadorEmpresa,
                             primaryColor,
-                            data,
                           )
                         : _buildDesktopLayout(
                             nombre,
@@ -142,12 +140,10 @@ class _DestinationDetailViewState extends State<DestinationDetailView> {
                             operadorNombre,
                             operadorEmpresa,
                             primaryColor,
-                            data,
                           ),
                   ),
                 ],
               ),
-              // Botón Volver flotante
               Positioned(
                 top: 80,
                 right: 24,
@@ -210,7 +206,6 @@ class _DestinationDetailViewState extends State<DestinationDetailView> {
     String operadorNombre,
     String operadorEmpresa,
     Color primaryColor,
-    Map<String, dynamic> data,
   ) {
     return SingleChildScrollView(
       padding: const EdgeInsets.all(16),
@@ -235,7 +230,7 @@ class _DestinationDetailViewState extends State<DestinationDetailView> {
             isMobile: true,
           ),
           const SizedBox(height: 16),
-          _buildActionButton(primaryColor, data),
+          _buildActionButton(primaryColor),
           const SizedBox(height: 80),
         ],
       ),
@@ -258,12 +253,10 @@ class _DestinationDetailViewState extends State<DestinationDetailView> {
     String operadorNombre,
     String operadorEmpresa,
     Color primaryColor,
-    Map<String, dynamic> data,
   ) {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // Columna Izquierda (70%) - Contenido Principal
         Expanded(
           flex: 7,
           child: SingleChildScrollView(
@@ -288,12 +281,11 @@ class _DestinationDetailViewState extends State<DestinationDetailView> {
             ),
           ),
         ),
-        // Columna Derecha (30%) - Caja Flotante de Conversión
         Expanded(
           flex: 3,
           child: Padding(
             padding: const EdgeInsets.only(top: 24, right: 24, bottom: 24),
-            child: _buildConversionCard(primaryColor, precio, data),
+            child: _buildConversionCard(primaryColor, precio),
           ),
         ),
       ],
@@ -333,7 +325,6 @@ class _DestinationDetailViewState extends State<DestinationDetailView> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Título y Ubicación
           Padding(
             padding: const EdgeInsets.all(24),
             child: Column(
@@ -377,7 +368,6 @@ class _DestinationDetailViewState extends State<DestinationDetailView> {
               ],
             ),
           ),
-          // Galería de Imágenes
           if (imagenesReferencia.isNotEmpty || imagenPortada.isNotEmpty) ...[
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 24),
@@ -385,10 +375,8 @@ class _DestinationDetailViewState extends State<DestinationDetailView> {
             ),
             const SizedBox(height: 24),
           ],
-          // Divider
           const Divider(height: 1, thickness: 1, color: Color(0xFFE0E0E0)),
           const SizedBox(height: 24),
-          // Incluye
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 24),
             child: Column(
@@ -413,7 +401,6 @@ class _DestinationDetailViewState extends State<DestinationDetailView> {
           const SizedBox(height: 24),
           const Divider(height: 1, thickness: 1, color: Color(0xFFE0E0E0)),
           const SizedBox(height: 24),
-          // Información Importante
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 24),
             child: Column(
@@ -597,7 +584,7 @@ class _DestinationDetailViewState extends State<DestinationDetailView> {
     );
   }
 
-  Widget _buildConversionCard(Color primaryColor, double precio, Map<String, dynamic> data) {
+  Widget _buildConversionCard(Color primaryColor, double precio) {
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
@@ -662,17 +649,24 @@ class _DestinationDetailViewState extends State<DestinationDetailView> {
           const SizedBox(height: 24),
           const Divider(height: 1, thickness: 1, color: Color(0xFFE0E0E0)),
           const SizedBox(height: 24),
-          _buildActionButton(primaryColor, data),
+          _buildActionButton(primaryColor),
         ],
       ),
     );
   }
 
-  Widget _buildActionButton(Color primaryColor, Map<String, dynamic> data) {
+  Widget _buildActionButton(Color primaryColor) {
     return SizedBox(
       width: double.infinity,
       child: ElevatedButton(
-        onPressed: () => _reservarDestino(widget.destinoId, data),
+        onPressed: () {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Próximamente podrás reservar este destino'),
+              backgroundColor: Color(0xFFFC6707),
+            ),
+          );
+        },
         style: ElevatedButton.styleFrom(
           backgroundColor: primaryColor,
           foregroundColor: Colors.white,
@@ -690,59 +684,5 @@ class _DestinationDetailViewState extends State<DestinationDetailView> {
         ),
       ),
     );
-  }
-
-  Future<void> _reservarDestino(String destinoId, Map<String, dynamic> data) async {
-    final int cuposDisponibles = data['cuposDisponibles'] ?? 0;
-    if (cuposDisponibles <= 0) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Ya no hay cupos disponibles'), backgroundColor: Colors.red),
-      );
-      return;
-    }
-
-    try {
-      final nuevoCupo = cuposDisponibles - 1;
-      await FirebaseFirestore.instance.collection('destinos').doc(destinoId).update({
-        'cuposDisponibles': nuevoCupo,
-      });
-
-      if (nuevoCupo == 0) {
-        // Notificar al operador
-        final operadorId = data['operadorId'];
-        final nombrePaquete = data['nombre'] ?? 'un viaje';
-        if (operadorId != null) {
-          final notifRef = FirebaseFirestore.instance
-              .collection('operadores')
-              .doc(operadorId)
-              .collection('notificaciones')
-              .doc();
-              
-          await notifRef.set({
-            'titulo': '¡Cupos Agotados!',
-            'mensaje': 'Tu paquete "$nombrePaquete" se ha llenado por completo.',
-            'fechaCreacion': FieldValue.serverTimestamp(),
-            'leida': false,
-            'tipo': 'alerta_operador',
-            'idPaquete': destinoId,
-          });
-        }
-      }
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('¡Reserva exitosa!'), backgroundColor: Colors.green),
-      );
-      
-      // Recargar la vista
-      if (mounted) {
-        setState(() {
-          _destinoFuture = FirebaseFirestore.instance.collection('destinos').doc(widget.destinoId).get();
-        });
-      }
-    } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error al reservar: $e'), backgroundColor: Colors.red),
-      );
-    }
   }
 }
