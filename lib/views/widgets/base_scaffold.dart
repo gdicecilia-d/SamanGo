@@ -2,6 +2,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'header_widget.dart';
+import '../../utils/responsive.dart';
 
 class BaseScaffold extends StatelessWidget {
   final Widget body;
@@ -55,14 +56,14 @@ class BaseScaffold extends StatelessWidget {
             return true;
           },
           child: SingleChildScrollView(
-            padding: EdgeInsets.symmetric(horizontal: isMobile ? 16 : 40),
+            padding: EdgeInsets.symmetric(horizontal: isMobile ? Responsive.padding(context, 16) : Responsive.padding(context, 40)),
             child: Column(
               children: [
                 body,
-                const SizedBox(height: 48),
+                SizedBox(height: Responsive.padding(context, 48)),
                 Container(
                   width: double.infinity,
-                  padding: const EdgeInsets.symmetric(vertical: 20),
+                  padding: EdgeInsets.symmetric(vertical: Responsive.padding(context, 20)),
                   decoration: const BoxDecoration(
                     color: Color(0xFFFC6707),
                     borderRadius: BorderRadius.only(
@@ -75,7 +76,7 @@ class BaseScaffold extends StatelessWidget {
                       '© 2026 SamanGo. Todos los derechos reservados. Comunidad UNIMET.',
                       textAlign: TextAlign.center,
                       style: GoogleFonts.outfit(
-                        fontSize: 12,
+                        fontSize: Responsive.fontSize(context, 12),
                         color: Colors.white,
                         fontWeight: FontWeight.w500,
                       ),
@@ -93,30 +94,30 @@ class BaseScaffold extends StatelessWidget {
   Widget _buildMobileDrawer(BuildContext context) {
     return Drawer(
       backgroundColor: Colors.white,
-      width: MediaQuery.of(context).size.width * 0.8, 
+      width: MediaQuery.of(context).size.width * 0.8,
       child: SafeArea(
-        child: SingleChildScrollView( 
+        child: SingleChildScrollView(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Padding(
-                padding: const EdgeInsets.all(24),
+                padding: EdgeInsets.all(Responsive.padding(context, 24)),
                 child: Row(
                   children: [
                     Transform.scale(
                       scale: 1.5,
                       child: Image.asset(
                         'assets/images/logo.png',
-                        width: 45,
-                        height: 45,
+                        width: Responsive.width(context, 45),
+                        height: Responsive.height(context, 45),
                       ),
                     ),
-                    const SizedBox(width: 8),
+                    SizedBox(width: Responsive.padding(context, 8)),
                     Padding(
-                      padding: const EdgeInsets.only(top: 8),
+                      padding: EdgeInsets.only(top: Responsive.padding(context, 8)),
                       child: Image.asset(
                         'assets/images/Nombre.png',
-                        height: 22,
+                        height: Responsive.height(context, 22),
                         fit: BoxFit.contain,
                       ),
                     ),
@@ -128,32 +129,32 @@ class BaseScaffold extends StatelessWidget {
               _buildDrawerItem('Sobre Nosotros', context),
               _buildDrawerItem('Destinos', context),
               _buildDrawerItem('Contacto', context),
-              const SizedBox(height: 24),
+              SizedBox(height: Responsive.padding(context, 24)),
               Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 24),
+                padding: EdgeInsets.symmetric(horizontal: Responsive.padding(context, 24)),
                 child: Column(
                   children: [
                     OutlinedButton(
                       onPressed: onLoginPressed,
                       style: OutlinedButton.styleFrom(
                         side: const BorderSide(color: Color(0xFFFC6707), width: 1.5),
-                        minimumSize: const Size(double.infinity, 45),
+                        minimumSize: Size(double.infinity, Responsive.height(context, 45)),
                       ),
                       child: Text('Iniciar Sesión', style: GoogleFonts.outfit(color: const Color(0xFFFC6707))),
                     ),
-                    const SizedBox(height: 12),
+                    SizedBox(height: Responsive.padding(context, 12)),
                     ElevatedButton(
                       onPressed: onRegisterPressed,
                       style: ElevatedButton.styleFrom(
                         backgroundColor: const Color(0xFFFC6707),
-                        minimumSize: const Size(double.infinity, 45),
+                        minimumSize: Size(double.infinity, Responsive.height(context, 45)),
                       ),
                       child: Text('Registrarse', style: GoogleFonts.outfit(color: Colors.white)),
                     ),
                   ],
                 ),
               ),
-              const SizedBox(height: 24),
+              SizedBox(height: Responsive.padding(context, 24)),
             ],
           ),
         ),
@@ -169,11 +170,11 @@ class BaseScaffold extends StatelessWidget {
         style: GoogleFonts.outfit(
           fontWeight: isActive ? FontWeight.bold : FontWeight.w500,
           color: isActive ? const Color(0xFFFC6707) : const Color(0xFF333333),
-          fontSize: 16,
+          fontSize: Responsive.fontSize(context, 16),
         ),
       ),
       trailing: isActive
-          ? const Icon(Icons.arrow_forward_ios, color: Color(0xFFFC6707), size: 14)
+          ? Icon(Icons.arrow_forward_ios, color: const Color(0xFFFC6707), size: Responsive.width(context, 14))
           : null,
       onTap: () {
         Navigator.pop(context);

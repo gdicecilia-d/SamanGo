@@ -7,6 +7,7 @@ import 'widgets/commitment_widget.dart';
 import 'widgets/features_widget.dart';
 import 'widgets/destinations_widget.dart';
 import 'widgets/contact_widget.dart';
+import '../../utils/responsive.dart';
 
 class HomeView extends StatefulWidget {
   const HomeView({super.key});
@@ -27,10 +28,11 @@ class _HomeViewState extends State<HomeView> {
 
   @override
   Widget build(BuildContext context) {
+    final screenWidth = MediaQuery.of(context).size.width;
+    final isMobile = screenWidth < Responsive.designWidth * 0.6; // ~864px
+
     return LayoutBuilder(
       builder: (context, constraints) {
-        final isMobile = constraints.maxWidth < 850;
-
         return ListenableBuilder(
           listenable: _controller,
           builder: (context, child) {
@@ -73,14 +75,14 @@ class _HomeViewState extends State<HomeView> {
                         onStartAdventurePressed: () => _controller.handleStartAdventure(context),
                       ),
                     ),
-                    const SizedBox(height: 48),
+                    SizedBox(height: Responsive.padding(context, 48)),
                     Container(
                       key: _controller.sectionSobreNosotrosKey,
                       child: isMobile
                           ? Column(
                               children: [
                                 CommitmentWidget(commitments: _controller.commitments, isMobile: true),
-                                const SizedBox(height: 32),
+                                SizedBox(height: Responsive.padding(context, 32)),
                                 FeaturesWidget(features: _controller.features, isMobile: true),
                               ],
                             )
@@ -88,12 +90,12 @@ class _HomeViewState extends State<HomeView> {
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 Expanded(flex: 7, child: CommitmentWidget(commitments: _controller.commitments, isMobile: false)),
-                                const SizedBox(width: 32),
+                                SizedBox(width: Responsive.padding(context, 32)),
                                 Expanded(flex: 3, child: FeaturesWidget(features: _controller.features, isMobile: false)),
                               ],
                             ),
                     ),
-                    const SizedBox(height: 64),
+                    SizedBox(height: Responsive.padding(context, 64)),
                     Container(
                       key: _controller.sectionDestinosKey,
                       child: DestinationsWidget(
@@ -101,7 +103,7 @@ class _HomeViewState extends State<HomeView> {
                         isMobile: isMobile,
                       ),
                     ),
-                    const SizedBox(height: 64),
+                    SizedBox(height: Responsive.padding(context, 64)),
                     Container(
                       key: _controller.sectionContactoKey,
                       child: ContactWidget(isMobile: isMobile),

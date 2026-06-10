@@ -2,6 +2,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../home_view.dart';
+import '../../utils/responsive.dart';
 
 class AuthBaseView extends StatelessWidget {
   final Widget formContent;
@@ -22,7 +23,7 @@ class AuthBaseView extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final screenWidth = MediaQuery.of(context).size.width;
-    final isMobile = screenWidth < 850;
+    final isMobile = screenWidth < Responsive.designWidth * 0.6;
 
     if (isMobile) {
       return _buildMobileLayout(context);
@@ -62,7 +63,7 @@ class AuthBaseView extends StatelessWidget {
           },
           child: SingleChildScrollView(
             physics: const BouncingScrollPhysics(),
-            padding: const EdgeInsets.all(24),
+            padding: EdgeInsets.all(Responsive.padding(context, 24)),
             child: Column(
               children: [
                 _buildFormCard(context, isMobile: true),
@@ -76,21 +77,17 @@ class AuthBaseView extends StatelessWidget {
 
   Widget _buildDesktopLayout(BuildContext context) {
     final screenWidth = MediaQuery.of(context).size.width;
-    // Escala base: tu medida original para un ancho de referencia de 1200px
-    final double scaleFactor = (screenWidth / 1200).clamp(0.8, 1.3);
+    final double scale = (screenWidth / Responsive.designWidth).clamp(0.55, 1.25);
     
-    // Tus medidas escaladas
-    final double formWidth = 480 * scaleFactor;
-    final double circleSize = 470 * scaleFactor; // Cambiado de 450 a 470
-    final double leftOffset = -75 * scaleFactor; // Ajustado proporcionalmente
-    final double logoScale = 2.0;
-    final double logoWidth = 65;
-    final double nombreHeight = 35;
-    final double topPadding = 20;
-    final int leftFlex = 6;
-    final int rightFlex = 4;
-    final double leftPadding = 30 * scaleFactor;
-    final double rightPadding = 50 * scaleFactor;
+    // Ancho del formulario 
+    final double formWidth = 520 * scale;
+    // Tamaño del círculo 
+    final double circleSize = 580 * scale;
+    // Posición izquierda 
+    final double leftOffset = -85 * scale;
+    // Padding laterales 
+    final double leftPadding = 40 * scale;
+    final double rightPadding = 60 * scale;
 
     return Scaffold(
       backgroundColor: Colors.white,
@@ -99,26 +96,31 @@ class AuthBaseView extends StatelessWidget {
           Row(
             children: [
               Expanded(
-                flex: leftFlex,
+                flex: 6,
                 child: SingleChildScrollView(
-                  padding: EdgeInsets.only(left: leftPadding, right: rightPadding, top: 40, bottom: 40),
+                  padding: EdgeInsets.only(
+                    left: leftPadding,
+                    right: rightPadding,
+                    top: Responsive.padding(context, 40),
+                    bottom: Responsive.padding(context, 40),
+                  ),
                   child: Center(
                     child: SizedBox(
                       width: formWidth,
-                      child: _buildFormCard(context, isMobile: false),
+                      child: _buildFormCard(context, isMobile: false, scale: scale),
                     ),
                   ),
                 ),
               ),
               Expanded(
-                flex: rightFlex,
-                child: _buildRightSection(circleSize: circleSize, leftOffset: leftOffset),
+                flex: 4,
+                child: _buildRightSection(context, circleSize: circleSize, leftOffset: leftOffset),
               ),
             ],
           ),
           Positioned(
-            top: 20,
-            left: 20,
+            top: 20 * scale,
+            left: 20 * scale,
             child: MouseRegion(
               cursor: SystemMouseCursors.click,
               child: GestureDetector(
@@ -133,24 +135,41 @@ class AuthBaseView extends StatelessWidget {
                     );
                   }
                 },
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    const Icon(
-                      Icons.arrow_back,
-                      color: Color(0xFFFC6707),
-                      size: 20,
-                    ),
-                    const SizedBox(width: 4),
-                    Text(
-                      'Volver',
-                      style: GoogleFonts.outfit(
-                        fontSize: 14,
-                        color: const Color(0xFFFC6707),
-                        fontWeight: FontWeight.w500,
+                child: Container(
+                  padding: EdgeInsets.symmetric(
+                    horizontal: 12 * scale,
+                    vertical: 8 * scale,
+                  ),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(30 * scale),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.1),
+                        blurRadius: 8 * scale,
+                        offset: Offset(0, 2 * scale),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        Icons.arrow_back,
+                        color: const Color(0xFFFC6707),
+                        size: 18 * scale,
+                      ),
+                      SizedBox(width: 4 * scale),
+                      Text(
+                        'Volver',
+                        style: GoogleFonts.outfit(
+                          fontSize: 14 * scale,
+                          color: const Color(0xFFFC6707),
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               ),
             ),
@@ -160,20 +179,27 @@ class AuthBaseView extends StatelessWidget {
     );
   }
 
-  Widget _buildFormCard(BuildContext context, {required bool isMobile}) {
-    final double logoScaleValue = isMobile ? 1.5 : 2.0;
-    final double logoWidthValue = isMobile ? 60 : 65;
-    final double nombreHeightValue = isMobile ? 30 : 35;
-    final double topPaddingValue = isMobile ? 12 : 20;
-    final double spacing = isMobile ? 20 : 28;
+  Widget _buildFormCard(BuildContext context, {required bool isMobile, double scale = 1.0}) {
+    final double logoWidth = isMobile ? Responsive.width(context, 70) : 75 * scale;
+    final double nombreHeight = isMobile ? Responsive.height(context, 35) : 40 * scale;
+    final double topPadding = isMobile ? Responsive.padding(context, 12) : 20 * scale;
+    final double spacing = isMobile ? Responsive.padding(context, 24) : 32 * scale;
+    final double innerPadding = isMobile ? Responsive.padding(context, 28) : 40 * scale;
 
     return Container(
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: const Color(0xFFE0E0E0), width: 1.2),
+        borderRadius: BorderRadius.circular(28 * scale),
+        border: Border.all(color: const Color(0xFFE0E0E0), width: 1.5 * scale),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 20 * scale,
+            offset: Offset(0, 8 * scale),
+          ),
+        ],
       ),
-      padding: EdgeInsets.all(isMobile ? 24 : 32),
+      padding: EdgeInsets.all(innerPadding),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
@@ -194,38 +220,38 @@ class AuthBaseView extends StatelessWidget {
                 children: isMobile
                     ? [
                         Transform.scale(
-                          scale: logoScaleValue,
+                          scale: 1.5,
                           child: Image.asset(
                             'assets/images/logo.png',
-                            width: 60,
-                            height: 60,
+                            width: logoWidth,
+                            height: logoWidth,
                           ),
                         ),
-                        const SizedBox(width: 12),
+                        SizedBox(width: 12 * scale),
                         Padding(
-                          padding: const EdgeInsets.only(top: 12),
+                          padding: EdgeInsets.only(top: topPadding),
                           child: Image.asset(
                             'assets/images/Nombre.png',
-                            height: 30,
+                            height: nombreHeight,
                             fit: BoxFit.contain,
                           ),
                         ),
                       ]
                     : [
                         Transform.scale(
-                          scale: logoScaleValue,
+                          scale: 2.2,
                           child: Image.asset(
                             'assets/images/logo.png',
-                            width: logoWidthValue,
-                            height: logoWidthValue,
+                            width: logoWidth,
+                            height: logoWidth,
                           ),
                         ),
-                        const SizedBox(width: 15),
+                        SizedBox(width: 15 * scale),
                         Padding(
-                          padding: EdgeInsets.only(top: topPaddingValue),
+                          padding: EdgeInsets.only(top: topPadding),
                           child: Image.asset(
                             'assets/images/Nombre.png',
-                            height: nombreHeightValue,
+                            height: nombreHeight,
                             fit: BoxFit.contain,
                           ),
                         ),
@@ -234,18 +260,16 @@ class AuthBaseView extends StatelessWidget {
             ),
           ),
           SizedBox(height: spacing),
-
           formContent,
-
           if (bottomText != null) ...[
-            const SizedBox(height: 24),
+            SizedBox(height: 28 * scale),
             Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 Text(
                   bottomText!,
                   style: GoogleFonts.outfit(
-                    fontSize: 14,
+                    fontSize: 14 * scale,
                     color: const Color(0xFF666666),
                   ),
                 ),
@@ -257,7 +281,7 @@ class AuthBaseView extends StatelessWidget {
                       child: Text(
                         bottomLinkText!,
                         style: GoogleFonts.outfit(
-                          fontSize: 14,
+                          fontSize: 14 * scale,
                           color: const Color(0xFFFC6707),
                           fontWeight: FontWeight.bold,
                         ),
@@ -272,7 +296,7 @@ class AuthBaseView extends StatelessWidget {
     );
   }
 
-  Widget _buildRightSection({required double circleSize, required double leftOffset}) {
+  Widget _buildRightSection(BuildContext context, {required double circleSize, required double leftOffset}) {
     return Container(
       decoration: const BoxDecoration(
         color: Color(0xFFFC6707),
@@ -292,9 +316,9 @@ class AuthBaseView extends StatelessWidget {
                   shape: BoxShape.circle,
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.black.withOpacity(0.15),
-                      blurRadius: 30,
-                      offset: const Offset(0, 10),
+                      color: Colors.black.withOpacity(0.2),
+                      blurRadius: 40,
+                      offset: const Offset(0, 15),
                     ),
                   ],
                 ),

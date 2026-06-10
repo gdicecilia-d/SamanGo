@@ -2,6 +2,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../models/commitment_model.dart';
+import '../../utils/responsive.dart';
 
 class CommitmentWidget extends StatelessWidget {
   final List<CommitmentModel> commitments;
@@ -21,54 +22,66 @@ class CommitmentWidget extends StatelessWidget {
         Text(
           'Nuestro Compromiso',
           style: GoogleFonts.outfit(
-            fontSize: isMobile ? 22 : 28,
+            fontSize: isMobile ? Responsive.fontSize(context, 22) : Responsive.fontSize(context, 28),
             fontWeight: FontWeight.bold,
             color: const Color(0xFF333333),
           ),
         ),
-        const SizedBox(height: 18),
+        SizedBox(height: Responsive.height(context, 18)),
         if (isMobile)
           Column(
             children: commitments.asMap().entries.map((entry) {
               return Padding(
-                padding: EdgeInsets.only(bottom: entry.key != commitments.length - 1 ? 20 : 0),
+                padding: EdgeInsets.only(bottom: entry.key != commitments.length - 1 ? Responsive.padding(context, 20) : 0),
                 child: Center(
-                  child: _buildCard(entry.value, isMobile: true),
+                  child: _buildCard(context, entry.value, isMobile: true),
                 ),
               );
             }).toList(),
           )
         else
           Row(
-            children: commitments.map((c) => Expanded(child: _buildCard(c, isMobile: false))).toList(),
+            children: commitments.map((c) => Expanded(child: _buildCard(context, c, isMobile: false))).toList(),
           ),
       ],
     );
   }
 
-  Widget _buildCard(CommitmentModel commitment, {required bool isMobile}) {
+  Widget _buildCard(BuildContext context, CommitmentModel commitment, {required bool isMobile}) {
     return Container(
-      width: isMobile ? double.infinity : null, 
-      margin: isMobile ? EdgeInsets.zero : const EdgeInsets.only(right: 16),
-      padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 24),
+      width: isMobile ? double.infinity : null,
+      margin: isMobile ? EdgeInsets.zero : EdgeInsets.only(right: Responsive.padding(context, 16)),
+      padding: EdgeInsets.symmetric(
+        horizontal: Responsive.padding(context, 22),
+        vertical: Responsive.padding(context, 24),
+      ),
       decoration: BoxDecoration(
         color: commitment.backgroundColor,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(Responsive.padding(context, 16)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          Icon(_getIconForTitle(commitment.title), color: commitment.titleColor, size: 26),
-          const SizedBox(height: 10),
+          Icon(_getIconForTitle(commitment.title), color: commitment.titleColor, size: Responsive.width(context, 26)),
+          SizedBox(height: Responsive.height(context, 10)),
           Text(
             commitment.title,
-            style: GoogleFonts.outfit(fontSize: 20, fontWeight: FontWeight.bold, color: commitment.titleColor),
+            style: GoogleFonts.outfit(
+              fontSize: Responsive.fontSize(context, 20),
+              fontWeight: FontWeight.bold,
+              color: commitment.titleColor,
+            ),
           ),
-          const SizedBox(height: 12),
+          SizedBox(height: Responsive.height(context, 12)),
           Text(
             commitment.description,
             textAlign: TextAlign.center,
-            style: GoogleFonts.outfit(fontSize: 14, fontWeight: FontWeight.w500, color: const Color(0xFF4A4A4A), height: 1.45),
+            style: GoogleFonts.outfit(
+              fontSize: Responsive.fontSize(context, 14),
+              fontWeight: FontWeight.w500,
+              color: const Color(0xFF4A4A4A),
+              height: 1.45,
+            ),
           ),
         ],
       ),

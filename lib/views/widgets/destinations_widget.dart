@@ -2,6 +2,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../models/destination_model.dart';
+import '../../utils/responsive.dart';
 
 class DestinationsWidget extends StatelessWidget {
   final List<DestinationModel> destinations;
@@ -16,10 +17,10 @@ class DestinationsWidget extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final screenWidth = MediaQuery.of(context).size.width;
-    final padding = isMobile ? 32.0 : 80.0;
+    final padding = isMobile ? Responsive.padding(context, 32) : Responsive.padding(context, 80);
     final availableWidth = screenWidth - padding;
     final cardsPerRow = isMobile ? 1 : 3;
-    final cardWidth = (availableWidth - (cardsPerRow - 1) * 20) / cardsPerRow;
+    final cardWidth = (availableWidth - (cardsPerRow - 1) * Responsive.padding(context, 20)) / cardsPerRow;
     
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -27,38 +28,40 @@ class DestinationsWidget extends StatelessWidget {
         Text(
           'Nuestros Destinos Favoritos',
           style: GoogleFonts.outfit(
-            fontSize: isMobile ? 22 : 28,
+            fontSize: isMobile ? Responsive.fontSize(context, 22) : Responsive.fontSize(context, 28),
             fontWeight: FontWeight.bold,
             color: const Color(0xFF333333),
           ),
         ),
-        const SizedBox(height: 28),
+        SizedBox(height: Responsive.height(context, 28)),
         if (isMobile)
           Column(
             children: destinations.asMap().entries.map((entry) {
               return Padding(
-                padding: EdgeInsets.only(bottom: entry.key != destinations.length - 1 ? 20 : 0),
-                child: _buildDestinationCard(entry.value, cardWidth),
+                padding: EdgeInsets.only(bottom: entry.key != destinations.length - 1 ? Responsive.padding(context, 20) : 0),
+                child: _buildDestinationCard(context, entry.value, cardWidth),
               );
             }).toList(),
           )
         else
           Wrap(
-            spacing: 20,
-            runSpacing: 24,
-            children: destinations.map((dest) => _buildDestinationCard(dest, cardWidth)).toList(),
+            spacing: Responsive.padding(context, 20),
+            runSpacing: Responsive.padding(context, 24),
+            children: destinations.map((dest) => _buildDestinationCard(context, dest, cardWidth)).toList(),
           ),
       ],
     );
   }
 
-  Widget _buildDestinationCard(DestinationModel destination, double cardWidth) {
+  Widget _buildDestinationCard(BuildContext context, DestinationModel destination, double cardWidth) {
+    final imageHeight = cardWidth * 0.75;
+    
     return SizedBox(
       width: cardWidth,
       child: Container(
         decoration: BoxDecoration(
           color: Colors.white,
-          borderRadius: BorderRadius.circular(14),
+          borderRadius: BorderRadius.circular(Responsive.padding(context, 14)),
           border: Border.all(color: const Color(0xFFE0E0E0), width: 1.2),
           boxShadow: [
             BoxShadow(
@@ -79,11 +82,11 @@ class DestinationsWidget extends StatelessWidget {
               ),
               child: Image.asset(
                 destination.imageAsset,
-                height: cardWidth * 0.75,
+                height: imageHeight,
                 width: cardWidth,
                 fit: BoxFit.cover,
                 errorBuilder: (context, error, stackTrace) => Container(
-                  height: cardWidth * 0.75,
+                  height: imageHeight,
                   width: cardWidth,
                   color: const Color(0xFFFC6707),
                   child: const Icon(Icons.image, color: Colors.white, size: 40),
@@ -91,7 +94,7 @@ class DestinationsWidget extends StatelessWidget {
               ),
             ),
             Padding(
-              padding: const EdgeInsets.fromLTRB(12, 12, 12, 14),
+              padding: EdgeInsets.fromLTRB(12, 12, 12, 14),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 mainAxisSize: MainAxisSize.min,
@@ -99,7 +102,7 @@ class DestinationsWidget extends StatelessWidget {
                   Text(
                     destination.name,
                     style: GoogleFonts.outfit(
-                      fontSize: 15,
+                      fontSize: Responsive.fontSize(context, 15),
                       fontWeight: FontWeight.w700,
                       color: const Color(0xFF333333),
                       height: 1.2,
@@ -107,16 +110,16 @@ class DestinationsWidget extends StatelessWidget {
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
                   ),
-                  const SizedBox(height: 6),
+                  SizedBox(height: Responsive.height(context, 6)),
                   Row(
                     children: [
                       const Icon(Icons.location_on, size: 14, color: Color(0xFFFC6707)),
-                      const SizedBox(width: 4),
+                      SizedBox(width: Responsive.padding(context, 4)),
                       Expanded(
                         child: Text(
                           destination.location,
                           style: GoogleFonts.outfit(
-                            fontSize: 12,
+                            fontSize: Responsive.fontSize(context, 12),
                             color: const Color(0xFF888888),
                             fontWeight: FontWeight.w500,
                           ),

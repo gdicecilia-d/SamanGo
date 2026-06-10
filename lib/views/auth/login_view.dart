@@ -10,6 +10,7 @@ import '../operator/operator_home_view.dart';
 import '../admin/admin_home_view.dart';
 import '../../controllers/auth_controller.dart';
 import 'complete_google_profile_view.dart';
+import '../../utils/responsive.dart';
 
 class LoginView extends StatefulWidget {
   const LoginView({super.key});
@@ -169,107 +170,107 @@ class _LoginViewState extends State<LoginView> {
           Text(
             'Iniciar Sesión',
             style: GoogleFonts.outfit(
-              fontSize: 28,
+              fontSize: Responsive.fontSize(context, 28),
               fontWeight: FontWeight.bold,
               color: const Color(0xFF333333),
             ),
           ),
-          const SizedBox(height: 32),
+          SizedBox(height: Responsive.height(context, 32)),
 
           Align(
             alignment: Alignment.centerLeft,
             child: Text(
               'Correo Institucional',
               style: GoogleFonts.outfit(
-                fontSize: 14,
+                fontSize: Responsive.fontSize(context, 14),
                 fontWeight: FontWeight.w500,
                 color: const Color(0xFF333333),
               ),
             ),
           ),
-          const SizedBox(height: 8),
+          SizedBox(height: Responsive.height(context, 8)),
           TextField(
             controller: _emailController,
             decoration: InputDecoration(
               hintText: 'ejemplo@correo.unimet.edu.ve',
-              hintStyle: GoogleFonts.outfit(fontSize: 14, color: const Color(0xFF999999)),
+              hintStyle: GoogleFonts.outfit(fontSize: Responsive.fontSize(context, 14), color: const Color(0xFF999999)),
               border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
+                borderRadius: BorderRadius.circular(Responsive.padding(context, 12)),
                 borderSide: BorderSide.none,
               ),
               focusedBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
+                borderRadius: BorderRadius.circular(Responsive.padding(context, 12)),
                 borderSide: const BorderSide(color: Colors.transparent),
               ),
               enabledBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
+                borderRadius: BorderRadius.circular(Responsive.padding(context, 12)),
                 borderSide: BorderSide.none,
               ),
               errorBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
+                borderRadius: BorderRadius.circular(Responsive.padding(context, 12)),
                 borderSide: const BorderSide(color: Color(0xFFFC6707), width: 1.5),
               ),
               focusedErrorBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
+                borderRadius: BorderRadius.circular(Responsive.padding(context, 12)),
                 borderSide: const BorderSide(color: Color(0xFFFC6707), width: 1.5),
               ),
-              errorStyle: GoogleFonts.outfit(color: const Color(0xFFFC6707), fontSize: 12),
+              errorStyle: GoogleFonts.outfit(color: const Color(0xFFFC6707), fontSize: Responsive.fontSize(context, 12)),
               filled: true,
               fillColor: const Color(0xFFF5F5F5),
-              contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+              contentPadding: EdgeInsets.symmetric(horizontal: Responsive.padding(context, 16), vertical: Responsive.padding(context, 16)),
             ),
           ),
-          const SizedBox(height: 16),
+          SizedBox(height: Responsive.height(context, 16)),
 
           Align(
             alignment: Alignment.centerLeft,
             child: Text(
               'Contraseña',
               style: GoogleFonts.outfit(
-                fontSize: 14,
+                fontSize: Responsive.fontSize(context, 14),
                 fontWeight: FontWeight.w500,
                 color: const Color(0xFF333333),
               ),
             ),
           ),
-          const SizedBox(height: 8),
+          SizedBox(height: Responsive.height(context, 8)),
           TextField(
             controller: _passwordController,
             obscureText: _obscurePassword,
             decoration: InputDecoration(
               hintText: 'Ingrese su contraseña',
-              hintStyle: GoogleFonts.outfit(fontSize: 14, color: const Color(0xFF999999)),
+              hintStyle: GoogleFonts.outfit(fontSize: Responsive.fontSize(context, 14), color: const Color(0xFF999999)),
               border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
+                borderRadius: BorderRadius.circular(Responsive.padding(context, 12)),
                 borderSide: BorderSide.none,
               ),
               focusedBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
+                borderRadius: BorderRadius.circular(Responsive.padding(context, 12)),
                 borderSide: const BorderSide(color: Colors.transparent),
               ),
               enabledBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
+                borderRadius: BorderRadius.circular(Responsive.padding(context, 12)),
                 borderSide: BorderSide.none,
               ),
               errorBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
+                borderRadius: BorderRadius.circular(Responsive.padding(context, 12)),
                 borderSide: const BorderSide(color: Color(0xFFFC6707), width: 1.5),
               ),
               focusedErrorBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
+                borderRadius: BorderRadius.circular(Responsive.padding(context, 12)),
                 borderSide: const BorderSide(color: Color(0xFFFC6707), width: 1.5),
               ),
-              errorStyle: GoogleFonts.outfit(color: const Color(0xFFFC6707), fontSize: 12),
+              errorStyle: GoogleFonts.outfit(color: const Color(0xFFFC6707), fontSize: Responsive.fontSize(context, 12)),
               filled: true,
               fillColor: const Color(0xFFF5F5F5),
-              contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+              contentPadding: EdgeInsets.symmetric(horizontal: Responsive.padding(context, 16), vertical: Responsive.padding(context, 16)),
               suffixIcon: IconButton(
                 icon: Icon(_obscurePassword ? Icons.visibility_off : Icons.visibility, color: const Color(0xFF999999)),
                 onPressed: () => setState(() => _obscurePassword = !_obscurePassword),
               ),
             ),
           ),
-          const SizedBox(height: 8),
+          SizedBox(height: Responsive.height(context, 8)),
 
           Align(
             alignment: Alignment.centerRight,
@@ -290,7 +291,7 @@ class _LoginViewState extends State<LoginView> {
                 child: Text(
                   '¿Olvidaste tu contraseña?',
                   style: GoogleFonts.outfit(
-                    fontSize: 13,
+                    fontSize: Responsive.fontSize(context, 13),
                     color: const Color(0xFF666666),
                     fontWeight: FontWeight.w500,
                   ),
@@ -298,14 +299,14 @@ class _LoginViewState extends State<LoginView> {
               ),
             ),
           ),
-          const SizedBox(height: 24),
+          SizedBox(height: Responsive.height(context, 24)),
 
           if (_errorMessage != null)
             Padding(
-              padding: const EdgeInsets.only(bottom: 12),
+              padding: EdgeInsets.only(bottom: Responsive.padding(context, 12)),
               child: Text(
                 _errorMessage!,
-                style: GoogleFonts.outfit(color: const Color(0xFFFC6707), fontSize: 13),
+                style: GoogleFonts.outfit(color: const Color(0xFFFC6707), fontSize: Responsive.fontSize(context, 13)),
               ),
             ),
 
@@ -316,15 +317,15 @@ class _LoginViewState extends State<LoginView> {
               style: TextButton.styleFrom(
                 backgroundColor: const Color(0xFFFC6707),
                 foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(vertical: 16),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                padding: EdgeInsets.symmetric(vertical: Responsive.padding(context, 16)),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(Responsive.padding(context, 12))),
               ),
               child: _isLoading
-                  ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
-                  : Text('Iniciar Sesión', style: GoogleFonts.outfit(fontSize: 16, fontWeight: FontWeight.bold)),
+                  ? SizedBox(height: Responsive.height(context, 20), width: Responsive.width(context, 20), child: const CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                  : Text('Iniciar Sesión', style: GoogleFonts.outfit(fontSize: Responsive.fontSize(context, 16), fontWeight: FontWeight.bold)),
             ),
           ),
-          const SizedBox(height: 12),
+          SizedBox(height: Responsive.height(context, 12)),
 
           SizedBox(
             width: double.infinity,
@@ -333,22 +334,22 @@ class _LoginViewState extends State<LoginView> {
               style: OutlinedButton.styleFrom(
                 backgroundColor: const Color(0xFFFDDBB3),
                 side: BorderSide.none,
-                padding: const EdgeInsets.symmetric(vertical: 16),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                padding: EdgeInsets.symmetric(vertical: Responsive.padding(context, 16)),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(Responsive.padding(context, 12))),
               ),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   Image.asset(
                     'assets/images/google_logo.png',
-                    height: 20,
-                    width: 20,
+                    height: Responsive.height(context, 20),
+                    width: Responsive.width(context, 20),
                     errorBuilder: (_, __, ___) => const Icon(Icons.g_mobiledata, size: 20),
                   ),
-                  const SizedBox(width: 12),
+                  SizedBox(width: Responsive.padding(context, 12)),
                   Text(
                     'Continuar con Google',
-                    style: GoogleFonts.outfit(fontSize: 16, fontWeight: FontWeight.bold, color: const Color(0xFF333333)),
+                    style: GoogleFonts.outfit(fontSize: Responsive.fontSize(context, 16), fontWeight: FontWeight.bold, color: const Color(0xFF333333)),
                   ),
                 ],
               ),

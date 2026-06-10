@@ -5,6 +5,7 @@ import 'auth_base_view.dart';
 import 'register_student_view.dart';
 import 'register_operator_view.dart';
 import 'login_view.dart';
+import '../../utils/responsive.dart';
 
 class SelectRoleView extends StatefulWidget {
   const SelectRoleView({super.key});
@@ -34,26 +35,26 @@ class _SelectRoleViewState extends State<SelectRoleView> {
           Text(
             '¿Eres Estudiante u Operador?',
             style: GoogleFonts.outfit(
-              fontSize: 24,
+              fontSize: Responsive.fontSize(context, 24),
               fontWeight: FontWeight.bold,
               color: const Color(0xFF333333),
             ),
             textAlign: TextAlign.center,
           ),
-          const SizedBox(height: 12),
+          SizedBox(height: Responsive.height(context, 12)),
           Text(
             'Selecciona tu perfil para personalizar tu experiencia',
             style: GoogleFonts.outfit(
-              fontSize: 14,
+              fontSize: Responsive.fontSize(context, 14),
               fontWeight: FontWeight.w400,
               color: const Color(0xFF666666),
             ),
             textAlign: TextAlign.center,
           ),
-          const SizedBox(height: 32),
+          SizedBox(height: Responsive.height(context, 32)),
 
-          // Opción Estudiante
           _buildRoleCard(
+            context,
             title: 'Soy Estudiante Unimet',
             description: 'Busco ofertas exclusivas para estudiantes.',
             imageAsset: 'assets/images/estudiante.png',
@@ -64,10 +65,10 @@ class _SelectRoleViewState extends State<SelectRoleView> {
               });
             },
           ),
-          const SizedBox(height: 20),
+          SizedBox(height: Responsive.height(context, 20)),
 
-          // Opción Operador
           _buildRoleCard(
+            context,
             title: 'Soy Operador Turístico',
             description: 'Quiero ofrecer mis servicios y experiencias a la comunidad.',
             imageAsset: 'assets/images/operador.png',
@@ -78,9 +79,8 @@ class _SelectRoleViewState extends State<SelectRoleView> {
               });
             },
           ),
-          const SizedBox(height: 32),
+          SizedBox(height: Responsive.height(context, 32)),
 
-          // Botón Continuar
           SizedBox(
             width: double.infinity,
             child: ElevatedButton(
@@ -104,16 +104,16 @@ class _SelectRoleViewState extends State<SelectRoleView> {
                     ? const Color(0xFFFC6707)  
                     : const Color(0xFFFDDBB3), 
                 foregroundColor: Colors.white, 
-                padding: const EdgeInsets.symmetric(vertical: 16),
+                padding: EdgeInsets.symmetric(vertical: Responsive.padding(context, 16)),
                 shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
+                  borderRadius: BorderRadius.circular(Responsive.padding(context, 12)),
                 ),
                 disabledBackgroundColor: const Color(0xFFFDDBB3), 
               ),
               child: Text(
                 'Continuar',
                 style: GoogleFonts.outfit(
-                  fontSize: 16,
+                  fontSize: Responsive.fontSize(context, 16),
                   fontWeight: FontWeight.w600,
                 ),
               ),
@@ -124,7 +124,7 @@ class _SelectRoleViewState extends State<SelectRoleView> {
     );
   }
 
-  Widget _buildRoleCard({
+  Widget _buildRoleCard(BuildContext context, {
     required String title,
     required String description,
     required String imageAsset,
@@ -136,10 +136,10 @@ class _SelectRoleViewState extends State<SelectRoleView> {
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 200),
         width: double.infinity,
-        padding: const EdgeInsets.all(16),
+        padding: EdgeInsets.all(Responsive.padding(context, 16)),
         decoration: BoxDecoration(
           color: Colors.white,
-          borderRadius: BorderRadius.circular(16),
+          borderRadius: BorderRadius.circular(Responsive.padding(context, 16)),
           border: Border.all(
             color: isSelected ? const Color(0xFFFC6707) : const Color(0xFFE0E0E0),
             width: isSelected ? 2 : 1,
@@ -147,17 +147,15 @@ class _SelectRoleViewState extends State<SelectRoleView> {
         ),
         child: Row(
           children: [
-            // Imagen circular
             ClipOval(
               child: Image.asset(
                 imageAsset,
-                width: 70,
-                height: 70,
+                width: Responsive.width(context, 70),
+                height: Responsive.height(context, 70),
                 fit: BoxFit.cover,
               ),
             ),
-            const SizedBox(width: 16),
-            // Textos
+            SizedBox(width: Responsive.width(context, 16)),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -165,16 +163,16 @@ class _SelectRoleViewState extends State<SelectRoleView> {
                   Text(
                     title,
                     style: GoogleFonts.outfit(
-                      fontSize: 16,
+                      fontSize: Responsive.fontSize(context, 16),
                       fontWeight: FontWeight.bold,
                       color: const Color(0xFF333333),
                     ),
                   ),
-                  const SizedBox(height: 4),
+                  SizedBox(height: Responsive.height(context, 4)),
                   Text(
                     description,
                     style: GoogleFonts.outfit(
-                      fontSize: 13,
+                      fontSize: Responsive.fontSize(context, 13),
                       fontWeight: FontWeight.w400,
                       color: const Color(0xFF666666),
                     ),

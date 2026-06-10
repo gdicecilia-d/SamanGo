@@ -1,4 +1,4 @@
-// registro de estudiantes con date picker
+// registro de estudiantes
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -8,6 +8,7 @@ import 'select_role_view.dart';
 import '../../models/validators.dart';
 import 'package:provider/provider.dart';
 import '../../controllers/auth_controller.dart';
+import '../../utils/responsive.dart';
 
 class RegisterStudentView extends StatefulWidget {
   const RegisterStudentView({super.key});
@@ -143,25 +144,24 @@ class _RegisterStudentViewState extends State<RegisterStudentView> {
             Text(
               'Crea tu Cuenta',
               style: GoogleFonts.outfit(
-                fontSize: 24,
+                fontSize: Responsive.fontSize(context, 24),
                 fontWeight: FontWeight.bold,
                 color: const Color(0xFF333333),
               ),
               textAlign: TextAlign.center,
             ),
-            const SizedBox(height: 8),
+            SizedBox(height: Responsive.height(context, 8)),
             Text(
               'Ingresa tus datos para unirte a la comunidad',
               style: GoogleFonts.outfit(
-                fontSize: 14,
+                fontSize: Responsive.fontSize(context, 14),
                 fontWeight: FontWeight.w400,
                 color: const Color(0xFF666666),
               ),
               textAlign: TextAlign.center,
             ),
-            const SizedBox(height: 28),
+            SizedBox(height: Responsive.height(context, 28)),
 
-            // Nombres y Apellidos
             Row(
               children: [
                 Expanded(
@@ -171,17 +171,17 @@ class _RegisterStudentViewState extends State<RegisterStudentView> {
                       Text(
                         'Nombres',
                         style: GoogleFonts.outfit(
-                          fontSize: 14,
+                          fontSize: Responsive.fontSize(context, 14),
                           fontWeight: FontWeight.w500,
                           color: const Color(0xFF333333),
                         ),
                       ),
-                      const SizedBox(height: 8),
+                      SizedBox(height: Responsive.height(context, 8)),
                       TextFormField(
                         controller: _nombresController,
                         onChanged: (_) => setState(() {}),
-                        style: GoogleFonts.outfit(fontSize: 14),
-                        decoration: _inputDecoration(
+                        style: GoogleFonts.outfit(fontSize: Responsive.fontSize(context, 14)),
+                        decoration: _inputDecoration(context,
                           hint: 'Ej: Juan David',
                           errorText: (_showErrors && _nombresController.text.isEmpty) ||
                               (_nombresController.text.isNotEmpty && _nombresController.text.length < 3)
@@ -192,7 +192,7 @@ class _RegisterStudentViewState extends State<RegisterStudentView> {
                     ],
                   ),
                 ),
-                const SizedBox(width: 16),
+                SizedBox(width: Responsive.width(context, 16)),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -200,17 +200,17 @@ class _RegisterStudentViewState extends State<RegisterStudentView> {
                       Text(
                         'Apellidos',
                         style: GoogleFonts.outfit(
-                          fontSize: 14,
+                          fontSize: Responsive.fontSize(context, 14),
                           fontWeight: FontWeight.w500,
                           color: const Color(0xFF333333),
                         ),
                       ),
-                      const SizedBox(height: 8),
+                      SizedBox(height: Responsive.height(context, 8)),
                       TextFormField(
                         controller: _apellidosController,
                         onChanged: (_) => setState(() {}),
-                        style: GoogleFonts.outfit(fontSize: 14),
-                        decoration: _inputDecoration(
+                        style: GoogleFonts.outfit(fontSize: Responsive.fontSize(context, 14)),
+                        decoration: _inputDecoration(context,
                           hint: 'Ej: Pérez Díaz',
                           errorText: (_showErrors && _apellidosController.text.isEmpty) ||
                               (_apellidosController.text.isNotEmpty && _apellidosController.text.length < 3)
@@ -223,28 +223,27 @@ class _RegisterStudentViewState extends State<RegisterStudentView> {
                 ),
               ],
             ),
-            const SizedBox(height: 16),
+            SizedBox(height: Responsive.height(context, 16)),
 
-            // Fecha de Nacimiento (Date Picker)
             Align(
               alignment: Alignment.centerLeft,
               child: Text(
                 'Fecha de Nacimiento',
                 style: GoogleFonts.outfit(
-                  fontSize: 14,
+                  fontSize: Responsive.fontSize(context, 14),
                   fontWeight: FontWeight.w500,
                   color: const Color(0xFF333333),
                 ),
               ),
             ),
-            const SizedBox(height: 8),
+            SizedBox(height: Responsive.height(context, 8)),
             GestureDetector(
               onTap: _seleccionarFecha,
               child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+                padding: EdgeInsets.symmetric(horizontal: Responsive.padding(context, 16), vertical: Responsive.padding(context, 16)),
                 decoration: BoxDecoration(
                   color: const Color(0xFFF5F5F5),
-                  borderRadius: BorderRadius.circular(12),
+                  borderRadius: BorderRadius.circular(Responsive.padding(context, 12)),
                   border: (_showErrors && _selectedFechaNacimiento == null)
                       ? Border.all(color: const Color(0xFFFC6707), width: 1.5)
                       : null,
@@ -252,11 +251,11 @@ class _RegisterStudentViewState extends State<RegisterStudentView> {
                 child: Row(
                   children: [
                     const Icon(Icons.calendar_today, color: Color(0xFFFC6707), size: 20),
-                    const SizedBox(width: 12),
+                    SizedBox(width: Responsive.width(context, 12)),
                     Text(
                       _fechaNacimientoTexto.isEmpty ? 'Selecciona tu fecha de nacimiento' : _fechaNacimientoTexto,
                       style: GoogleFonts.outfit(
-                        fontSize: 14,
+                        fontSize: Responsive.fontSize(context, 14),
                         color: _fechaNacimientoTexto.isEmpty 
                             ? const Color(0xFF999999) 
                             : const Color(0xFF333333),
@@ -268,124 +267,120 @@ class _RegisterStudentViewState extends State<RegisterStudentView> {
             ),
             if (_showErrors && _selectedFechaNacimiento == null)
               Padding(
-                padding: const EdgeInsets.only(top: 4, left: 16),
+                padding: EdgeInsets.only(top: Responsive.height(context, 4), left: Responsive.padding(context, 16)),
                 child: Align(
                   alignment: Alignment.centerLeft,
                   child: Text(
                     'La fecha de nacimiento es obligatoria',
-                    style: GoogleFonts.outfit(color: const Color(0xFFFC6707), fontSize: 12),
+                    style: GoogleFonts.outfit(color: const Color(0xFFFC6707), fontSize: Responsive.fontSize(context, 12)),
                   ),
                 ),
               ),
-            const SizedBox(height: 16),
+            SizedBox(height: Responsive.height(context, 16)),
 
-            // Carnet
             Align(
               alignment: Alignment.centerLeft,
               child: Text(
                 'Número de Carnet Unimet',
                 style: GoogleFonts.outfit(
-                  fontSize: 14,
+                  fontSize: Responsive.fontSize(context, 14),
                   fontWeight: FontWeight.w500,
                   color: const Color(0xFF333333),
                 ),
               ),
             ),
-            const SizedBox(height: 8),
+            SizedBox(height: Responsive.height(context, 8)),
             TextFormField(
               controller: _carnetController,
               onChanged: (_) => setState(() {}),
               keyboardType: TextInputType.number,
               inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-              style: GoogleFonts.outfit(fontSize: 14),
-              decoration: _inputDecoration(
+              style: GoogleFonts.outfit(fontSize: Responsive.fontSize(context, 14)),
+              decoration: _inputDecoration(context,
                 hint: 'Ej: 20251234567',
                 errorText: (_showErrors && _carnetController.text.isNotEmpty)
                     ? FormValidators.validarCarnet(_carnetController.text)
                     : null,
               ),
             ),
-            const SizedBox(height: 16),
+            SizedBox(height: Responsive.height(context, 16)),
 
-            // Correo
             Align(
               alignment: Alignment.centerLeft,
               child: Text(
                 'Correo Institucional',
                 style: GoogleFonts.outfit(
-                  fontSize: 14,
+                  fontSize: Responsive.fontSize(context, 14),
                   fontWeight: FontWeight.w500,
                   color: const Color(0xFF333333),
                 ),
               ),
             ),
-            const SizedBox(height: 8),
+            SizedBox(height: Responsive.height(context, 8)),
             TextFormField(
               controller: _emailController,
               onChanged: (_) => setState(() {}),
               keyboardType: TextInputType.emailAddress,
-              style: GoogleFonts.outfit(fontSize: 14),
-              decoration: _inputDecoration(
+              style: GoogleFonts.outfit(fontSize: Responsive.fontSize(context, 14)),
+              decoration: _inputDecoration(context,
                 hint: 'ejemplo@correo.unimet.edu.ve',
                 errorText: (_showErrors && _emailController.text.isNotEmpty)
                     ? FormValidators.validarCorreoUnimet(_emailController.text)
                     : null,
               ),
             ),
-            const SizedBox(height: 16),
+            SizedBox(height: Responsive.height(context, 16)),
 
-            // Contraseña
             Align(
               alignment: Alignment.centerLeft,
               child: Text(
                 'Contraseña',
                 style: GoogleFonts.outfit(
-                  fontSize: 14,
+                  fontSize: Responsive.fontSize(context, 14),
                   fontWeight: FontWeight.w500,
                   color: const Color(0xFF333333),
                 ),
               ),
             ),
-            const SizedBox(height: 8),
+            SizedBox(height: Responsive.height(context, 8)),
             TextFormField(
               controller: _passwordController,
               onChanged: (_) => setState(() {}),
               obscureText: _obscurePassword,
-              style: GoogleFonts.outfit(fontSize: 14),
+              style: GoogleFonts.outfit(fontSize: Responsive.fontSize(context, 14)),
               decoration: InputDecoration(
                 hintText: 'Ingrese su contraseña (mínimo 8 caracteres)',
-                hintStyle: GoogleFonts.outfit(fontSize: 14, color: const Color(0xFF999999)),
+                hintStyle: GoogleFonts.outfit(fontSize: Responsive.fontSize(context, 14), color: const Color(0xFF999999)),
                 errorText: (_showErrors && _passwordController.text.isNotEmpty)
                     ? FormValidators.validarPassword(_passwordController.text)
                     : null,
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
-                focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: Colors.transparent)),
-                enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
-                errorBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: Color(0xFFFC6707), width: 1.5)),
-                focusedErrorBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: Color(0xFFFC6707), width: 1.5)),
-                errorStyle: GoogleFonts.outfit(color: const Color(0xFFFC6707), fontSize: 12),
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(Responsive.padding(context, 12)), borderSide: BorderSide.none),
+                focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(Responsive.padding(context, 12)), borderSide: const BorderSide(color: Colors.transparent)),
+                enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(Responsive.padding(context, 12)), borderSide: BorderSide.none),
+                errorBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(Responsive.padding(context, 12)), borderSide: const BorderSide(color: Color(0xFFFC6707), width: 1.5)),
+                focusedErrorBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(Responsive.padding(context, 12)), borderSide: const BorderSide(color: Color(0xFFFC6707), width: 1.5)),
+                errorStyle: GoogleFonts.outfit(color: const Color(0xFFFC6707), fontSize: Responsive.fontSize(context, 12)),
                 filled: true,
                 fillColor: const Color(0xFFF5F5F5),
-                contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+                contentPadding: EdgeInsets.symmetric(horizontal: Responsive.padding(context, 16), vertical: Responsive.padding(context, 16)),
                 suffixIcon: IconButton(
                   icon: Icon(_obscurePassword ? Icons.visibility_off : Icons.visibility, color: const Color(0xFF999999)),
                   onPressed: () => setState(() => _obscurePassword = !_obscurePassword),
                 ),
               ),
             ),
-            const SizedBox(height: 16),
+            SizedBox(height: Responsive.height(context, 16)),
 
-            // Checkbox Términos
             Row(
               children: [
                 GestureDetector(
                   onTap: () => setState(() => _acceptTerms = !_acceptTerms),
                   child: Container(
-                    width: 22,
-                    height: 22,
+                    width: Responsive.width(context, 22),
+                    height: Responsive.height(context, 22),
                     decoration: BoxDecoration(
                       color: _acceptTerms ? const Color(0xFFFC6707) : const Color(0xFFFDDBB3),
-                      borderRadius: BorderRadius.circular(4),
+                      borderRadius: BorderRadius.circular(Responsive.padding(context, 4)),
                       border: Border.all(color: Colors.transparent),
                     ),
                     child: _acceptTerms
@@ -393,7 +388,7 @@ class _RegisterStudentViewState extends State<RegisterStudentView> {
                         : null,
                   ),
                 ),
-                const SizedBox(width: 8),
+                SizedBox(width: Responsive.width(context, 8)),
                 Expanded(
                   child: GestureDetector(
                     onTap: () {
@@ -416,7 +411,7 @@ class _RegisterStudentViewState extends State<RegisterStudentView> {
                     child: Text(
                       'He leído y acepto los Términos de Servicio y la Política de Privacidad',
                       style: GoogleFonts.outfit(
-                        fontSize: 12,
+                        fontSize: Responsive.fontSize(context, 12),
                         fontWeight: FontWeight.w400,
                         color: Colors.blue,
                         decoration: TextDecoration.underline,
@@ -426,9 +421,8 @@ class _RegisterStudentViewState extends State<RegisterStudentView> {
                 ),
               ],
             ),
-            const SizedBox(height: 24),
+            SizedBox(height: Responsive.height(context, 24)),
 
-            // Botón Registrarse
             SizedBox(
               width: double.infinity,
               child: TextButton(
@@ -436,12 +430,12 @@ class _RegisterStudentViewState extends State<RegisterStudentView> {
                 style: TextButton.styleFrom(
                   backgroundColor: _isFormValid ? const Color(0xFFFC6707) : const Color(0xFFFDDBB3),
                   foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(vertical: 16),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  padding: EdgeInsets.symmetric(vertical: Responsive.padding(context, 16)),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(Responsive.padding(context, 12))),
                 ),
                 child: Text(
                   'Registrarse',
-                  style: GoogleFonts.outfit(fontSize: 16, fontWeight: FontWeight.bold),
+                  style: GoogleFonts.outfit(fontSize: Responsive.fontSize(context, 16), fontWeight: FontWeight.bold),
                 ),
               ),
             ),
@@ -451,20 +445,20 @@ class _RegisterStudentViewState extends State<RegisterStudentView> {
     );
   }
 
-  InputDecoration _inputDecoration({required String hint, String? errorText}) {
+  InputDecoration _inputDecoration(BuildContext context, {required String hint, String? errorText}) {
     return InputDecoration(
       hintText: hint,
-      hintStyle: GoogleFonts.outfit(fontSize: 14, color: const Color(0xFF999999)),
+      hintStyle: GoogleFonts.outfit(fontSize: Responsive.fontSize(context, 14), color: const Color(0xFF999999)),
       errorText: errorText,
-      errorStyle: GoogleFonts.outfit(color: const Color(0xFFFC6707), fontSize: 12),
-      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
-      focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: Colors.transparent)),
-      enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
-      errorBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: Color(0xFFFC6707), width: 1.5)),
-      focusedErrorBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: Color(0xFFFC6707), width: 1.5)),
+      errorStyle: GoogleFonts.outfit(color: const Color(0xFFFC6707), fontSize: Responsive.fontSize(context, 12)),
+      border: OutlineInputBorder(borderRadius: BorderRadius.circular(Responsive.padding(context, 12)), borderSide: BorderSide.none),
+      focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(Responsive.padding(context, 12)), borderSide: const BorderSide(color: Colors.transparent)),
+      enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(Responsive.padding(context, 12)), borderSide: BorderSide.none),
+      errorBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(Responsive.padding(context, 12)), borderSide: const BorderSide(color: Color(0xFFFC6707), width: 1.5)),
+      focusedErrorBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(Responsive.padding(context, 12)), borderSide: const BorderSide(color: Color(0xFFFC6707), width: 1.5)),
       filled: true,
       fillColor: const Color(0xFFF5F5F5),
-      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+      contentPadding: EdgeInsets.symmetric(horizontal: Responsive.padding(context, 16), vertical: Responsive.padding(context, 16)),
     );
   }
 }

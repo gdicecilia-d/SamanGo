@@ -9,6 +9,7 @@ import 'login_view.dart';
 import 'select_role_view.dart';
 import '../../models/validators.dart';
 import '../../controllers/auth_controller.dart';
+import '../../utils/responsive.dart';
 
 class RegisterOperatorView extends StatefulWidget {
   const RegisterOperatorView({super.key});
@@ -18,7 +19,6 @@ class RegisterOperatorView extends StatefulWidget {
 }
 
 class _RegisterOperatorViewState extends State<RegisterOperatorView> {
-  // Controladores de texto
   final TextEditingController _empresaController = TextEditingController();
   final TextEditingController _rifNumeroController = TextEditingController();
   final TextEditingController _representanteController = TextEditingController();
@@ -26,18 +26,15 @@ class _RegisterOperatorViewState extends State<RegisterOperatorView> {
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _descripcionController = TextEditingController();
 
-  // Variables de estado
   bool _acceptTerms = false;
   bool _showErrors = false;
   bool _isUploading = false;
   String? _selectedFileName;
   String? _uploadError;
 
-  // Selección de teléfono
   String _selectedTelefonoPrefijo = '412';
   final List<String> _telefonoOpciones = ['212', '412', '414', '416', '424', '426'];
 
-  // Selección de RIF
   String _selectedRifLetra = 'J';
   final List<String> _rifOpciones = ['J', 'V', 'E', 'G', 'P'];
 
@@ -58,7 +55,6 @@ class _RegisterOperatorViewState extends State<RegisterOperatorView> {
         _selectedFileName != null;
   }
 
-  // Seleccionar archivo - SOLO IMÁGENES
   Future<void> _pickFile() async {
     setState(() {
       _isUploading = true;
@@ -67,7 +63,7 @@ class _RegisterOperatorViewState extends State<RegisterOperatorView> {
 
     try {
       FilePickerResult? result = await FilePicker.pickFiles(
-        type: FileType.image, // SOLO IMÁGENES
+        type: FileType.image,
         withData: true,
       );
 
@@ -106,7 +102,9 @@ class _RegisterOperatorViewState extends State<RegisterOperatorView> {
     if (!_isFormValid || !_acceptTerms) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(!_acceptTerms ? 'Debes aceptar los Términos y Condiciones' : 'Por favor completa todos los campos correctamente'),
+          content: Text(!_acceptTerms 
+              ? 'Debes aceptar los Términos y Condiciones' 
+              : 'Por favor completa todos los campos correctamente'),
           backgroundColor: const Color(0xFFFC6707),
         ),
       );
@@ -114,7 +112,6 @@ class _RegisterOperatorViewState extends State<RegisterOperatorView> {
     }
 
     final nombreCompleto = _representanteController.text;
-    // CAMBIO: Se agrega el 0 al inicio para que se guarde como 04121234567
     final telefonoCompleto = '0$_selectedTelefonoPrefijo${_telefonoNumeroController.text}';
     final rifCompleto = '$_selectedRifLetra${_rifNumeroController.text}';
 
@@ -163,86 +160,97 @@ class _RegisterOperatorViewState extends State<RegisterOperatorView> {
           children: [
             Text(
               'Crea tu Cuenta',
-              style: GoogleFonts.outfit(fontSize: 24, fontWeight: FontWeight.bold, color: const Color(0xFF333333)),
+              style: GoogleFonts.outfit(
+                fontSize: Responsive.fontSize(context, 24),
+                fontWeight: FontWeight.bold,
+                color: const Color(0xFF333333),
+              ),
             ),
-            const SizedBox(height: 8),
+            SizedBox(height: Responsive.height(context, 8)),
             Text(
               'Ingresa tus datos para unirte a la comunidad',
-              style: GoogleFonts.outfit(fontSize: 14, fontWeight: FontWeight.w400, color: const Color(0xFF666666)),
+              style: GoogleFonts.outfit(
+                fontSize: Responsive.fontSize(context, 14),
+                fontWeight: FontWeight.w400,
+                color: const Color(0xFF666666),
+              ),
             ),
-            const SizedBox(height: 28),
+            SizedBox(height: Responsive.height(context, 28)),
 
-            // Nombre de la Empresa
-            _buildLabel('Nombre de la Empresa'),
-            _buildTextField(
+            _buildLabel(context, 'Nombre de la Empresa'),
+            _buildTextField(context,
               controller: _empresaController,
               hint: 'Ej: RutaVzla',
               errorText: (_showErrors || _empresaController.text.isNotEmpty) && _empresaController.text.length < 3
                   ? 'Mínimo 3 caracteres'
                   : null,
             ),
-            const SizedBox(height: 16),
+            SizedBox(height: Responsive.height(context, 16)),
 
-            // R.I.F. con dropdown
-            _buildLabel('R.I.F.'),
+            _buildLabel(context, 'R.I.F.'),
             Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                _buildRifDropdown(),
-                const SizedBox(width: 12),
+                _buildRifDropdown(context),
+                SizedBox(width: Responsive.width(context, 12)),
                 Expanded(
-                  child: _buildTextField(
+                  child: _buildTextField(context,
                     controller: _rifNumeroController,
                     hint: 'Ej: 123456789',
                     keyboardType: TextInputType.number,
                     inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-                    errorText: (_showErrors || _rifNumeroController.text.isNotEmpty) && !RegExp(r'^\d{8,9}$').hasMatch(_rifNumeroController.text)
+                    errorText: (_showErrors || _rifNumeroController.text.isNotEmpty) && 
+                        !RegExp(r'^\d{8,9}$').hasMatch(_rifNumeroController.text)
                         ? 'Debe tener entre 8 y 9 dígitos'
                         : null,
                   ),
                 ),
               ],
             ),
-            const SizedBox(height: 16),
+            SizedBox(height: Responsive.height(context, 16)),
 
-            // Representante Legal
-            _buildLabel('Representante Legal'),
-            _buildTextField(
+            _buildLabel(context, 'Representante Legal'),
+            _buildTextField(context,
               controller: _representanteController,
               hint: 'Ej: Juan Miguel Moreira',
-              errorText: (_showErrors || _representanteController.text.isNotEmpty) && _representanteController.text.length < 5
+              errorText: (_showErrors || _representanteController.text.isNotEmpty) && 
+                  _representanteController.text.length < 5
                   ? 'Mínimo 5 caracteres'
                   : null,
             ),
-            const SizedBox(height: 16),
+            SizedBox(height: Responsive.height(context, 16)),
 
-            // Número de Teléfono
-            _buildLabel('Número de Teléfono'),
-            Row(
+            _buildLabel(context, 'Número de Teléfono'),
+            // Teléfono 
+            Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                _buildPrefijoFijo(),
-                const SizedBox(width: 8),
-                _buildTelefonoDropdown(),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: _buildTextField(
-                    controller: _telefonoNumeroController,
-                    hint: '1234567',
-                    keyboardType: TextInputType.number,
-                    inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-                    errorText: (_showErrors || _telefonoNumeroController.text.isNotEmpty) && !RegExp(r'^\d{7}$').hasMatch(_telefonoNumeroController.text)
-                        ? 'Debe tener 7 dígitos'
-                        : null,
-                  ),
+                // Fila: +58 y prefijo
+                Row(
+                  children: [
+                    _buildPrefijoFijo(context),
+                    SizedBox(width: Responsive.width(context, 12)),
+                    Expanded(child: _buildTelefonoDropdown(context)),
+                  ],
+                ),
+                SizedBox(height: Responsive.height(context, 12)),
+                // Número de 7 dígitos 
+                _buildTextField(context,
+                  controller: _telefonoNumeroController,
+                  hint: '1234567',
+                  keyboardType: TextInputType.number,
+                  inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                  errorText: (_showErrors || _telefonoNumeroController.text.isNotEmpty) && 
+                      !RegExp(r'^\d{7}$').hasMatch(_telefonoNumeroController.text)
+                      ? 'Debe tener 7 dígitos'
+                      : null,
                 ),
               ],
             ),
-            const SizedBox(height: 16),
+            SizedBox(height: Responsive.height(context, 16)),
 
-            // Email
-            _buildLabel('Email'),
-            _buildTextField(
+            _buildLabel(context, 'Email'),
+            _buildTextField(context,
               controller: _emailController,
               hint: 'ejemplo@rutas.com',
               keyboardType: TextInputType.emailAddress,
@@ -250,30 +258,27 @@ class _RegisterOperatorViewState extends State<RegisterOperatorView> {
                   ? FormValidators.validarEmail(_emailController.text)
                   : null,
             ),
-            const SizedBox(height: 16),
+            SizedBox(height: Responsive.height(context, 16)),
 
-            // Descripción Servicios
-            _buildLabel('Descripción Servicios'),
-            _buildTextField(
+            _buildLabel(context, 'Descripción Servicios'),
+            _buildTextField(context,
               controller: _descripcionController,
               hint: 'Tipos de tours u ofertas',
               maxLines: 2,
-              errorText: (_showErrors || _descripcionController.text.isNotEmpty) && _descripcionController.text.length < 10
+              errorText: (_showErrors || _descripcionController.text.isNotEmpty) && 
+                  _descripcionController.text.length < 10
                   ? 'Mínimo 10 caracteres'
                   : null,
             ),
-            const SizedBox(height: 16),
+            SizedBox(height: Responsive.height(context, 16)),
 
-            // Subir Licencia 
-            _buildLabel('Subir Licencia de Turismo'),
-            _buildFilePicker(),
-            const SizedBox(height: 16),
+            _buildLabel(context, 'Subir Licencia de Turismo'),
+            _buildFilePicker(context),
+            SizedBox(height: Responsive.height(context, 16)),
 
-            // Checkbox Términos
-            _buildTermsCheckbox(),
-            const SizedBox(height: 24),
+            _buildTermsCheckbox(context),
+            SizedBox(height: Responsive.height(context, 24)),
 
-            // Botón Solicitar Registro
             SizedBox(
               width: double.infinity,
               child: TextButton(
@@ -281,10 +286,10 @@ class _RegisterOperatorViewState extends State<RegisterOperatorView> {
                 style: TextButton.styleFrom(
                   backgroundColor: const Color(0xFFFC6707),
                   foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(vertical: 16),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  padding: EdgeInsets.symmetric(vertical: Responsive.padding(context, 16)),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(Responsive.padding(context, 12))),
                 ),
-                child: Text('Solicitar Registro', style: GoogleFonts.outfit(fontSize: 16, fontWeight: FontWeight.bold)),
+                child: Text('Solicitar Registro', style: GoogleFonts.outfit(fontSize: Responsive.fontSize(context, 16), fontWeight: FontWeight.bold)),
               ),
             ),
           ],
@@ -293,17 +298,21 @@ class _RegisterOperatorViewState extends State<RegisterOperatorView> {
     );
   }
 
-  Widget _buildLabel(String text) {
+  Widget _buildLabel(BuildContext context, String text) {
     return Align(
       alignment: Alignment.centerLeft,
       child: Text(
         text,
-        style: GoogleFonts.outfit(fontSize: 14, fontWeight: FontWeight.w500, color: const Color(0xFF333333)),
+        style: GoogleFonts.outfit(
+          fontSize: Responsive.fontSize(context, 14),
+          fontWeight: FontWeight.w500,
+          color: const Color(0xFF333333),
+        ),
       ),
     );
   }
 
-  Widget _buildTextField({
+  Widget _buildTextField(BuildContext context, {
     required TextEditingController controller,
     required String hint,
     TextInputType keyboardType = TextInputType.text,
@@ -320,35 +329,35 @@ class _RegisterOperatorViewState extends State<RegisterOperatorView> {
           keyboardType: keyboardType,
           maxLines: maxLines,
           inputFormatters: inputFormatters,
-          style: GoogleFonts.outfit(fontSize: 14),
+          style: GoogleFonts.outfit(fontSize: Responsive.fontSize(context, 14)),
           decoration: InputDecoration(
             hintText: hint,
-            hintStyle: GoogleFonts.outfit(fontSize: 14, color: const Color(0xFF999999)),
+            hintStyle: GoogleFonts.outfit(fontSize: Responsive.fontSize(context, 14), color: const Color(0xFF999999)),
             errorText: errorText,
-            errorStyle: GoogleFonts.outfit(color: const Color(0xFFFC6707), fontSize: 12),
-            border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
-            focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: Colors.transparent)),
-            enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
-            errorBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: Color(0xFFFC6707), width: 1.5)),
-            focusedErrorBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: Color(0xFFFC6707), width: 1.5)),
+            errorStyle: GoogleFonts.outfit(color: const Color(0xFFFC6707), fontSize: Responsive.fontSize(context, 12)),
+            border: OutlineInputBorder(borderRadius: BorderRadius.circular(Responsive.padding(context, 12)), borderSide: BorderSide.none),
+            focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(Responsive.padding(context, 12)), borderSide: const BorderSide(color: Colors.transparent)),
+            enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(Responsive.padding(context, 12)), borderSide: BorderSide.none),
+            errorBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(Responsive.padding(context, 12)), borderSide: const BorderSide(color: Color(0xFFFC6707), width: 1.5)),
+            focusedErrorBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(Responsive.padding(context, 12)), borderSide: const BorderSide(color: Color(0xFFFC6707), width: 1.5)),
             filled: true,
             fillColor: const Color(0xFFF5F5F5),
-            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+            contentPadding: EdgeInsets.symmetric(horizontal: Responsive.padding(context, 16), vertical: Responsive.padding(context, 16)),
           ),
         ),
       ],
     );
   }
 
-  Widget _buildRifDropdown() {
+  Widget _buildRifDropdown(BuildContext context) {
     return Container(
-      width: 80,
-      height: 54,
-      decoration: BoxDecoration(color: const Color(0xFFF5F5F5), borderRadius: BorderRadius.circular(12)),
+      width: Responsive.width(context, 80),
+      height: Responsive.height(context, 54),
+      decoration: BoxDecoration(color: const Color(0xFFF5F5F5), borderRadius: BorderRadius.circular(Responsive.padding(context, 12))),
       child: DropdownButtonFormField<String>(
         value: _selectedRifLetra,
         items: _rifOpciones.map((letra) {
-          return DropdownMenuItem(value: letra, child: Text(letra, style: GoogleFonts.outfit(fontSize: 16)));
+          return DropdownMenuItem(value: letra, child: Text(letra, style: GoogleFonts.outfit(fontSize: Responsive.fontSize(context, 16))));
         }).toList(),
         onChanged: (value) => setState(() => _selectedRifLetra = value!),
         decoration: const InputDecoration(
@@ -359,38 +368,38 @@ class _RegisterOperatorViewState extends State<RegisterOperatorView> {
     );
   }
 
-  Widget _buildPrefijoFijo() {
+  Widget _buildPrefijoFijo(BuildContext context) {
     return Container(
-      width: 70,
-      height: 54,
-      decoration: BoxDecoration(color: const Color(0xFFF5F5F5), borderRadius: BorderRadius.circular(12)),
-      child: const Center(
-        child: Text('+58', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500)),
+      width: Responsive.width(context, 70),
+      height: Responsive.height(context, 54),
+      decoration: BoxDecoration(color: const Color(0xFFF5F5F5), borderRadius: BorderRadius.circular(Responsive.padding(context, 12))),
+      child: Center(
+        child: Text('+58', style: TextStyle(fontSize: Responsive.fontSize(context, 16), fontWeight: FontWeight.w500)),
       ),
     );
   }
 
-  Widget _buildTelefonoDropdown() {
+  Widget _buildTelefonoDropdown(BuildContext context) {
     return Container(
-      width: 85,
-      height: 54,
-      decoration: BoxDecoration(color: const Color(0xFFF5F5F5), borderRadius: BorderRadius.circular(12)),
+      height: Responsive.height(context, 54),
+      decoration: BoxDecoration(color: const Color(0xFFF5F5F5), borderRadius: BorderRadius.circular(Responsive.padding(context, 12))),
       child: DropdownButtonFormField<String>(
         value: _selectedTelefonoPrefijo,
         items: _telefonoOpciones.map((prefijo) {
-          return DropdownMenuItem(value: prefijo, child: Text(prefijo, style: GoogleFonts.outfit(fontSize: 16)));
+          return DropdownMenuItem(value: prefijo, child: Text(prefijo, style: GoogleFonts.outfit(fontSize: Responsive.fontSize(context, 16))));
         }).toList(),
         onChanged: (value) => setState(() => _selectedTelefonoPrefijo = value!),
         decoration: const InputDecoration(
           border: OutlineInputBorder(borderSide: BorderSide.none),
-          contentPadding: EdgeInsets.symmetric(horizontal: 8),
+          contentPadding: EdgeInsets.symmetric(horizontal: 12),
         ),
+        isExpanded: true,
       ),
     );
   }
 
-  Widget _buildFilePicker() {
-    final hasError = _selectedFileName == null;
+  Widget _buildFilePicker(BuildContext context) {
+    final hasError = _selectedFileName == null && _showErrors;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -398,10 +407,10 @@ class _RegisterOperatorViewState extends State<RegisterOperatorView> {
           onTap: _isUploading ? null : _pickFile,
           child: Container(
             width: double.infinity,
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+            padding: EdgeInsets.symmetric(horizontal: Responsive.padding(context, 16), vertical: Responsive.padding(context, 16)),
             decoration: BoxDecoration(
               color: const Color(0xFFF5F5F5),
-              borderRadius: BorderRadius.circular(12),
+              borderRadius: BorderRadius.circular(Responsive.padding(context, 12)),
               border: Border.all(
                 color: hasError ? const Color(0xFFFC6707) : const Color(0xFFE0E0E0),
                 width: hasError ? 1.5 : 1,
@@ -409,13 +418,13 @@ class _RegisterOperatorViewState extends State<RegisterOperatorView> {
             ),
             child: Row(
               children: [
-                Icon(_isUploading ? Icons.cloud_upload : Icons.upload_file, color: const Color(0xFFFC6707), size: 20),
-                const SizedBox(width: 12),
+                Icon(_isUploading ? Icons.cloud_upload : Icons.upload_file, color: const Color(0xFFFC6707), size: Responsive.width(context, 20)),
+                SizedBox(width: Responsive.width(context, 12)),
                 Expanded(
                   child: Text(
                     _isUploading ? 'Subiendo...' : (_selectedFileName ?? 'Seleccionar imagen'),
                     style: GoogleFonts.outfit(
-                      fontSize: 14,
+                      fontSize: Responsive.fontSize(context, 14),
                       color: hasError ? const Color(0xFFFC6707) : const Color(0xFF666666),
                     ),
                   ),
@@ -426,32 +435,32 @@ class _RegisterOperatorViewState extends State<RegisterOperatorView> {
         ),
         if (_uploadError != null)
           Padding(
-            padding: const EdgeInsets.only(top: 6),
-            child: Text(_uploadError!, style: GoogleFonts.outfit(color: const Color(0xFFFC6707), fontSize: 12)),
+            padding: EdgeInsets.only(top: Responsive.height(context, 6)),
+            child: Text(_uploadError!, style: GoogleFonts.outfit(color: const Color(0xFFFC6707), fontSize: Responsive.fontSize(context, 12))),
           ),
         if (hasError && _uploadError == null)
           Padding(
-            padding: const EdgeInsets.only(top: 6),
+            padding: EdgeInsets.only(top: Responsive.height(context, 6)),
             child: Text(
               'Debes subir una imagen de la licencia de turismo (JPG, PNG)',
-              style: GoogleFonts.outfit(color: const Color(0xFFFC6707), fontSize: 12),
+              style: GoogleFonts.outfit(color: const Color(0xFFFC6707), fontSize: Responsive.fontSize(context, 12)),
             ),
           ),
       ],
     );
   }
 
-  Widget _buildTermsCheckbox() {
+  Widget _buildTermsCheckbox(BuildContext context) {
     return Row(
       children: [
         GestureDetector(
           onTap: () => setState(() => _acceptTerms = !_acceptTerms),
           child: Container(
-            width: 22,
-            height: 22,
+            width: Responsive.width(context, 22),
+            height: Responsive.height(context, 22),
             decoration: BoxDecoration(
               color: _acceptTerms ? const Color(0xFFFC6707) : const Color(0xFFFDDBB3),
-              borderRadius: BorderRadius.circular(4),
+              borderRadius: BorderRadius.circular(Responsive.padding(context, 4)),
               border: Border.all(color: Colors.transparent),
             ),
             child: _acceptTerms
@@ -459,7 +468,7 @@ class _RegisterOperatorViewState extends State<RegisterOperatorView> {
                 : null,
           ),
         ),
-        const SizedBox(width: 8),
+        SizedBox(width: Responsive.width(context, 8)),
         Expanded(
           child: GestureDetector(
             onTap: () {
@@ -482,7 +491,7 @@ class _RegisterOperatorViewState extends State<RegisterOperatorView> {
             child: Text(
               'He leído y acepto los Términos de Servicio y la Política de Privacidad',
               style: GoogleFonts.outfit(
-                fontSize: 12,
+                fontSize: Responsive.fontSize(context, 12),
                 fontWeight: FontWeight.w400,
                 color: Colors.blue,
                 decoration: TextDecoration.underline,
@@ -504,14 +513,14 @@ class _RegisterOperatorViewState extends State<RegisterOperatorView> {
           title: Column(
             children: [
               const Icon(Icons.check_circle, color: Color(0xFFFC6707), size: 60),
-              const SizedBox(height: 16),
-              Text('¡Solicitud Enviada!', style: GoogleFonts.outfit(fontSize: 22, fontWeight: FontWeight.bold, color: const Color(0xFF333333))),
+              SizedBox(height: Responsive.height(context, 16)),
+              Text('¡Solicitud Enviada!', style: GoogleFonts.outfit(fontSize: Responsive.fontSize(context, 22), fontWeight: FontWeight.bold, color: const Color(0xFF333333))),
             ],
           ),
           content: Text(
             'Se ha enviado tu solicitud de registro.\nTe llegará un correo con los datos de inicio de sesión una vez sea aprobada.',
             textAlign: TextAlign.center,
-            style: GoogleFonts.outfit(fontSize: 14, color: const Color(0xFF666666)),
+            style: GoogleFonts.outfit(fontSize: Responsive.fontSize(context, 14), color: const Color(0xFF666666)),
           ),
           actions: [
             Center(
@@ -526,10 +535,10 @@ class _RegisterOperatorViewState extends State<RegisterOperatorView> {
                 style: ElevatedButton.styleFrom(
                   backgroundColor: const Color(0xFFFC6707),
                   foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 12),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  padding: EdgeInsets.symmetric(horizontal: Responsive.padding(context, 32), vertical: Responsive.padding(context, 12)),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(Responsive.padding(context, 12))),
                 ),
-                child: Text('Volver a Iniciar Sesión', style: GoogleFonts.outfit(fontSize: 14, fontWeight: FontWeight.w600)),
+                child: Text('Volver a Iniciar Sesión', style: GoogleFonts.outfit(fontSize: Responsive.fontSize(context, 14), fontWeight: FontWeight.w600)),
               ),
             ),
           ],
