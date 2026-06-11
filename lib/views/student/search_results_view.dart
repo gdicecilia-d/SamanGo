@@ -4,7 +4,9 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../shared/app_header.dart';
 import 'widgets/destination_card.dart';
+import 'widgets/horizontal_scroll_section.dart';
 import 'destination_detail_view.dart';
+import 'favorites_view.dart';
 
 class SearchResultsView extends StatefulWidget {
   final String destino;
@@ -83,7 +85,6 @@ class _SearchResultsViewState extends State<SearchResultsView> {
   Widget build(BuildContext context) {
     final screenWidth = MediaQuery.of(context).size.width;
     final isMobile = screenWidth < 850;
-    final crossAxisCount = isMobile ? 2 : 4;
 
     return Scaffold(
       key: _scaffoldKey,
@@ -100,8 +101,9 @@ class _SearchResultsViewState extends State<SearchResultsView> {
                   const SnackBar(content: Text('Mis Viajes - Próximamente'), backgroundColor: Color(0xFFFC6707)),
                 );
               } else if (menu == 'Favoritos') {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Favoritos - Próximamente'), backgroundColor: Color(0xFFFC6707)),
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const FavoritesView()),
                 );
               }
             },
@@ -151,12 +153,41 @@ class _SearchResultsViewState extends State<SearchResultsView> {
                             cursor: SystemMouseCursors.click,
                             child: GestureDetector(
                               onTap: () => Navigator.pop(context),
-                              child: Text(
-                                'Volver',
-                                style: GoogleFonts.outfit(
-                                  fontSize: 14,
-                                  color: const Color(0xFFFC6707),
-                                  fontWeight: FontWeight.w500,
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                                decoration: BoxDecoration(
+                                  color: Colors.white,
+                                  borderRadius: BorderRadius.circular(30),
+                                  border: Border.all(
+                                    color: const Color(0xFFFC6707),
+                                    width: 1,
+                                  ),
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: Colors.black.withOpacity(0.05),
+                                      blurRadius: 4,
+                                      offset: const Offset(0, 2),
+                                    ),
+                                  ],
+                                ),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Icon(
+                                      Icons.arrow_back,
+                                      color: const Color(0xFFFC6707),
+                                      size: 16,
+                                    ),
+                                    const SizedBox(width: 4),
+                                    Text(
+                                      'Volver',
+                                      style: GoogleFonts.outfit(
+                                        fontSize: 13,
+                                        color: const Color(0xFFFC6707),
+                                        fontWeight: FontWeight.w500,
+                                      ),
+                                    ),
+                                  ],
                                 ),
                               ),
                             ),
@@ -212,19 +243,14 @@ class _SearchResultsViewState extends State<SearchResultsView> {
                                 ],
                               ),
                             )
-                          : Padding(
-                              padding: const EdgeInsets.symmetric(horizontal: 24),
-                              child: GridView.builder(
-                                gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                                  crossAxisCount: crossAxisCount,
-                                  crossAxisSpacing: 16,
-                                  mainAxisSpacing: 16,
-                                  childAspectRatio: 0.99,
-                                ),
-                                itemCount: resultados.length,
-                                itemBuilder: (context, index) {
-                                  final doc = resultados[index];
+                          : SingleChildScrollView(
+                              child: HorizontalScrollSection(
+                                title: '',
+                                showTitle: false,
+                                children: resultados.map((doc) {
                                   final data = doc.data() as Map<String, dynamic>;
+                                  final isOffer = data['isOffer'] == true;
+                                  
                                   return DestinationCard(
                                     id: doc.id,
                                     nombre: data['nombre'] ?? 'Sin título',
@@ -232,7 +258,7 @@ class _SearchResultsViewState extends State<SearchResultsView> {
                                     precio: (data['precio'] ?? 0).toDouble(),
                                     duracion: data['duracion'] ?? 'Full Day',
                                     imagenUrl: data['imagen'] ?? '',
-                                    isOffer: data['isOffer'] == true,
+                                    isOffer: isOffer,
                                     cuposDisponibles: data['cuposDisponibles'] ?? 0,
                                     onTap: () {
                                       Navigator.push(
@@ -243,7 +269,7 @@ class _SearchResultsViewState extends State<SearchResultsView> {
                                       );
                                     },
                                   );
-                                },
+                                }).toList(),
                               ),
                             ),
                     ),

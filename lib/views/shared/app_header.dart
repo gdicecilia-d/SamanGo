@@ -195,7 +195,16 @@ class _AppHeaderState extends State<AppHeader> {
 
   @override
   Widget build(BuildContext context) {
-    // MÓVIL
+    final screenWidth = MediaQuery.of(context).size.width;
+    final isLargeScreen = screenWidth > 1400;
+    final double logoSize = isLargeScreen ? 75.0 : 60.0;
+    final double nombreHeight = isLargeScreen ? 32.0 : 25.0;
+    final double fontSize = isLargeScreen ? 18.0 : 16.0;
+    final double avatarSize = isLargeScreen ? 55.0 : 45.0;
+    final double iconSize = isLargeScreen ? 28.0 : 24.0;
+    final double paddingHorizontal = isLargeScreen ? 48.0 : 24.0;
+    
+    // Cell
     if (widget.isMobile) {
       return Container(
         color: Colors.white,
@@ -209,12 +218,12 @@ class _AppHeaderState extends State<AppHeader> {
                 children: [
                   Transform.scale(
                     scale: 1.5,
-                    child: Image.asset('assets/images/logo.png', width: 60, height: 60),
+                    child: Image.asset('assets/images/logo.png', width: 50, height: 50),
                   ),
                   const SizedBox(width: 4),
                   Padding(
                     padding: const EdgeInsets.only(top: 8),
-                    child: Image.asset('assets/images/Nombre.png', height: 25),
+                    child: Image.asset('assets/images/Nombre.png', height: 22),
                   ),
                 ],
               ),
@@ -228,7 +237,7 @@ class _AppHeaderState extends State<AppHeader> {
       );
     }
 
-    // ESCRITORIO
+    // Compu
     return Container(
       decoration: const BoxDecoration(
         color: Colors.white,
@@ -240,7 +249,7 @@ class _AppHeaderState extends State<AppHeader> {
           ),
         ],
       ),
-      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+      padding: EdgeInsets.symmetric(horizontal: paddingHorizontal, vertical: 12),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
@@ -248,9 +257,15 @@ class _AppHeaderState extends State<AppHeader> {
             onTap: () => widget.onMenuSelected('Inicio'),
             child: Row(
               children: [
-                Transform.scale(scale: 1.5, child: Image.asset('assets/images/logo.png', width: 60, height: 60)),
+                Transform.scale(
+                  scale: 1.5,
+                  child: Image.asset('assets/images/logo.png', width: logoSize, height: logoSize),
+                ),
                 const SizedBox(width: 4),
-                Padding(padding: const EdgeInsets.only(top: 8), child: Image.asset('assets/images/Nombre.png', height: 25)),
+                Padding(
+                  padding: EdgeInsets.only(top: isLargeScreen ? 12.0 : 8.0),
+                  child: Image.asset('assets/images/Nombre.png', height: nombreHeight),
+                ),
               ],
             ),
           ),
@@ -263,14 +278,30 @@ class _AppHeaderState extends State<AppHeader> {
                 child: GestureDetector(
                   onTap: () => widget.onMenuSelected(title),
                   child: Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 16),
-                    child: Text(
-                      title,
-                      style: GoogleFonts.outfit(
-                        fontSize: 16,
-                        fontWeight: isActive ? FontWeight.w700 : FontWeight.w500,
-                        color: isActive ? const Color(0xFFFC6707) : const Color(0xFF555555),
-                      ),
+                    padding: const EdgeInsets.symmetric(horizontal: 20),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          title,
+                          style: GoogleFonts.outfit(
+                            fontSize: fontSize,
+                            fontWeight: isActive ? FontWeight.w700 : FontWeight.w500,
+                            color: isActive ? const Color(0xFFFC6707) : const Color(0xFF555555),
+                          ),
+                        ),
+                        if (isActive) ...[
+                          const SizedBox(height: 4),
+                          Container(
+                            width: 20,
+                            height: 3,
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFFC6707),
+                              borderRadius: BorderRadius.circular(2),
+                            ),
+                          ),
+                        ],
+                      ],
                     ),
                   ),
                 ),
@@ -283,8 +314,8 @@ class _AppHeaderState extends State<AppHeader> {
               key: _avatarKey,
               onTap: _showMenu,
               child: Container(
-                width: 45,
-                height: 45,
+                width: avatarSize,
+                height: avatarSize,
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
                   border: Border.all(color: const Color(0xFFFC6707), width: 2),
@@ -296,15 +327,15 @@ class _AppHeaderState extends State<AppHeader> {
                       if (foto != null && foto.isNotEmpty) {
                         return Image.memory(
                           base64Decode(foto),
-                          width: 45,
-                          height: 45,
+                          width: avatarSize,
+                          height: avatarSize,
                           fit: BoxFit.cover,
                           gaplessPlayback: true,
                         );
                       }
                       return Container(
                         color: const Color(0xFFFDDBB3),
-                        child: const Icon(Icons.person, color: Color(0xFFFC6707), size: 24),
+                        child: Icon(Icons.person, color: const Color(0xFFFC6707), size: iconSize),
                       );
                     },
                   ),

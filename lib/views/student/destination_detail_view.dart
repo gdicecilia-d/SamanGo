@@ -5,6 +5,8 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../shared/app_header.dart';
+import 'favorites_view.dart';
+import 'student_home_view.dart';
 
 class DestinationDetailView extends StatefulWidget {
   final String destinoId;
@@ -17,14 +19,63 @@ class DestinationDetailView extends StatefulWidget {
 
 class _DestinationDetailViewState extends State<DestinationDetailView> {
   late Future<DocumentSnapshot> _destinoFuture;
+  bool _esFavoritoLocal = false;
 
   @override
   void initState() {
     super.initState();
+    _cargarDestino();
+  }
+
+  void _cargarDestino() {
     _destinoFuture = FirebaseFirestore.instance
         .collection('destinos')
         .doc(widget.destinoId)
-        .get();
+        .get()
+        .then((doc) {
+      if (doc.exists) {
+        final data = doc.data() as Map<String, dynamic>;
+        _esFavoritoLocal = data['esFavorito'] ?? false;
+      }
+      return doc;
+    });
+  }
+
+  Future<void> _toggleFavorito(String docId) async {
+    final newValue = !_esFavoritoLocal;
+    
+    setState(() {
+      _esFavoritoLocal = newValue;
+    });
+    
+    try {
+      await FirebaseFirestore.instance
+          .collection('destinos')
+          .doc(docId)
+          .update({'esFavorito': newValue});
+      
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(newValue ? 'Añadido a favoritos' : 'Eliminado de favoritos'),
+            backgroundColor: const Color(0xFFFC6707),
+            duration: const Duration(seconds: 1),
+          ),
+        );
+      }
+    } catch (e) {
+      setState(() {
+        _esFavoritoLocal = !newValue;
+      });
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Error al actualizar favoritos'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
   }
 
   bool _esBase64(String url) {
@@ -40,6 +91,20 @@ class _DestinationDetailViewState extends State<DestinationDetailView> {
   Widget build(BuildContext context) {
     final screenWidth = MediaQuery.of(context).size.width;
     final isMobile = screenWidth < 850;
+    final isLargeScreen = screenWidth > 1400;
+    
+    // Tamaños responsivos
+    final double titleFontSize = isMobile ? 24 : (isLargeScreen ? 44 : 32);
+    final double subtitleFontSize = isMobile ? 14 : (isLargeScreen ? 20 : 16);
+    final double sectionFontSize = isMobile ? 18 : (isLargeScreen ? 26 : 20);
+    final double buttonFontSize = isMobile ? 16 : (isLargeScreen ? 22 : 16);
+    final double buttonPaddingVertical = isMobile ? 14 : (isLargeScreen ? 20 : 14);
+    final double priceFontSize = isMobile ? 36 : (isLargeScreen ? 56 : 42);
+    final double paddingHorizontal = isMobile ? 16 : (isLargeScreen ? 48 : 24);
+    final double cardPadding = isMobile ? 24 : (isLargeScreen ? 40 : 28);
+    final double iconSize = isMobile ? 28 : (isLargeScreen ? 44 : 32);
+    final double backButtonSize = isLargeScreen ? 20 : 16;
+    final double backButtonTop = isMobile ? 80 : (isLargeScreen ? 100 : 80);
 
     return Scaffold(
       backgroundColor: Colors.white,
@@ -76,6 +141,7 @@ class _DestinationDetailViewState extends State<DestinationDetailView> {
 
           return Stack(
             children: [
+              // Fondo con la imagen de portada
               Container(
                 decoration: BoxDecoration(
                   image: imagenPortada.isNotEmpty
@@ -84,10 +150,10 @@ class _DestinationDetailViewState extends State<DestinationDetailView> {
                               ? MemoryImage(_decodificarBase64(imagenPortada))
                               : NetworkImage(imagenPortada) as ImageProvider,
                           fit: BoxFit.cover,
-                          opacity: 0.4,
+                          opacity: 0.3,
                         )
                       : null,
-                  color: const Color(0xFFE8E8E8),
+                  color: const Color(0xFFF5F5F5),
                 ),
               ),
               Column(
@@ -96,7 +162,23 @@ class _DestinationDetailViewState extends State<DestinationDetailView> {
                     activeMenu: '',
                     onMenuSelected: (menu) {
                       if (menu == 'Inicio') {
-                        Navigator.pop(context);
+                        Navigator.pushAndRemoveUntil(
+                          context,
+                          MaterialPageRoute(builder: (_) => const StudentHomeView()),
+                          (route) => false,
+                        );
+                      } else if (menu == 'Favoritos') {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(builder: (_) => const FavoritesView()),
+                        );
+                      } else if (menu == 'Mis Viajes') {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text('Mis Viajes - Próximamente'),
+                            backgroundColor: Color(0xFFFC6707),
+                          ),
+                        );
                       }
                     },
                     onEditProfile: () {},
@@ -108,6 +190,7 @@ class _DestinationDetailViewState extends State<DestinationDetailView> {
                   Expanded(
                     child: isMobile
                         ? _buildMobileLayout(
+                            widget.destinoId,
                             nombre,
                             ubicacion,
                             precio,
@@ -123,8 +206,18 @@ class _DestinationDetailViewState extends State<DestinationDetailView> {
                             operadorNombre,
                             operadorEmpresa,
                             primaryColor,
+                            titleFontSize,
+                            subtitleFontSize,
+                            sectionFontSize,
+                            buttonFontSize,
+                            buttonPaddingVertical,
+                            priceFontSize,
+                            paddingHorizontal,
+                            cardPadding,
+                            iconSize,
                           )
                         : _buildDesktopLayout(
+                            widget.destinoId,
                             nombre,
                             ubicacion,
                             precio,
@@ -140,12 +233,23 @@ class _DestinationDetailViewState extends State<DestinationDetailView> {
                             operadorNombre,
                             operadorEmpresa,
                             primaryColor,
+                            titleFontSize,
+                            subtitleFontSize,
+                            sectionFontSize,
+                            buttonFontSize,
+                            buttonPaddingVertical,
+                            priceFontSize,
+                            paddingHorizontal,
+                            cardPadding,
+                            iconSize,
+                            isLargeScreen,
                           ),
                   ),
                 ],
               ),
+              // Botón volver flotante sobre la foto
               Positioned(
-                top: 80,
+                top: backButtonTop,
                 right: 24,
                 child: MouseRegion(
                   cursor: SystemMouseCursors.click,
@@ -167,12 +271,12 @@ class _DestinationDetailViewState extends State<DestinationDetailView> {
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          Icon(Icons.arrow_back, color: primaryColor, size: 18),
+                          Icon(Icons.arrow_back, color: primaryColor, size: backButtonSize),
                           const SizedBox(width: 4),
                           Text(
                             'Volver',
                             style: GoogleFonts.outfit(
-                              fontSize: 14,
+                              fontSize: backButtonSize,
                               color: primaryColor,
                               fontWeight: FontWeight.w500,
                             ),
@@ -191,6 +295,7 @@ class _DestinationDetailViewState extends State<DestinationDetailView> {
   }
 
   Widget _buildMobileLayout(
+    String destinoId,
     String nombre,
     String ubicacion,
     double precio,
@@ -206,12 +311,22 @@ class _DestinationDetailViewState extends State<DestinationDetailView> {
     String operadorNombre,
     String operadorEmpresa,
     Color primaryColor,
+    double titleFontSize,
+    double subtitleFontSize,
+    double sectionFontSize,
+    double buttonFontSize,
+    double buttonPaddingVertical,
+    double priceFontSize,
+    double paddingHorizontal,
+    double cardPadding,
+    double iconSize,
   ) {
     return SingleChildScrollView(
-      padding: const EdgeInsets.all(16),
+      padding: EdgeInsets.all(paddingHorizontal),
       child: Column(
         children: [
           _buildContentCard(
+            destinoId,
             nombre,
             ubicacion,
             precio,
@@ -227,10 +342,16 @@ class _DestinationDetailViewState extends State<DestinationDetailView> {
             operadorNombre,
             operadorEmpresa,
             primaryColor,
+            titleFontSize,
+            subtitleFontSize,
+            sectionFontSize,
+            priceFontSize,
+            cardPadding,
+            iconSize,
             isMobile: true,
           ),
           const SizedBox(height: 16),
-          _buildActionButton(primaryColor),
+          _buildActionButton(primaryColor, buttonFontSize, buttonPaddingVertical),
           const SizedBox(height: 80),
         ],
       ),
@@ -238,6 +359,7 @@ class _DestinationDetailViewState extends State<DestinationDetailView> {
   }
 
   Widget _buildDesktopLayout(
+    String destinoId,
     String nombre,
     String ubicacion,
     double precio,
@@ -253,6 +375,16 @@ class _DestinationDetailViewState extends State<DestinationDetailView> {
     String operadorNombre,
     String operadorEmpresa,
     Color primaryColor,
+    double titleFontSize,
+    double subtitleFontSize,
+    double sectionFontSize,
+    double buttonFontSize,
+    double buttonPaddingVertical,
+    double priceFontSize,
+    double paddingHorizontal,
+    double cardPadding,
+    double iconSize,
+    bool isLargeScreen,
   ) {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -260,8 +392,9 @@ class _DestinationDetailViewState extends State<DestinationDetailView> {
         Expanded(
           flex: 7,
           child: SingleChildScrollView(
-            padding: const EdgeInsets.all(24),
+            padding: EdgeInsets.all(paddingHorizontal),
             child: _buildContentCard(
+              destinoId,
               nombre,
               ubicacion,
               precio,
@@ -277,6 +410,12 @@ class _DestinationDetailViewState extends State<DestinationDetailView> {
               operadorNombre,
               operadorEmpresa,
               primaryColor,
+              titleFontSize,
+              subtitleFontSize,
+              sectionFontSize,
+              priceFontSize,
+              cardPadding,
+              iconSize,
               isMobile: false,
             ),
           ),
@@ -284,8 +423,16 @@ class _DestinationDetailViewState extends State<DestinationDetailView> {
         Expanded(
           flex: 3,
           child: Padding(
-            padding: const EdgeInsets.only(top: 24, right: 24, bottom: 24),
-            child: _buildConversionCard(primaryColor, precio),
+            padding: EdgeInsets.only(top: paddingHorizontal, right: paddingHorizontal, bottom: paddingHorizontal),
+            child: _buildConversionCard(
+              primaryColor, 
+              precio, 
+              priceFontSize, 
+              sectionFontSize, 
+              buttonFontSize, 
+              buttonPaddingVertical,
+              isLargeScreen,
+            ),
           ),
         ),
       ],
@@ -293,6 +440,7 @@ class _DestinationDetailViewState extends State<DestinationDetailView> {
   }
 
   Widget _buildContentCard(
+    String destinoId,
     String nombre,
     String ubicacion,
     double precio,
@@ -307,7 +455,13 @@ class _DestinationDetailViewState extends State<DestinationDetailView> {
     String imagenPortada,
     String operadorNombre,
     String operadorEmpresa,
-    Color primaryColor, {
+    Color primaryColor,
+    double titleFontSize,
+    double subtitleFontSize,
+    double sectionFontSize,
+    double priceFontSize,
+    double cardPadding,
+    double iconSize, {
     required bool isMobile,
   }) {
     return Container(
@@ -326,38 +480,59 @@ class _DestinationDetailViewState extends State<DestinationDetailView> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Padding(
-            padding: const EdgeInsets.all(24),
+            padding: EdgeInsets.all(cardPadding),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  nombre,
-                  style: GoogleFonts.outfit(
-                    fontSize: isMobile ? 24 : 32,
-                    fontWeight: FontWeight.bold,
-                    color: const Color(0xFF333333),
-                  ),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Expanded(
+                      child: Text(
+                        nombre,
+                        style: GoogleFonts.outfit(
+                          fontSize: titleFontSize,
+                          fontWeight: FontWeight.bold,
+                          color: const Color(0xFF333333),
+                        ),
+                      ),
+                    ),
+                    MouseRegion(
+                      cursor: SystemMouseCursors.click,
+                      child: GestureDetector(
+                        onTap: () => _toggleFavorito(destinoId),
+                        child: Padding(
+                          padding: const EdgeInsets.all(8),
+                          child: Icon(
+                            _esFavoritoLocal ? Icons.favorite : Icons.favorite_border,
+                            color: primaryColor,
+                            size: iconSize,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
                 const SizedBox(height: 8),
                 Row(
                   children: [
-                    Icon(Icons.access_time, size: 16, color: const Color(0xFF888888)),
+                    Icon(Icons.access_time, size: subtitleFontSize - 2, color: const Color(0xFF888888)),
                     const SizedBox(width: 4),
                     Text(
                       duracion,
                       style: GoogleFonts.outfit(
-                        fontSize: 14,
+                        fontSize: subtitleFontSize - 2,
                         color: const Color(0xFF888888),
                       ),
                     ),
                     const SizedBox(width: 16),
-                    Icon(Icons.location_on, size: 16, color: const Color(0xFF888888)),
+                    Icon(Icons.location_on, size: subtitleFontSize - 2, color: const Color(0xFF888888)),
                     const SizedBox(width: 4),
                     Expanded(
                       child: Text(
                         ubicacion,
                         style: GoogleFonts.outfit(
-                          fontSize: 14,
+                          fontSize: subtitleFontSize - 2,
                           color: const Color(0xFF888888),
                         ),
                         overflow: TextOverflow.ellipsis,
@@ -370,7 +545,7 @@ class _DestinationDetailViewState extends State<DestinationDetailView> {
           ),
           if (imagenesReferencia.isNotEmpty || imagenPortada.isNotEmpty) ...[
             Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 24),
+              padding: EdgeInsets.symmetric(horizontal: cardPadding),
               child: _buildImageGallery(imagenesReferencia, imagenPortada),
             ),
             const SizedBox(height: 24),
@@ -378,23 +553,23 @@ class _DestinationDetailViewState extends State<DestinationDetailView> {
           const Divider(height: 1, thickness: 1, color: Color(0xFFE0E0E0)),
           const SizedBox(height: 24),
           Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 24),
+            padding: EdgeInsets.symmetric(horizontal: cardPadding),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
                   '¿Qué incluye? ✈️',
                   style: GoogleFonts.outfit(
-                    fontSize: 18,
+                    fontSize: sectionFontSize,
                     fontWeight: FontWeight.bold,
                     color: const Color(0xFF333333),
                   ),
                 ),
                 const SizedBox(height: 12),
-                _buildBulletPoint('Transporte:', transporte),
-                _buildBulletPoint('Alojamiento:', alojamiento),
+                _buildBulletPoint('Transporte:', transporte, subtitleFontSize),
+                _buildBulletPoint('Alojamiento:', alojamiento, subtitleFontSize),
                 if (incluye.isNotEmpty && incluye != 'No especificado')
-                  _buildBulletPoint('Servicios:', incluye),
+                  _buildBulletPoint('Servicios:', incluye, subtitleFontSize),
               ],
             ),
           ),
@@ -402,25 +577,25 @@ class _DestinationDetailViewState extends State<DestinationDetailView> {
           const Divider(height: 1, thickness: 1, color: Color(0xFFE0E0E0)),
           const SizedBox(height: 24),
           Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 24),
+            padding: EdgeInsets.symmetric(horizontal: cardPadding),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
                   'Información Importante 💡',
                   style: GoogleFonts.outfit(
-                    fontSize: 18,
+                    fontSize: sectionFontSize,
                     fontWeight: FontWeight.bold,
                     color: const Color(0xFF333333),
                   ),
                 ),
                 const SizedBox(height: 12),
                 if (descripcion.isNotEmpty)
-                  _buildBulletPoint('Descripción:', descripcion, isLongText: true),
+                  _buildBulletPoint('Descripción:', descripcion, subtitleFontSize, isLongText: true),
                 if (requisitos.isNotEmpty)
-                  _buildBulletPoint('Requisitos:', requisitos),
+                  _buildBulletPoint('Requisitos:', requisitos, subtitleFontSize),
                 if (noIncluye.isNotEmpty)
-                  _buildBulletPoint('No incluye:', noIncluye),
+                  _buildBulletPoint('No incluye:', noIncluye, subtitleFontSize),
                 const SizedBox(height: 16),
                 Container(
                   padding: const EdgeInsets.all(12),
@@ -447,14 +622,14 @@ class _DestinationDetailViewState extends State<DestinationDetailView> {
                             Text(
                               'Operado por: $operadorNombre',
                               style: GoogleFonts.outfit(
-                                fontSize: 12,
+                                fontSize: subtitleFontSize - 2,
                                 color: const Color(0xFF666666),
                               ),
                             ),
                             Text(
                               operadorEmpresa,
                               style: GoogleFonts.outfit(
-                                fontSize: 14,
+                                fontSize: subtitleFontSize,
                                 fontWeight: FontWeight.w600,
                                 color: const Color(0xFF333333),
                               ),
@@ -481,8 +656,12 @@ class _DestinationDetailViewState extends State<DestinationDetailView> {
     
     if (imagenes.isEmpty) return const SizedBox.shrink();
     
+    final screenWidth = MediaQuery.of(context).size.width;
+    final isLargeScreen = screenWidth > 1400;
+    final double imageSize = isLargeScreen ? 200.0 : 120.0;
+    
     return SizedBox(
-      height: 120,
+      height: imageSize,
       child: ListView.separated(
         scrollDirection: Axis.horizontal,
         itemCount: imagenes.length > 3 ? 3 : imagenes.length,
@@ -491,7 +670,7 @@ class _DestinationDetailViewState extends State<DestinationDetailView> {
           final imagen = imagenes[index];
           return ClipRRect(
             borderRadius: BorderRadius.circular(12),
-            child: _buildImage(imagen, width: 120, height: 120),
+            child: _buildImage(imagen, width: imageSize, height: imageSize),
           );
         },
       ),
@@ -504,7 +683,7 @@ class _DestinationDetailViewState extends State<DestinationDetailView> {
         width: width,
         height: height,
         color: const Color(0xFFFDDBB3),
-        child: const Icon(Icons.image, color: Color(0xFFFC6707), size: 32),
+        child: const Icon(Icons.image, color: Color(0xFFFC6707), size: 40),
       );
     }
 
@@ -519,7 +698,7 @@ class _DestinationDetailViewState extends State<DestinationDetailView> {
             width: width,
             height: height,
             color: const Color(0xFFFDDBB3),
-            child: const Icon(Icons.image, color: Color(0xFFFC6707), size: 32),
+            child: const Icon(Icons.image, color: Color(0xFFFC6707), size: 40),
           ),
         );
       } catch (_) {
@@ -527,7 +706,7 @@ class _DestinationDetailViewState extends State<DestinationDetailView> {
           width: width,
           height: height,
           color: const Color(0xFFFDDBB3),
-          child: const Icon(Icons.image, color: Color(0xFFFC6707), size: 32),
+          child: const Icon(Icons.image, color: Color(0xFFFC6707), size: 40),
         );
       }
     }
@@ -541,12 +720,12 @@ class _DestinationDetailViewState extends State<DestinationDetailView> {
         width: width,
         height: height,
         color: const Color(0xFFFDDBB3),
-        child: const Icon(Icons.image, color: Color(0xFFFC6707), size: 32),
+        child: const Icon(Icons.image, color: Color(0xFFFC6707), size: 40),
       ),
     );
   }
 
-  Widget _buildBulletPoint(String label, String value, {bool isLongText = false}) {
+  Widget _buildBulletPoint(String label, String value, double fontSize, {bool isLongText = false}) {
     if (value.isEmpty) return const SizedBox.shrink();
     
     return Padding(
@@ -557,7 +736,7 @@ class _DestinationDetailViewState extends State<DestinationDetailView> {
           Text(
             '• ',
             style: GoogleFonts.outfit(
-              fontSize: 14,
+              fontSize: fontSize - 2,
               fontWeight: FontWeight.bold,
               color: const Color(0xFFFC6707),
             ),
@@ -565,7 +744,7 @@ class _DestinationDetailViewState extends State<DestinationDetailView> {
           Expanded(
             child: RichText(
               text: TextSpan(
-                style: GoogleFonts.outfit(fontSize: 14, color: const Color(0xFF555555)),
+                style: GoogleFonts.outfit(fontSize: fontSize - 2, color: const Color(0xFF555555)),
                 children: [
                   TextSpan(
                     text: '$label ',
@@ -584,9 +763,17 @@ class _DestinationDetailViewState extends State<DestinationDetailView> {
     );
   }
 
-  Widget _buildConversionCard(Color primaryColor, double precio) {
+  Widget _buildConversionCard(
+    Color primaryColor, 
+    double precio, 
+    double priceFontSize, 
+    double sectionFontSize, 
+    double buttonFontSize, 
+    double buttonPaddingVertical,
+    bool isLargeScreen,
+  ) {
     return Container(
-      padding: const EdgeInsets.all(20),
+      padding: EdgeInsets.all(isLargeScreen ? 32 : 20),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(24),
@@ -604,7 +791,7 @@ class _DestinationDetailViewState extends State<DestinationDetailView> {
           Text(
             '\$${precio.toStringAsFixed(0)}',
             style: GoogleFonts.outfit(
-              fontSize: 36,
+              fontSize: priceFontSize,
               fontWeight: FontWeight.bold,
               color: primaryColor,
             ),
@@ -613,7 +800,7 @@ class _DestinationDetailViewState extends State<DestinationDetailView> {
           Text(
             'por persona',
             style: GoogleFonts.outfit(
-              fontSize: 14,
+              fontSize: sectionFontSize - 6,
               color: const Color(0xFF888888),
             ),
           ),
@@ -623,7 +810,7 @@ class _DestinationDetailViewState extends State<DestinationDetailView> {
           Text(
             'Reseñas',
             style: GoogleFonts.outfit(
-              fontSize: 18,
+              fontSize: sectionFontSize - 4,
               fontWeight: FontWeight.bold,
               color: primaryColor,
             ),
@@ -649,13 +836,13 @@ class _DestinationDetailViewState extends State<DestinationDetailView> {
           const SizedBox(height: 24),
           const Divider(height: 1, thickness: 1, color: Color(0xFFE0E0E0)),
           const SizedBox(height: 24),
-          _buildActionButton(primaryColor),
+          _buildActionButton(primaryColor, buttonFontSize, buttonPaddingVertical),
         ],
       ),
     );
   }
 
-  Widget _buildActionButton(Color primaryColor) {
+  Widget _buildActionButton(Color primaryColor, double fontSize, double paddingVertical) {
     return SizedBox(
       width: double.infinity,
       child: ElevatedButton(
@@ -670,7 +857,7 @@ class _DestinationDetailViewState extends State<DestinationDetailView> {
         style: ElevatedButton.styleFrom(
           backgroundColor: primaryColor,
           foregroundColor: Colors.white,
-          padding: const EdgeInsets.symmetric(vertical: 16),
+          padding: EdgeInsets.symmetric(vertical: paddingVertical),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(30),
           ),
@@ -678,7 +865,7 @@ class _DestinationDetailViewState extends State<DestinationDetailView> {
         child: Text(
           '¡Quiero ir!',
           style: GoogleFonts.outfit(
-            fontSize: 16,
+            fontSize: fontSize,
             fontWeight: FontWeight.bold,
           ),
         ),

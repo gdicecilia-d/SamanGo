@@ -51,10 +51,30 @@ class DestinationCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final screenWidth = MediaQuery.of(context).size.width;
+    
+    // Ancho dinámico según tamaño de pantalla
+    double cardWidth;
+    double imageHeight;
+    
+    if (screenWidth < 600) {
+      // Móvil
+      cardWidth = 200;
+      imageHeight = 110;
+    } else if (screenWidth < 1200) {
+      // Laptop normal
+      cardWidth = 240;
+      imageHeight = 132;
+    } else {
+      // Pantalla grande (>1200px)
+      cardWidth = 320;
+      imageHeight = 176;
+    }
+
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        width: 220,
+        width: cardWidth,
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(20),
@@ -77,9 +97,9 @@ class DestinationCard extends StatelessWidget {
                 topRight: Radius.circular(20),
               ),
               child: SizedBox(
-                height: 120,
-                width: double.infinity,
-                child: _buildImagen(),
+                height: imageHeight,
+                width: cardWidth,
+                child: _buildImagen(cardWidth, imageHeight),
               ),
             ),
             Padding(
@@ -91,7 +111,7 @@ class DestinationCard extends StatelessWidget {
                   Text(
                     nombre,
                     style: GoogleFonts.outfit(
-                      fontSize: 16,
+                      fontSize: screenWidth > 1200 ? 18 : 16,
                       fontWeight: FontWeight.bold,
                       color: const Color(0xFF333333),
                     ),
@@ -140,7 +160,7 @@ class DestinationCard extends StatelessWidget {
                       Text(
                         '\$${precio.toStringAsFixed(0)}',
                         style: GoogleFonts.outfit(
-                          fontSize: 20,
+                          fontSize: screenWidth > 1200 ? 22 : 20,
                           fontWeight: FontWeight.bold,
                           color: _primaryColor,
                         ),
@@ -191,11 +211,11 @@ class DestinationCard extends StatelessWidget {
     );
   }
 
-  Widget _buildImagen() {
+  Widget _buildImagen(double cardWidth, double imageHeight) {
     if (imagenUrl.isEmpty) {
       return Container(
-        width: double.infinity,
-        height: 120,
+        width: cardWidth,
+        height: imageHeight,
         color: const Color(0xFFFDDBB3),
         child: const Icon(Icons.image, color: Color(0xFFFC6707), size: 40),
       );
@@ -205,20 +225,20 @@ class DestinationCard extends StatelessWidget {
       try {
         return Image.memory(
           _bytesBase64,
-          width: double.infinity,
-          height: 120,
+          width: cardWidth,
+          height: imageHeight,
           fit: BoxFit.cover,
           errorBuilder: (_, __, ___) => Container(
-            width: double.infinity,
-            height: 120,
+            width: cardWidth,
+            height: imageHeight,
             color: const Color(0xFFFDDBB3),
             child: const Icon(Icons.image, color: Color(0xFFFC6707), size: 40),
           ),
         );
       } catch (_) {
         return Container(
-          width: double.infinity,
-          height: 120,
+          width: cardWidth,
+          height: imageHeight,
           color: const Color(0xFFFDDBB3),
           child: const Icon(Icons.image, color: Color(0xFFFC6707), size: 40),
         );
@@ -227,12 +247,12 @@ class DestinationCard extends StatelessWidget {
 
     return Image.network(
       imagenUrl,
-      width: double.infinity,
-      height: 120,
+      width: cardWidth,
+      height: imageHeight,
       fit: BoxFit.cover,
       errorBuilder: (_, __, ___) => Container(
-        width: double.infinity,
-        height: 120,
+        width: cardWidth,
+        height: imageHeight,
         color: const Color(0xFFFDDBB3),
         child: const Icon(Icons.image, color: Color(0xFFFC6707), size: 40),
       ),

@@ -1,7 +1,6 @@
-// Sección Explorar por Categorías - Responsive
+// Sección Explorar por Categorías 
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import '../search_results_view.dart';
 import '../search_results_view.dart';
 
 class CategoriesSection extends StatelessWidget {
@@ -11,6 +10,11 @@ class CategoriesSection extends StatelessWidget {
   Widget build(BuildContext context) {
     final screenWidth = MediaQuery.of(context).size.width;
     final isMobile = screenWidth < 850;
+    final isLargeScreen = screenWidth > 1400;
+
+    final double cardHeight = isMobile ? 120 : (isLargeScreen ? 180 : 140);
+    
+    final double titleFontSize = isMobile ? 20 : (isLargeScreen ? 28 : 24);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -20,7 +24,7 @@ class CategoriesSection extends StatelessWidget {
           child: Text(
             'Explorar por Categorías',
             style: GoogleFonts.outfit(
-              fontSize: isMobile ? 20 : 24,
+              fontSize: titleFontSize,
               fontWeight: FontWeight.bold,
               color: const Color(0xFF333333),
             ),
@@ -32,24 +36,24 @@ class CategoriesSection extends StatelessWidget {
           child: isMobile
               ? Column(
                   children: [
-                    _buildCategoryCard('Playas / Cayos', 'assets/images/playas_cayos.png', isMobile, context),
+                    _buildCategoryCard('Playas / Cayos', 'assets/images/playas_cayos.png', cardHeight, context),
                     const SizedBox(height: 16),
-                    _buildCategoryCard('Montañas / Trekking', 'assets/images/montañas_trekking.png', isMobile, context),
+                    _buildCategoryCard('Montañas / Trekking', 'assets/images/montañas_trekking.png', cardHeight, context),
                     const SizedBox(height: 16),
-                    _buildCategoryCard('Aventura / Ríos', 'assets/images/aventuras_rios.png', isMobile, context),
+                    _buildCategoryCard('Aventura / Ríos', 'assets/images/aventuras_rios.png', cardHeight, context),
                     const SizedBox(height: 16),
-                    _buildCategoryCard('Cultura / Ciudades', 'assets/images/cultura_ciudades.png', isMobile, context),
+                    _buildCategoryCard('Cultura / Ciudades', 'assets/images/cultura_ciudades.png', cardHeight, context),
                   ],
                 )
               : Row(
                   children: [
-                    Expanded(child: _buildCategoryCard('Playas / Cayos', 'assets/images/playas_cayos.png', isMobile, context)),
+                    Expanded(child: _buildCategoryCard('Playas / Cayos', 'assets/images/playas_cayos.png', cardHeight, context)),
                     const SizedBox(width: 16),
-                    Expanded(child: _buildCategoryCard('Montañas / Trekking', 'assets/images/montañas_trekking.png', isMobile, context)),
+                    Expanded(child: _buildCategoryCard('Montañas / Trekking', 'assets/images/montañas_trekking.png', cardHeight, context)),
                     const SizedBox(width: 16),
-                    Expanded(child: _buildCategoryCard('Aventura / Ríos', 'assets/images/aventuras_rios.png', isMobile, context)),
+                    Expanded(child: _buildCategoryCard('Aventura / Ríos', 'assets/images/aventuras_rios.png', cardHeight, context)),
                     const SizedBox(width: 16),
-                    Expanded(child: _buildCategoryCard('Cultura / Ciudades', 'assets/images/cultura_ciudades.png', isMobile, context)),
+                    Expanded(child: _buildCategoryCard('Cultura / Ciudades', 'assets/images/cultura_ciudades.png', cardHeight, context)),
                   ],
                 ),
         ),
@@ -57,7 +61,11 @@ class CategoriesSection extends StatelessWidget {
     );
   }
 
-  Widget _buildCategoryCard(String title, String imagePath, bool isMobile, BuildContext context) {
+  Widget _buildCategoryCard(String title, String imagePath, double cardHeight, BuildContext context) {
+    final screenWidth = MediaQuery.of(context).size.width;
+    final isLargeScreen = screenWidth > 1400;
+    final double fontSize = isLargeScreen ? 20 : 16;
+    
     return MouseRegion(
       cursor: SystemMouseCursors.click,
       child: GestureDetector(
@@ -76,7 +84,7 @@ class CategoriesSection extends StatelessWidget {
           );
         },
         child: Container(
-          height: isMobile ? 110 : 120,
+          height: cardHeight,
           width: double.infinity,
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(16),
@@ -93,7 +101,7 @@ class CategoriesSection extends StatelessWidget {
                 end: Alignment.bottomCenter,
                 colors: [
                   Colors.black.withOpacity(0.4),
-                  Colors.black.withOpacity(0.8),
+                  Colors.black.withOpacity(0.7),
                 ],
               ),
             ),
@@ -102,7 +110,7 @@ class CategoriesSection extends StatelessWidget {
                 title,
                 textAlign: TextAlign.center,
                 style: GoogleFonts.outfit(
-                  fontSize: isMobile ? 15 : 16,
+                  fontSize: fontSize,
                   fontWeight: FontWeight.bold,
                   color: Colors.white,
                 ),

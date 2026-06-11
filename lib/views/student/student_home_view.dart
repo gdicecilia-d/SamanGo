@@ -1,3 +1,4 @@
+// Home estudiante 
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
@@ -10,6 +11,7 @@ import 'widgets/categories.dart';
 import 'widgets/destination_card.dart';
 import 'widgets/horizontal_scroll_section.dart';
 import 'destination_detail_view.dart';
+import 'favorites_view.dart';
 import '../../views/shared/widgets/custom_dialog.dart';
 import '../auth/login_view.dart';
 import '../../controllers/notificacion_controller.dart';
@@ -44,7 +46,10 @@ class _StudentHomeViewState extends State<StudentHomeView> {
     if (menu == 'Mis Viajes') {
       _mostrarMensaje('Mis Viajes - Próximamente');
     } else if (menu == 'Favoritos') {
-      _mostrarMensaje('Favoritos - Próximamente');
+      Navigator.push(
+        context,
+        MaterialPageRoute(builder: (_) => const FavoritesView()),
+      );
     }
   }
 
@@ -151,7 +156,6 @@ class _StudentHomeViewState extends State<StudentHomeView> {
                 : Row(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      // Panel izquierdo 
                       Expanded(
                         flex: 7,
                         child: Container(
@@ -189,7 +193,6 @@ class _StudentHomeViewState extends State<StudentHomeView> {
                           ),
                         ),
                       ),
-                      // Panel derecho 
                       Container(
                         width: 320,
                         child: SingleChildScrollView(
@@ -277,7 +280,10 @@ class _StudentHomeViewState extends State<StudentHomeView> {
             }),
             _buildDrawerItem('Favoritos', Icons.favorite_border, () {
               Navigator.pop(context);
-              _mostrarMensaje('Favoritos - Próximamente');
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const FavoritesView()),
+              );
             }),
             const Spacer(),
             const Divider(height: 1, thickness: 1, color: Color(0xFFE0E0E0)),

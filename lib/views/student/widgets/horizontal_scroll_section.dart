@@ -126,7 +126,7 @@ class _HorizontalScrollSectionState extends State<HorizontalScrollSection> {
           Stack(
             children: [
               SizedBox(
-                height: 290,
+                height: isMobile ? 290 : 400,
                 child: ListView.separated(
                   controller: _scrollController,
                   scrollDirection: Axis.horizontal,
