@@ -72,6 +72,7 @@ class Reserva {
   }
 
   Reserva copyWith({
+    String? id,
     EstadoReserva? estadoActual,
     DateTime? fechaInicio,
     DateTime? fechaFin,
@@ -84,7 +85,7 @@ class Reserva {
     Map<String, dynamic>? historial,
   }) {
     return Reserva(
-      id: id,
+      id: id ?? this.id,
       estudianteId: estudianteId,
       paqueteId: paqueteId,
       estadoActual: estadoActual ?? this.estadoActual,

@@ -201,6 +201,7 @@ class _DestinationDetailViewState extends State<DestinationDetailView> {
                             paddingHorizontal,
                             cardPadding,
                             iconSize,
+                            data,
                           )
                         : _buildDesktopLayout(
                             widget.destinoId,
@@ -229,6 +230,7 @@ class _DestinationDetailViewState extends State<DestinationDetailView> {
                             cardPadding,
                             iconSize,
                             isLargeScreen,
+                            data,
                           ),
                   ),
                 ],
@@ -306,6 +308,7 @@ class _DestinationDetailViewState extends State<DestinationDetailView> {
     double paddingHorizontal,
     double cardPadding,
     double iconSize,
+    Map<String, dynamic> destinoData,
   ) {
     return SingleChildScrollView(
       padding: EdgeInsets.all(paddingHorizontal),
@@ -337,7 +340,7 @@ class _DestinationDetailViewState extends State<DestinationDetailView> {
             isMobile: true,
           ),
           const SizedBox(height: 16),
-          _buildActionButton(primaryColor, buttonFontSize, buttonPaddingVertical),
+          _buildActionButton(primaryColor, buttonFontSize, buttonPaddingVertical, destinoData),
           const SizedBox(height: 80),
         ],
       ),
@@ -371,6 +374,7 @@ class _DestinationDetailViewState extends State<DestinationDetailView> {
     double cardPadding,
     double iconSize,
     bool isLargeScreen,
+    Map<String, dynamic> destinoData,
   ) {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -418,6 +422,7 @@ class _DestinationDetailViewState extends State<DestinationDetailView> {
               buttonFontSize, 
               buttonPaddingVertical,
               isLargeScreen,
+              destinoData,
             ),
           ),
         ),
@@ -762,6 +767,7 @@ class _DestinationDetailViewState extends State<DestinationDetailView> {
     double buttonFontSize, 
     double buttonPaddingVertical,
     bool isLargeScreen,
+    Map<String, dynamic> destinoData,
   ) {
     return Container(
       padding: EdgeInsets.all(isLargeScreen ? 32 : 20),
@@ -827,7 +833,7 @@ class _DestinationDetailViewState extends State<DestinationDetailView> {
           const SizedBox(height: 24),
           const Divider(height: 1, thickness: 1, color: Color(0xFFE0E0E0)),
           const SizedBox(height: 24),
-          _buildActionButton(primaryColor, buttonFontSize, buttonPaddingVertical, data),
+          _buildActionButton(primaryColor, buttonFontSize, buttonPaddingVertical, destinoData),
         ],
       ),
     );

@@ -101,8 +101,6 @@ class _PaymentViewState extends State<PaymentView> {
             Text('Método de Pago', style: GoogleFonts.outfit(fontSize: 24, fontWeight: FontWeight.bold, color: const Color(0xFF333333))),
             const SizedBox(height: 16),
             _buildOpcionPago('PayPal', Icons.paypal, 'paypal@ejemplo.com'),
-            const SizedBox(height: 12),
-            _buildOpcionPago('Zelle', Icons.attach_money, 'zelle@ejemplo.com'),
             const SizedBox(height: 32),
             SizedBox(
               width: double.infinity,
