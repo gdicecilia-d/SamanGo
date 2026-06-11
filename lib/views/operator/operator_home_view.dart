@@ -5,8 +5,8 @@ import 'package:provider/provider.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../controllers/auth_controller.dart';
 import '../shared/app_header.dart';
-import 'operator_edit_profile_view.dart';
 import 'operator_publish_view.dart';
+import 'requests_view.dart';
 import 'widgets/operator_destination_card.dart';
 import '../../views/shared/widgets/custom_dialog.dart';
 import '../auth/login_view.dart';
@@ -55,7 +55,10 @@ class _OperatorHomeViewState extends State<OperatorHomeView> {
         });
       });
     } else if (menu == 'Solicitudes') {
-      _mostrarMensaje('Solicitudes - Próximamente');
+      Navigator.push(
+        context,
+        MaterialPageRoute(builder: (_) => const OperatorRequestsView()),
+      );
     } else if (menu == 'Inicio') {
       setState(() {
         _activeMenu = menu;
@@ -230,9 +233,8 @@ class _OperatorHomeViewState extends State<OperatorHomeView> {
             }),
             _buildDrawerItem('Solicitudes', Icons.receipt_outlined, () {
               Navigator.pop(context);
-              _mostrarMensaje('Solicitudes - Próximamente');
-            }),
-            const Spacer(),
+              _handleMenuSelected('Solicitudes');
+            }, _activeMenu == 'Solicitudes'),
             const Divider(height: 1, thickness: 1, color: Color(0xFFE0E0E0)),
             _buildDrawerItem('Cerrar Sesión', Icons.logout_outlined, () {
               Navigator.pop(context);

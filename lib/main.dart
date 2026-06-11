@@ -10,6 +10,8 @@ import 'firebase_options.dart';
 import 'controllers/auth_controller.dart';
 import 'controllers/profile_controller.dart';
 import 'controllers/notificacion_controller.dart';
+import 'controllers/favoritos_controller.dart';
+import 'controllers/reserva_controller.dart';
 import 'views/home_view.dart';
 import 'services/tips_notificacion_service.dart';
 
@@ -29,6 +31,12 @@ void main() async {
         ChangeNotifierProvider(create: (_) => AuthController()),
         ChangeNotifierProvider(create: (_) => ProfileController()),
         ChangeNotifierProvider(create: (_) => NotificacionController()),
+        ChangeNotifierProvider(create: (_) => ReservaController()),
+        ChangeNotifierProxyProvider<AuthController, FavoritosController>(
+          create: (_) => FavoritosController(),
+          update: (_, auth, favoritosController) => 
+              favoritosController!..updateUsuario(auth.usuarioActual?.id ?? ''),
+        ),
       ],
       child: const SamanGoApp(),
     ),

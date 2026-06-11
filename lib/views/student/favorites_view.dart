@@ -5,6 +5,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:provider/provider.dart';
 import '../shared/app_header.dart';
 import '../../controllers/auth_controller.dart';
+import '../../controllers/favoritos_controller.dart';
 import 'widgets/destination_card.dart';
 import 'widgets/horizontal_scroll_section.dart';
 import 'destination_detail_view.dart';
@@ -26,7 +27,6 @@ class _FavoritesViewState extends State<FavoritesView> {
 
   void _handleMenuSelected(String menu) {
     if (menu == 'Inicio') {
-      // Ir a StudentHomeView y eliminar todas las pantallas anteriores
       Navigator.pushAndRemoveUntil(
         context,
         MaterialPageRoute(builder: (_) => const StudentHomeView()),
@@ -100,29 +100,9 @@ class _FavoritesViewState extends State<FavoritesView> {
             onMenuTap: isMobile ? _openDrawer : null,
           ),
           Expanded(
-            child: StreamBuilder<QuerySnapshot>(
-              stream: FirebaseFirestore.instance
-                  .collection('destinos')
-                  .where('activo', isEqualTo: true)
-                  .where('esFavorito', isEqualTo: true)
-                  .snapshots(),
-              builder: (context, snapshot) {
-                if (snapshot.connectionState == ConnectionState.waiting) {
-                  return const Center(
-                    child: CircularProgressIndicator(color: Color(0xFFFC6707)),
-                  );
-                }
-
-                if (snapshot.hasError) {
-                  return Center(
-                    child: Text(
-                      'Error al cargar favoritos',
-                      style: GoogleFonts.outfit(color: Colors.red),
-                    ),
-                  );
-                }
-
-                final favoritos = snapshot.data?.docs ?? [];
+            child: Consumer<FavoritosController>(
+              builder: (context, favoritosController, child) {
+                final favoritos = favoritosController.favoritos;
 
                 if (favoritos.isEmpty) {
                   return Center(
@@ -143,25 +123,34 @@ class _FavoritesViewState extends State<FavoritesView> {
                             color: const Color(0xFF999999),
                           ),
                         ),
-                        const SizedBox(height: 8),
-                        Text(
-                          'Toca el corazón en cualquier destino para añadirlo aquí',
-                          style: GoogleFonts.outfit(
-                            fontSize: 14,
-                            color: const Color(0xFFCCCCCC),
-                          ),
-                        ),
                       ],
                     ),
                   );
                 }
 
-                return Column(
-                  children: [
-                    Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                return FutureBuilder<QuerySnapshot>(
+                  future: FirebaseFirestore.instance
+                      .collection('destinos')
+                      .where(FieldPath.documentId, whereIn: favoritos)
+                      .where('activo', isEqualTo: true)
+                      .get(),
+                  builder: (context, snapshot) {
+                    if (snapshot.connectionState == ConnectionState.waiting) {
+                      return const Center(
+                        child: CircularProgressIndicator(color: Color(0xFFFC6707)),
+                      );
+                    }
+
+                    if (snapshot.hasError) {
+                      return Center(child: Text('Error al cargar favoritos', style: GoogleFonts.outfit(color: Colors.red)));
+                    }
+
+                    final destinosFavoritos = snapshot.data?.docs ?? [];
+
+                    return SingleChildScrollView(
+                      padding: EdgeInsets.symmetric(horizontal: isMobile ? 16 : 40, vertical: 24),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
                             'Mis Favoritos',
@@ -171,84 +160,37 @@ class _FavoritesViewState extends State<FavoritesView> {
                               color: const Color(0xFF333333),
                             ),
                           ),
-                          MouseRegion(
-                            cursor: SystemMouseCursors.click,
-                            child: GestureDetector(
-                              onTap: () => Navigator.pop(context),
-                              child: Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                                decoration: BoxDecoration(
-                                  color: Colors.white,
-                                  borderRadius: BorderRadius.circular(30),
-                                  border: Border.all(
-                                    color: const Color(0xFFFC6707),
-                                    width: 1,
-                                  ),
-                                  boxShadow: [
-                                    BoxShadow(
-                                      color: Colors.black.withOpacity(0.05),
-                                      blurRadius: 4,
-                                      offset: const Offset(0, 2),
+                          const SizedBox(height: 20),
+                          Wrap(
+                            spacing: 16,
+                            runSpacing: 16,
+                            children: destinosFavoritos.map((doc) {
+                              final data = doc.data() as Map<String, dynamic>;
+                              final isOffer = _esOferta(data['isOffer']);
+                              return DestinationCard(
+                                id: doc.id,
+                                nombre: data['nombre'] ?? 'Sin título',
+                                ubicacion: data['ubicacion'] ?? '',
+                                precio: (data['precio'] ?? 0).toDouble(),
+                                duracion: data['duracion'] ?? 'Full Day',
+                                imagenUrl: data['imagen'] ?? '',
+                                isOffer: isOffer,
+                                cuposDisponibles: data['cuposDisponibles'] ?? 0,
+                                onTap: () {
+                                  Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (_) => DestinationDetailView(destinoId: doc.id),
                                     ),
-                                  ],
-                                ),
-                                child: Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    Icon(
-                                      Icons.arrow_back,
-                                      color: const Color(0xFFFC6707),
-                                      size: 16,
-                                    ),
-                                    const SizedBox(width: 4),
-                                    Text(
-                                      'Volver',
-                                      style: GoogleFonts.outfit(
-                                        fontSize: 13,
-                                        color: const Color(0xFFFC6707),
-                                        fontWeight: FontWeight.w500,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ),
+                                  );
+                                },
+                              );
+                            }).toList(),
                           ),
                         ],
                       ),
-                    ),
-                    Expanded(
-                      child: SingleChildScrollView(
-                        child: HorizontalScrollSection(
-                          title: '',
-                          showTitle: false,
-                          children: favoritos.map((doc) {
-                            final data = doc.data() as Map<String, dynamic>;
-                            final isOffer = _esOferta(data['isOffer']);
-                            
-                            return DestinationCard(
-                              id: doc.id,
-                              nombre: data['nombre'] ?? 'Sin título',
-                              ubicacion: data['ubicacion'] ?? '',
-                              precio: (data['precio'] ?? 0).toDouble(),
-                              duracion: data['duracion'] ?? 'Full Day',
-                              imagenUrl: data['imagen'] ?? '',
-                              isOffer: isOffer,
-                              cuposDisponibles: data['cuposDisponibles'] ?? 0,
-                              onTap: () {
-                                Navigator.push(
-                                  context,
-                                  MaterialPageRoute(
-                                    builder: (_) => DestinationDetailView(destinoId: doc.id),
-                                  ),
-                                );
-                              },
-                            );
-                          }).toList(),
-                        ),
-                      ),
-                    ),
-                  ],
+                    );
+                  },
                 );
               },
             ),

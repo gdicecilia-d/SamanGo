@@ -12,6 +12,7 @@ import 'widgets/destination_card.dart';
 import 'widgets/horizontal_scroll_section.dart';
 import 'destination_detail_view.dart';
 import 'favorites_view.dart';
+import 'my_trips_view.dart';
 import '../../views/shared/widgets/custom_dialog.dart';
 import '../auth/login_view.dart';
 import '../../controllers/notificacion_controller.dart';
@@ -44,7 +45,10 @@ class _StudentHomeViewState extends State<StudentHomeView> {
 
   void _handleMenuSelected(String menu) {
     if (menu == 'Mis Viajes') {
-      _mostrarMensaje('Mis Viajes - Próximamente');
+      Navigator.push(
+        context,
+        MaterialPageRoute(builder: (_) => const MyTripsView()),
+      );
     } else if (menu == 'Favoritos') {
       Navigator.push(
         context,
@@ -276,7 +280,7 @@ class _StudentHomeViewState extends State<StudentHomeView> {
             }),
             _buildDrawerItem('Mis Viajes', Icons.airplane_ticket_outlined, () {
               Navigator.pop(context);
-              _mostrarMensaje('Mis Viajes - Próximamente');
+              _handleMenuSelected('Mis Viajes');
             }),
             _buildDrawerItem('Favoritos', Icons.favorite_border, () {
               Navigator.pop(context);

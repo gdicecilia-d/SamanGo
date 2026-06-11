@@ -4,9 +4,12 @@ import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:provider/provider.dart';
 import '../shared/app_header.dart';
 import 'favorites_view.dart';
 import 'student_home_view.dart';
+import 'checkout_view.dart';
+import '../../controllers/favoritos_controller.dart';
 
 class DestinationDetailView extends StatefulWidget {
   final String destinoId;
@@ -19,7 +22,6 @@ class DestinationDetailView extends StatefulWidget {
 
 class _DestinationDetailViewState extends State<DestinationDetailView> {
   late Future<DocumentSnapshot> _destinoFuture;
-  bool _esFavoritoLocal = false;
 
   @override
   void initState() {
@@ -31,42 +33,26 @@ class _DestinationDetailViewState extends State<DestinationDetailView> {
     _destinoFuture = FirebaseFirestore.instance
         .collection('destinos')
         .doc(widget.destinoId)
-        .get()
-        .then((doc) {
-      if (doc.exists) {
-        final data = doc.data() as Map<String, dynamic>;
-        _esFavoritoLocal = data['esFavorito'] ?? false;
-      }
-      return doc;
-    });
+        .get();
   }
 
   Future<void> _toggleFavorito(String docId) async {
-    final newValue = !_esFavoritoLocal;
-    
-    setState(() {
-      _esFavoritoLocal = newValue;
-    });
+    final favoritosController = Provider.of<FavoritosController>(context, listen: false);
     
     try {
-      await FirebaseFirestore.instance
-          .collection('destinos')
-          .doc(docId)
-          .update({'esFavorito': newValue});
+      await favoritosController.toggleFavorito(docId);
       
       if (mounted) {
+        final esFavorito = favoritosController.esFavorito(docId);
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(newValue ? 'Añadido a favoritos' : 'Eliminado de favoritos'),
+            content: Text(esFavorito ? 'Añadido a favoritos' : 'Eliminado de favoritos'),
             backgroundColor: const Color(0xFFFC6707),
             duration: const Duration(seconds: 1),
           ),
         );
       }
     } catch (e) {
-      setState(() {
-        _esFavoritoLocal = !newValue;
-      });
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
@@ -497,19 +483,24 @@ class _DestinationDetailViewState extends State<DestinationDetailView> {
                         ),
                       ),
                     ),
-                    MouseRegion(
-                      cursor: SystemMouseCursors.click,
-                      child: GestureDetector(
-                        onTap: () => _toggleFavorito(destinoId),
-                        child: Padding(
-                          padding: const EdgeInsets.all(8),
-                          child: Icon(
-                            _esFavoritoLocal ? Icons.favorite : Icons.favorite_border,
-                            color: primaryColor,
-                            size: iconSize,
+                    Consumer<FavoritosController>(
+                      builder: (context, favoritosController, child) {
+                        final esFavorito = favoritosController.esFavorito(destinoId);
+                        return MouseRegion(
+                          cursor: SystemMouseCursors.click,
+                          child: GestureDetector(
+                            onTap: () => _toggleFavorito(destinoId),
+                            child: Padding(
+                              padding: const EdgeInsets.all(8),
+                              child: Icon(
+                                esFavorito ? Icons.favorite : Icons.favorite_border,
+                                color: primaryColor,
+                                size: iconSize,
+                              ),
+                            ),
                           ),
-                        ),
-                      ),
+                        );
+                      },
                     ),
                   ],
                 ),
@@ -836,24 +827,27 @@ class _DestinationDetailViewState extends State<DestinationDetailView> {
           const SizedBox(height: 24),
           const Divider(height: 1, thickness: 1, color: Color(0xFFE0E0E0)),
           const SizedBox(height: 24),
-          _buildActionButton(primaryColor, buttonFontSize, buttonPaddingVertical),
+          _buildActionButton(primaryColor, buttonFontSize, buttonPaddingVertical, data),
         ],
       ),
     );
   }
 
-  Widget _buildActionButton(Color primaryColor, double fontSize, double paddingVertical) {
+  Widget _buildActionButton(Color primaryColor, double fontSize, double paddingVertical, Map<String, dynamic>? destinoData) {
     return SizedBox(
       width: double.infinity,
       child: ElevatedButton(
-        onPressed: () {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Próximamente podrás reservar este destino'),
-              backgroundColor: Color(0xFFFC6707),
+        onPressed: destinoData != null ? () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => CheckoutView(
+                destinoId: widget.destinoId,
+                destinoData: destinoData,
+              ),
             ),
           );
-        },
+        } : null,
         style: ElevatedButton.styleFrom(
           backgroundColor: primaryColor,
           foregroundColor: Colors.white,

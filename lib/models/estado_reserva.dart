@@ -3,6 +3,7 @@
 enum EstadoReserva {
   solicitado,
   aceptado,
+  verificandoPago,
   pagado,
   disfrutado,
 }
@@ -15,9 +16,11 @@ extension EstadoReservaExtension on EstadoReserva {
       case EstadoReserva.solicitado:
         return 'Solicitado';
       case EstadoReserva.aceptado:
-        return 'Aceptado';
+        return 'Aceptado (Listo para Pagar)';
+      case EstadoReserva.verificandoPago:
+        return 'Verificando Pago';
       case EstadoReserva.pagado:
-        return 'Pagado';
+        return 'Pagado (Próximo Viaje)';
       case EstadoReserva.disfrutado:
         return 'Disfrutado';
     }
