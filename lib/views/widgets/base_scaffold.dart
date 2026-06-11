@@ -60,30 +60,62 @@ class BaseScaffold extends StatelessWidget {
               children: [
                 body,
                 SizedBox(height: Responsive.padding(context, 48)),
-                Container(
-                  width: double.infinity,
-                  padding: EdgeInsets.symmetric(vertical: Responsive.padding(context, 20)),
-                  decoration: const BoxDecoration(
-                    color: Color(0xFFFC6707),
-                    borderRadius: BorderRadius.only(
-                      topLeft: Radius.circular(16),
-                      topRight: Radius.circular(16),
-                    ),
-                  ),
-                  child: Center(
-                    child: Text(
-                      '© 2026 SamanGo. Todos los derechos reservados. Comunidad UNIMET.',
-                      textAlign: TextAlign.center,
-                      style: GoogleFonts.outfit(
-                        fontSize: Responsive.fontSize(context, 12),
-                        color: Colors.white,
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                  ),
-                ),
+                // Footer con diseño condicional
+                isMobile ? _buildMobileFooter() : _buildDesktopFooter(context),
               ],
             ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  // Cell 
+  Widget _buildMobileFooter() {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 16),
+      decoration: const BoxDecoration(
+        color: Color(0xFFFC6707),
+        borderRadius: BorderRadius.only(
+          topLeft: Radius.circular(16),
+          topRight: Radius.circular(16),
+        ),
+      ),
+      child: const Center(
+        child: Text(
+          '© 2026 SamanGo. Todos los derechos reservados. Comunidad UNIMET.',
+          textAlign: TextAlign.center,
+          style: TextStyle(
+            fontSize: 10,
+            color: Colors.white,
+            fontWeight: FontWeight.w500,
+          ),
+        ),
+      ),
+    );
+  }
+
+  // Computadora 
+  Widget _buildDesktopFooter(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: EdgeInsets.symmetric(vertical: Responsive.padding(context, 20)),
+      decoration: const BoxDecoration(
+        color: Color(0xFFFC6707),
+        borderRadius: BorderRadius.only(
+          topLeft: Radius.circular(16),
+          topRight: Radius.circular(16),
+        ),
+      ),
+      child: Center(
+        child: Text(
+          '© 2026 SamanGo. Todos los derechos reservados. Comunidad UNIMET.',
+          textAlign: TextAlign.center,
+          style: GoogleFonts.outfit(
+            fontSize: Responsive.fontSize(context, 12),
+            color: Colors.white,
+            fontWeight: FontWeight.w500,
           ),
         ),
       ),
