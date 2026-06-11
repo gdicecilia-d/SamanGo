@@ -141,6 +141,169 @@ class _RegisterOperatorViewState extends State<RegisterOperatorView> {
 
   @override
   Widget build(BuildContext context) {
+    final screenWidth = MediaQuery.of(context).size.width;
+    final isMobile = screenWidth < 850;
+
+    // Cell 
+    if (isMobile) {
+      return AuthBaseView(
+        onBackPressed: () {
+          Navigator.pop(context);
+        },
+        bottomText: '¿Ya tienes cuenta? ',
+        bottomLinkText: 'Inicia Sesión',
+        onBottomLinkTap: () {
+          Navigator.pushAndRemoveUntil(
+            context,
+            MaterialPageRoute(builder: (_) => const LoginView()),
+            (route) => false,
+          );
+        },
+        formContent: SingleChildScrollView(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              const Text(
+                'Crea tu Cuenta',
+                style: TextStyle(
+                  fontSize: 24,
+                  fontWeight: FontWeight.bold,
+                  color: Color(0xFF333333),
+                ),
+              ),
+              const SizedBox(height: 8),
+              const Text(
+                'Ingresa tus datos para unirte a la comunidad',
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w400,
+                  color: Color(0xFF666666),
+                ),
+              ),
+              const SizedBox(height: 24),
+
+              _buildMobileLabel('Nombre de la Empresa'),
+              _buildMobileTextField(
+                controller: _empresaController,
+                hint: 'Ej: RutaVzla',
+                errorText: (_showErrors || _empresaController.text.isNotEmpty) && _empresaController.text.length < 3
+                    ? 'Mínimo 3 caracteres'
+                    : null,
+              ),
+              const SizedBox(height: 16),
+
+              _buildMobileLabel('R.I.F.'),
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  _buildMobileRifDropdown(),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: _buildMobileTextField(
+                      controller: _rifNumeroController,
+                      hint: 'Ej: 123456789',
+                      keyboardType: TextInputType.number,
+                      inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                      errorText: (_showErrors || _rifNumeroController.text.isNotEmpty) && 
+                          !RegExp(r'^\d{8,9}$').hasMatch(_rifNumeroController.text)
+                          ? 'Debe tener entre 8 y 9 dígitos'
+                          : null,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 16),
+
+              _buildMobileLabel('Representante Legal'),
+              _buildMobileTextField(
+                controller: _representanteController,
+                hint: 'Ej: Juan Miguel Moreira',
+                errorText: (_showErrors || _representanteController.text.isNotEmpty) && 
+                    _representanteController.text.length < 5
+                    ? 'Mínimo 5 caracteres'
+                    : null,
+              ),
+              const SizedBox(height: 16),
+
+              _buildMobileLabel('Número de Teléfono'),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      _buildMobilePrefijoFijo(),
+                      const SizedBox(width: 12),
+                      Expanded(child: _buildMobileTelefonoDropdown()),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                  _buildMobileTextField(
+                    controller: _telefonoNumeroController,
+                    hint: '1234567',
+                    keyboardType: TextInputType.number,
+                    inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                    errorText: (_showErrors || _telefonoNumeroController.text.isNotEmpty) && 
+                        !RegExp(r'^\d{7}$').hasMatch(_telefonoNumeroController.text)
+                        ? 'Debe tener 7 dígitos'
+                        : null,
+                  ),
+                ],
+              ),
+              const SizedBox(height: 16),
+
+              _buildMobileLabel('Email'),
+              _buildMobileTextField(
+                controller: _emailController,
+                hint: 'ejemplo@rutas.com',
+                keyboardType: TextInputType.emailAddress,
+                errorText: (_showErrors || _emailController.text.isNotEmpty)
+                    ? FormValidators.validarEmail(_emailController.text)
+                    : null,
+              ),
+              const SizedBox(height: 16),
+
+              _buildMobileLabel('Descripción Servicios'),
+              _buildMobileTextField(
+                controller: _descripcionController,
+                hint: 'Tipos de tours u ofertas',
+                maxLines: 2,
+                errorText: (_showErrors || _descripcionController.text.isNotEmpty) && 
+                    _descripcionController.text.length < 10
+                    ? 'Mínimo 10 caracteres'
+                    : null,
+              ),
+              const SizedBox(height: 16),
+
+              _buildMobileLabel('Subir Licencia de Turismo'),
+              _buildMobileFilePicker(),
+              const SizedBox(height: 16),
+
+              _buildMobileTermsCheckbox(),
+              const SizedBox(height: 24),
+
+              SizedBox(
+                width: double.infinity,
+                child: TextButton(
+                  onPressed: _submitForm,
+                  style: TextButton.styleFrom(
+                    backgroundColor: const Color(0xFFFC6707),
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
+                  ),
+                  child: const Text(
+                    'Solicitar Registro',
+                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
+    // Computadora 
     return AuthBaseView(
       onBackPressed: () {
         Navigator.pop(context);
@@ -221,11 +384,9 @@ class _RegisterOperatorViewState extends State<RegisterOperatorView> {
             SizedBox(height: Responsive.height(context, 16)),
 
             _buildLabel(context, 'Número de Teléfono'),
-            // Teléfono 
             Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Fila: +58 y prefijo
                 Row(
                   children: [
                     _buildPrefijoFijo(context),
@@ -234,7 +395,6 @@ class _RegisterOperatorViewState extends State<RegisterOperatorView> {
                   ],
                 ),
                 SizedBox(height: Responsive.height(context, 12)),
-                // Número de 7 dígitos 
                 _buildTextField(context,
                   controller: _telefonoNumeroController,
                   hint: '1234567',
@@ -297,6 +457,215 @@ class _RegisterOperatorViewState extends State<RegisterOperatorView> {
       ),
     );
   }
+
+  // Cell
+  
+  Widget _buildMobileLabel(String text) {
+    return Align(
+      alignment: Alignment.centerLeft,
+      child: Text(
+        text,
+        style: const TextStyle(
+          fontSize: 14,
+          fontWeight: FontWeight.w500,
+          color: Color(0xFF333333),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildMobileTextField({
+    required TextEditingController controller,
+    required String hint,
+    TextInputType keyboardType = TextInputType.text,
+    int maxLines = 1,
+    List<TextInputFormatter>? inputFormatters,
+    String? errorText,
+  }) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        TextFormField(
+          controller: controller,
+          onChanged: (_) => setState(() {}),
+          keyboardType: keyboardType,
+          maxLines: maxLines,
+          inputFormatters: inputFormatters,
+          style: const TextStyle(fontSize: 14),
+          decoration: InputDecoration(
+            hintText: hint,
+            hintStyle: const TextStyle(fontSize: 14, color: Color(0xFF999999)),
+            errorText: errorText,
+            errorStyle: const TextStyle(color: Color(0xFFFC6707), fontSize: 12),
+            border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+            focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: Colors.transparent)),
+            enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+            errorBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: Color(0xFFFC6707), width: 1.5)),
+            focusedErrorBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: Color(0xFFFC6707), width: 1.5)),
+            filled: true,
+            fillColor: const Color(0xFFF5F5F5),
+            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildMobileRifDropdown() {
+    return Container(
+      width: 70,
+      height: 54,
+      decoration: BoxDecoration(color: const Color(0xFFF5F5F5), borderRadius: BorderRadius.circular(12)),
+      child: DropdownButtonFormField<String>(
+        value: _selectedRifLetra,
+        items: _rifOpciones.map((letra) {
+          return DropdownMenuItem(value: letra, child: Text(letra, style: const TextStyle(fontSize: 16)));
+        }).toList(),
+        onChanged: (value) => setState(() => _selectedRifLetra = value!),
+        decoration: const InputDecoration(
+          border: OutlineInputBorder(borderSide: BorderSide.none),
+          contentPadding: EdgeInsets.symmetric(horizontal: 12),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildMobilePrefijoFijo() {
+    return Container(
+      width: 60,
+      height: 54,
+      decoration: BoxDecoration(color: const Color(0xFFF5F5F5), borderRadius: BorderRadius.circular(12)),
+      child: const Center(
+        child: Text('+58', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500)),
+      ),
+    );
+  }
+
+  Widget _buildMobileTelefonoDropdown() {
+    return Container(
+      height: 54,
+      decoration: BoxDecoration(color: const Color(0xFFF5F5F5), borderRadius: BorderRadius.circular(12)),
+      child: DropdownButtonFormField<String>(
+        value: _selectedTelefonoPrefijo,
+        items: _telefonoOpciones.map((prefijo) {
+          return DropdownMenuItem(value: prefijo, child: Text(prefijo, style: const TextStyle(fontSize: 16)));
+        }).toList(),
+        onChanged: (value) => setState(() => _selectedTelefonoPrefijo = value!),
+        decoration: const InputDecoration(
+          border: OutlineInputBorder(borderSide: BorderSide.none),
+          contentPadding: EdgeInsets.symmetric(horizontal: 12),
+        ),
+        isExpanded: true,
+      ),
+    );
+  }
+
+  Widget _buildMobileFilePicker() {
+    final hasError = _selectedFileName == null && _showErrors;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        GestureDetector(
+          onTap: _isUploading ? null : _pickFile,
+          child: Container(
+            width: double.infinity,
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+            decoration: BoxDecoration(
+              color: const Color(0xFFF5F5F5),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(
+                color: hasError ? const Color(0xFFFC6707) : const Color(0xFFE0E0E0),
+                width: hasError ? 1.5 : 1,
+              ),
+            ),
+            child: Row(
+              children: [
+                Icon(_isUploading ? Icons.cloud_upload : Icons.upload_file, color: const Color(0xFFFC6707), size: 20),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    _isUploading ? 'Subiendo...' : (_selectedFileName ?? 'Seleccionar imagen'),
+                    style: TextStyle(
+                      fontSize: 14,
+                      color: hasError ? const Color(0xFFFC6707) : const Color(0xFF666666),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+        if (_uploadError != null)
+          Padding(
+            padding: const EdgeInsets.only(top: 6),
+            child: Text(_uploadError!, style: const TextStyle(color: Color(0xFFFC6707), fontSize: 12)),
+          ),
+        if (hasError && _uploadError == null)
+          const Padding(
+            padding: EdgeInsets.only(top: 6),
+            child: Text(
+              'Debes subir una imagen de la licencia de turismo (JPG, PNG)',
+              style: TextStyle(color: Color(0xFFFC6707), fontSize: 12),
+            ),
+          ),
+      ],
+    );
+  }
+
+  Widget _buildMobileTermsCheckbox() {
+    return Row(
+      children: [
+        GestureDetector(
+          onTap: () => setState(() => _acceptTerms = !_acceptTerms),
+          child: Container(
+            width: 22,
+            height: 22,
+            decoration: BoxDecoration(
+              color: _acceptTerms ? const Color(0xFFFC6707) : const Color(0xFFFDDBB3),
+              borderRadius: BorderRadius.circular(4),
+              border: Border.all(color: Colors.transparent),
+            ),
+            child: _acceptTerms
+                ? const Icon(Icons.check, size: 16, color: Colors.white)
+                : null,
+          ),
+        ),
+        const SizedBox(width: 8),
+        Expanded(
+          child: GestureDetector(
+            onTap: () {
+              showDialog(
+                context: context,
+                builder: (context) => AlertDialog(
+                  title: const Text('Términos y Condiciones'),
+                  content: const SingleChildScrollView(
+                    child: Text('Aquí van los términos y condiciones de la aplicación...'),
+                  ),
+                  actions: [
+                    TextButton(
+                      onPressed: () => Navigator.pop(context),
+                      child: const Text('Cerrar', style: TextStyle(color: Color(0xFFFC6707))),
+                    ),
+                  ],
+                ),
+              );
+            },
+            child: const Text(
+              'He leído y acepto los Términos de Servicio y la Política de Privacidad',
+              style: TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w400,
+                color: Colors.blue,
+                decoration: TextDecoration.underline,
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  // Computadora 
 
   Widget _buildLabel(BuildContext context, String text) {
     return Align(

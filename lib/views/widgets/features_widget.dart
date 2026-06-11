@@ -16,6 +16,40 @@ class FeaturesWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Cell 
+    if (isMobile) {
+      return Container(
+        padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: features.map((feature) => Padding(
+            padding: const EdgeInsets.only(bottom: 16),
+            child: Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(4),
+                  decoration: const BoxDecoration(color: Color(0xFFFC6707), shape: BoxShape.circle),
+                  child: const Icon(Icons.check, color: Colors.white, size: 14),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    feature.title,
+                    style: const TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                      color: Color(0xFF2C2C2C),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          )).toList(),
+        ),
+      );
+    }
+
+    // Computadora 
     return Container(
       padding: EdgeInsets.symmetric(
         vertical: isMobile ? Responsive.padding(context, 12) : Responsive.padding(context, 24),

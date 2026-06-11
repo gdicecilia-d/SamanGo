@@ -1,4 +1,3 @@
-// Plantilla base para todas las pantallas usando Template Method
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'header_widget.dart';
@@ -94,69 +93,103 @@ class BaseScaffold extends StatelessWidget {
   Widget _buildMobileDrawer(BuildContext context) {
     return Drawer(
       backgroundColor: Colors.white,
-      width: MediaQuery.of(context).size.width * 0.8,
+      width: MediaQuery.of(context).size.width * 0.75,
       child: SafeArea(
-        child: SingleChildScrollView(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Padding(
-                padding: EdgeInsets.all(Responsive.padding(context, 24)),
-                child: Row(
-                  children: [
-                    Transform.scale(
-                      scale: 1.5,
-                      child: Image.asset(
-                        'assets/images/logo.png',
-                        width: Responsive.width(context, 45),
-                        height: Responsive.height(context, 45),
-                      ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Logo en el drawer
+            Padding(
+              padding: const EdgeInsets.all(24),
+              child: Row(
+                children: [
+                  Transform.scale(
+                    scale: 1.5,
+                    child: Image.asset(
+                      'assets/images/logo.png',
+                      width: 45,
+                      height: 45,
                     ),
-                    SizedBox(width: Responsive.padding(context, 8)),
-                    Padding(
-                      padding: EdgeInsets.only(top: Responsive.padding(context, 8)),
-                      child: Image.asset(
-                        'assets/images/Nombre.png',
-                        height: Responsive.height(context, 22),
-                        fit: BoxFit.contain,
-                      ),
+                  ),
+                  const SizedBox(width: 8),
+                  Padding(
+                    padding: const EdgeInsets.only(top: 8),
+                    child: Image.asset(
+                      'assets/images/Nombre.png',
+                      height: 22,
+                      fit: BoxFit.contain,
                     ),
-                  ],
-                ),
+                  ),
+                ],
               ),
-              const Divider(),
-              _buildDrawerItem('Inicio', context),
-              _buildDrawerItem('Sobre Nosotros', context),
-              _buildDrawerItem('Destinos', context),
-              _buildDrawerItem('Contacto', context),
-              SizedBox(height: Responsive.padding(context, 24)),
-              Padding(
-                padding: EdgeInsets.symmetric(horizontal: Responsive.padding(context, 24)),
-                child: Column(
-                  children: [
-                    OutlinedButton(
-                      onPressed: onLoginPressed,
-                      style: OutlinedButton.styleFrom(
-                        side: const BorderSide(color: Color(0xFFFC6707), width: 1.5),
-                        minimumSize: Size(double.infinity, Responsive.height(context, 45)),
-                      ),
-                      child: Text('Iniciar Sesión', style: GoogleFonts.outfit(color: const Color(0xFFFC6707))),
+            ),
+            const Divider(thickness: 1, color: Color(0xFFE0E0E0)),
+            // Menú items
+            Expanded(
+              child: ListView(
+                padding: EdgeInsets.zero,
+                children: [
+                  _buildDrawerItem('Inicio', context),
+                  _buildDrawerItem('Sobre Nosotros', context),
+                  _buildDrawerItem('Destinos', context),
+                  _buildDrawerItem('Contacto', context),
+                  const SizedBox(height: 24),
+                  // Botones de acción
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 20),
+                    child: Column(
+                      children: [
+                        SizedBox(
+                          width: double.infinity,
+                          height: 48,
+                          child: OutlinedButton(
+                            onPressed: onLoginPressed,
+                            style: OutlinedButton.styleFrom(
+                              side: const BorderSide(color: Color(0xFFFC6707), width: 1.5),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(30),
+                              ),
+                            ),
+                            child: const Text(
+                              'Iniciar Sesión',
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.w600,
+                                color: Color(0xFFFC6707),
+                              ),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+                        SizedBox(
+                          width: double.infinity,
+                          height: 48,
+                          child: ElevatedButton(
+                            onPressed: onRegisterPressed,
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: const Color(0xFFFC6707),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(30),
+                              ),
+                            ),
+                            child: const Text(
+                              'Registrarse',
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.w600,
+                                color: Colors.white,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
-                    SizedBox(height: Responsive.padding(context, 12)),
-                    ElevatedButton(
-                      onPressed: onRegisterPressed,
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFFFC6707),
-                        minimumSize: Size(double.infinity, Responsive.height(context, 45)),
-                      ),
-                      child: Text('Registrarse', style: GoogleFonts.outfit(color: Colors.white)),
-                    ),
-                  ],
-                ),
+                  ),
+                  const SizedBox(height: 24),
+                ],
               ),
-              SizedBox(height: Responsive.padding(context, 24)),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
     );
@@ -165,16 +198,17 @@ class BaseScaffold extends StatelessWidget {
   Widget _buildDrawerItem(String title, BuildContext context) {
     final isActive = activeMenu == title;
     return ListTile(
+      contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 4),
       title: Text(
         title,
-        style: GoogleFonts.outfit(
+        style: TextStyle(
+          fontSize: 18,
           fontWeight: isActive ? FontWeight.bold : FontWeight.w500,
           color: isActive ? const Color(0xFFFC6707) : const Color(0xFF333333),
-          fontSize: Responsive.fontSize(context, 16),
         ),
       ),
       trailing: isActive
-          ? Icon(Icons.arrow_forward_ios, color: const Color(0xFFFC6707), size: Responsive.width(context, 14))
+          ? const Icon(Icons.arrow_forward_ios, color: Color(0xFFFC6707), size: 18)
           : null,
       onTap: () {
         Navigator.pop(context);

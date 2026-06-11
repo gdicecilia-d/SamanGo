@@ -1,4 +1,3 @@
-// imágenes destacadas de la pag
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../utils/responsive.dart';
@@ -15,10 +14,115 @@ class HeroWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Cell 
+    if (isMobile) {
+      return Column(
+        children: [
+          SizedBox(
+            height: 280,
+            child: Container(
+              width: double.infinity,
+              height: double.infinity,
+              decoration: const BoxDecoration(
+                image: DecorationImage(
+                  image: AssetImage('assets/images/el_avila.png'),
+                  fit: BoxFit.cover,
+                  alignment: Alignment.center,
+                ),
+              ),
+              child: Container(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.bottomCenter,
+                    end: Alignment.topCenter,
+                    colors: [
+                      Colors.black.withOpacity(0.75),
+                      Colors.black.withOpacity(0.4),
+                      Colors.transparent,
+                    ],
+                    stops: [0.0, 0.5, 1.0],
+                  ),
+                ),
+                padding: const EdgeInsets.all(20),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisAlignment: MainAxisAlignment.end,
+                  children: [
+                    const Text(
+                      'Tu próximo destino está a un clic del campus',
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white,
+                        height: 1.2,
+                      ),
+                      maxLines: 2,
+                    ),
+                    const SizedBox(height: 8),
+                    const Text(
+                      'La primera plataforma de viajes exclusiva para la comunidad UNIMET.',
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w500,
+                        color: Colors.white,
+                        height: 1.3,
+                      ),
+                      maxLines: 2,
+                    ),
+                    const SizedBox(height: 12),
+                    SizedBox(
+                      width: 180,
+                      child: ElevatedButton(
+                        onPressed: onStartAdventurePressed,
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFFFC6707),
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                        ),
+                        child: const Text(
+                          'Empieza tu aventura',
+                          style: TextStyle(
+                            fontWeight: FontWeight.w700,
+                            fontSize: 13,
+                            color: Colors.white,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+          Container(
+            height: 4,
+            color: const Color(0xFFE0E0E0),
+          ),
+          SizedBox(
+            height: 200,
+            child: Container(
+              width: double.infinity,
+              height: double.infinity,
+              decoration: const BoxDecoration(
+                image: DecorationImage(
+                  image: AssetImage('assets/images/unimet_campus1.png'),
+                  fit: BoxFit.cover,
+                  alignment: Alignment.center,
+                ),
+              ),
+            ),
+          ),
+        ],
+      );
+    }
+
+    // Computadora
     final screenWidth = MediaQuery.of(context).size.width;
     final screenHeight = MediaQuery.of(context).size.height;
     
-    // Altura dinámica
     final double heroHeight = (screenHeight * 0.45).clamp(350.0, 500.0);
     
     if (isMobile) {

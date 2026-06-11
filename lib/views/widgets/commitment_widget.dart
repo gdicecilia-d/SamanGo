@@ -16,6 +16,66 @@ class CommitmentWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Cell 
+    if (isMobile) {
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            'Nuestro Compromiso',
+            style: TextStyle(
+              fontSize: 22,
+              fontWeight: FontWeight.bold,
+              color: Color(0xFF333333),
+            ),
+          ),
+          const SizedBox(height: 18),
+          Column(
+            children: commitments.asMap().entries.map((entry) {
+              return Padding(
+                padding: EdgeInsets.only(bottom: entry.key != commitments.length - 1 ? 20 : 0),
+                child: Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
+                  decoration: BoxDecoration(
+                    color: entry.value.backgroundColor,
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.center,
+                    children: [
+                      Icon(_getIconForTitle(entry.value.title), color: entry.value.titleColor, size: 28),
+                      const SizedBox(height: 10),
+                      Text(
+                        entry.value.title,
+                        style: const TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                          color: Color(0xFFFC6707),
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      Text(
+                        entry.value.description,
+                        textAlign: TextAlign.center,
+                        style: const TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w500,
+                          color: Color(0xFF4A4A4A),
+                          height: 1.45,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              );
+            }).toList(),
+          ),
+        ],
+      );
+    }
+
+    // Computadora 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [

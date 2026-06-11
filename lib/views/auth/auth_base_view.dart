@@ -2,7 +2,6 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../home_view.dart';
-import '../../utils/responsive.dart';
 
 class AuthBaseView extends StatelessWidget {
   final Widget formContent;
@@ -23,7 +22,7 @@ class AuthBaseView extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final screenWidth = MediaQuery.of(context).size.width;
-    final isMobile = screenWidth < Responsive.designWidth * 0.6;
+    final isMobile = screenWidth < 850;
 
     if (isMobile) {
       return _buildMobileLayout(context);
@@ -31,6 +30,7 @@ class AuthBaseView extends StatelessWidget {
     return _buildDesktopLayout(context);
   }
 
+  // Cell 
   Widget _buildMobileLayout(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.white,
@@ -63,10 +63,10 @@ class AuthBaseView extends StatelessWidget {
           },
           child: SingleChildScrollView(
             physics: const BouncingScrollPhysics(),
-            padding: EdgeInsets.all(Responsive.padding(context, 24)),
+            padding: const EdgeInsets.all(20),
             child: Column(
               children: [
-                _buildFormCard(context, isMobile: true),
+                _buildMobileFormCard(context),
               ],
             ),
           ),
@@ -75,17 +75,109 @@ class AuthBaseView extends StatelessWidget {
     );
   }
 
+  // Cell 
+  Widget _buildMobileFormCard(BuildContext context) {
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(color: const Color(0xFFE0E0E0), width: 1.5),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 20,
+            offset: const Offset(0, 8),
+          ),
+        ],
+      ),
+      padding: const EdgeInsets.all(24),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          // Logo clickeable
+          MouseRegion(
+            cursor: SystemMouseCursors.click,
+            child: GestureDetector(
+              onTap: () {
+                Navigator.pushAndRemoveUntil(
+                  context,
+                  MaterialPageRoute(builder: (_) => const HomeView()),
+                  (route) => false,
+                );
+              },
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                crossAxisAlignment: CrossAxisAlignment.center,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Transform.scale(
+                    scale: 1.5,
+                    child: Image.asset(
+                      'assets/images/logo.png',
+                      width: 60,
+                      height: 60,
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  Padding(
+                    padding: const EdgeInsets.only(top: 8),
+                    child: Image.asset(
+                      'assets/images/Nombre.png',
+                      height: 30,
+                      fit: BoxFit.contain,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(height: 24),
+          // Contenido del formulario (viene de login_view, etc.)
+          formContent,
+          if (bottomText != null) ...[
+            const SizedBox(height: 24),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Text(
+                  bottomText!,
+                  style: const TextStyle(
+                    fontSize: 14,
+                    color: Color(0xFF666666),
+                  ),
+                ),
+                if (bottomLinkText != null)
+                  MouseRegion(
+                    cursor: SystemMouseCursors.click,
+                    child: GestureDetector(
+                      onTap: onBottomLinkTap,
+                      child: Text(
+                        bottomLinkText!,
+                        style: const TextStyle(
+                          fontSize: 14,
+                          color: Color(0xFFFC6707),
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  // Computadora 
   Widget _buildDesktopLayout(BuildContext context) {
     final screenWidth = MediaQuery.of(context).size.width;
-    final isLargeScreen = screenWidth > 1600;
-    
-    final double scale = (screenWidth / Responsive.designWidth).clamp(0.65, 1.4);
-    
-    final double formWidth = (520 * scale).clamp(400.0, 700.0);
-    final double circleSize = (580 * scale).clamp(380.0, 750.0);
-    final double leftOffset = (-85 * scale).clamp(-120.0, -50.0);
-    final double leftPadding = (40 * scale).clamp(20.0, 80.0);
-    final double rightPadding = (60 * scale).clamp(30.0, 100.0);
+    final double scale = screenWidth / 1440;
+    final double formWidth = 520 * scale;
+    final double circleSize = 600 * scale;
+    final double leftOffset = -90 * scale;
+    final double leftPadding = 40 * scale;
+    final double rightPadding = 60 * scale;
 
     return Scaffold(
       backgroundColor: Colors.white,
@@ -99,8 +191,8 @@ class AuthBaseView extends StatelessWidget {
                   padding: EdgeInsets.only(
                     left: leftPadding,
                     right: rightPadding,
-                    top: Responsive.padding(context, 40),
-                    bottom: Responsive.padding(context, 40),
+                    top: 40 * scale,
+                    bottom: 40 * scale,
                   ),
                   child: Center(
                     child: SizedBox(
@@ -177,23 +269,25 @@ class AuthBaseView extends StatelessWidget {
     );
   }
 
+  // Computadora 
   Widget _buildFormCard(BuildContext context, {required bool isMobile, double scale = 1.0}) {
-    final double logoWidth = isMobile ? Responsive.width(context, 70) : 75 * scale;
-    final double nombreHeight = isMobile ? Responsive.height(context, 35) : 40 * scale;
-    final double topPadding = isMobile ? Responsive.padding(context, 12) : 20 * scale;
-    final double spacing = isMobile ? Responsive.padding(context, 24) : 32 * scale;
-    final double innerPadding = isMobile ? Responsive.padding(context, 28) : 40 * scale;
+    final double logoWidth = isMobile ? 70 : 75;
+    final double nombreHeight = isMobile ? 35 : 40;
+    final double topPadding = isMobile ? 12 : 20;
+    final double spacing = isMobile ? 24 : 32;
+    final double innerPadding = isMobile ? 28 : 40;
+    final double borderRadius = 28;
 
     return Container(
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(28 * scale),
-        border: Border.all(color: const Color(0xFFE0E0E0), width: 1.5 * scale),
+        borderRadius: BorderRadius.circular(borderRadius),
+        border: Border.all(color: const Color(0xFFE0E0E0), width: 1.5),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withOpacity(0.05),
-            blurRadius: 20 * scale,
-            offset: Offset(0, 8 * scale),
+            blurRadius: 20,
+            offset: const Offset(0, 8),
           ),
         ],
       ),
@@ -225,7 +319,7 @@ class AuthBaseView extends StatelessWidget {
                             height: logoWidth,
                           ),
                         ),
-                        SizedBox(width: 12 * scale),
+                        const SizedBox(width: 12),
                         Padding(
                           padding: EdgeInsets.only(top: topPadding),
                           child: Image.asset(
@@ -244,7 +338,7 @@ class AuthBaseView extends StatelessWidget {
                             height: logoWidth,
                           ),
                         ),
-                        SizedBox(width: 15 * scale),
+                        const SizedBox(width: 15),
                         Padding(
                           padding: EdgeInsets.only(top: topPadding),
                           child: Image.asset(
@@ -260,14 +354,14 @@ class AuthBaseView extends StatelessWidget {
           SizedBox(height: spacing),
           formContent,
           if (bottomText != null) ...[
-            SizedBox(height: 28 * scale),
+            const SizedBox(height: 28),
             Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 Text(
                   bottomText!,
                   style: GoogleFonts.outfit(
-                    fontSize: 14 * scale,
+                    fontSize: 14,
                     color: const Color(0xFF666666),
                   ),
                 ),
@@ -279,7 +373,7 @@ class AuthBaseView extends StatelessWidget {
                       child: Text(
                         bottomLinkText!,
                         style: GoogleFonts.outfit(
-                          fontSize: 14 * scale,
+                          fontSize: 14,
                           color: const Color(0xFFFC6707),
                           fontWeight: FontWeight.bold,
                         ),
@@ -294,6 +388,7 @@ class AuthBaseView extends StatelessWidget {
     );
   }
 
+  // Computadora 
   Widget _buildRightSection(BuildContext context, {required double circleSize, required double leftOffset}) {
     return Container(
       decoration: const BoxDecoration(
@@ -329,16 +424,12 @@ class AuthBaseView extends StatelessWidget {
               ),
             ),
           ),
-          Positioned(
+          const Positioned(
             bottom: 20,
             right: 20,
             child: Text(
               'Copyright © 2026 - SamanGo',
-              style: GoogleFonts.outfit(
-                fontSize: 11,
-                color: Colors.black,
-                fontWeight: FontWeight.w500,
-              ),
+              style: TextStyle(fontSize: 11, color: Colors.black, fontWeight: FontWeight.w500),
             ),
           ),
         ],

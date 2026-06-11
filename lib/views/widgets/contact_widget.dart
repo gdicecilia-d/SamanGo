@@ -13,6 +13,43 @@ class ContactWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Cell 
+    if (isMobile) {
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            'Contáctanos',
+            style: TextStyle(
+              fontSize: 22,
+              fontWeight: FontWeight.bold,
+              color: Color(0xFF333333),
+            ),
+          ),
+          const SizedBox(height: 16),
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(24),
+            decoration: BoxDecoration(
+              color: const Color(0xFFFC6707),
+              borderRadius: BorderRadius.circular(16),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                _buildMobileContactItem(Icons.camera_alt, '@SamanGo_Unimet'),
+                const SizedBox(height: 16),
+                _buildMobileContactItem(Icons.phone, '+58 412-1234567'),
+                const SizedBox(height: 16),
+                _buildMobileContactItem(Icons.email, 'soporte@samango.unimet.edu.ve'),
+              ],
+            ),
+          ),
+        ],
+      );
+    }
+
+    // Computadora 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -41,6 +78,24 @@ class ContactWidget extends StatelessWidget {
               SizedBox(height: Responsive.height(context, 20)),
               _buildContactItem(context, Icons.email, 'soporte@samango.unimet.edu.ve'),
             ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildMobileContactItem(IconData icon, String text) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Icon(icon, color: Colors.white, size: 22),
+        const SizedBox(width: 12),
+        Text(
+          text,
+          style: const TextStyle(
+            fontSize: 14,
+            fontWeight: FontWeight.w500,
+            color: Colors.white,
           ),
         ),
       ],
