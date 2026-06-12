@@ -53,22 +53,21 @@ class DestinationCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final screenWidth = MediaQuery.of(context).size.width;
     
-    // Ancho dinámico según tamaño de pantalla
     double cardWidth;
     double imageHeight;
     
     if (screenWidth < 600) {
-      // Móvil
-      cardWidth = 200;
-      imageHeight = 110;
+      // Teléfono móvil
+      cardWidth = 210;
+      imageHeight = 115;
     } else if (screenWidth < 1200) {
-      // Laptop normal
-      cardWidth = 240;
-      imageHeight = 132;
+      // Pantallas medianas
+      cardWidth = 250;
+      imageHeight = 145;
     } else {
-      // Pantalla grande (>1200px)
-      cardWidth = 320;
-      imageHeight = 176;
+      // Pantallas grandes 
+      cardWidth = 300;
+      imageHeight = 175;
     }
 
     return GestureDetector(
@@ -77,12 +76,12 @@ class DestinationCard extends StatelessWidget {
         width: cardWidth,
         decoration: BoxDecoration(
           color: Colors.white,
-          borderRadius: BorderRadius.circular(20),
+          borderRadius: BorderRadius.circular(16),
           border: Border.all(color: const Color(0xFFE0E0E0), width: 1),
           boxShadow: [
             BoxShadow(
               color: Colors.black.withOpacity(0.05),
-              blurRadius: 8,
+              blurRadius: 6,
               offset: const Offset(0, 2),
             ),
           ],
@@ -91,10 +90,11 @@ class DestinationCard extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           mainAxisSize: MainAxisSize.min,
           children: [
+            // Imagen
             ClipRRect(
               borderRadius: const BorderRadius.only(
-                topLeft: Radius.circular(20),
-                topRight: Radius.circular(20),
+                topLeft: Radius.circular(16),
+                topRight: Radius.circular(16),
               ),
               child: SizedBox(
                 height: imageHeight,
@@ -103,7 +103,7 @@ class DestinationCard extends StatelessWidget {
               ),
             ),
             Padding(
-              padding: const EdgeInsets.all(12),
+              padding: const EdgeInsets.fromLTRB(8, 8, 8, 6),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 mainAxisSize: MainAxisSize.min,
@@ -119,10 +119,11 @@ class DestinationCard extends StatelessWidget {
                     overflow: TextOverflow.ellipsis,
                   ),
                   const SizedBox(height: 4),
+                  // Duración
                   Row(
                     children: [
-                      const Icon(Icons.access_time, size: 14, color: Color(0xFF888888)),
-                      const SizedBox(width: 4),
+                      Icon(Icons.access_time, size: 13, color: const Color(0xFF888888)),
+                      const SizedBox(width: 3),
                       Expanded(
                         child: Text(
                           duracion,
@@ -136,10 +137,11 @@ class DestinationCard extends StatelessWidget {
                       ),
                     ],
                   ),
+                  // Ubicación
                   Row(
                     children: [
-                      const Icon(Icons.location_on, size: 14, color: Color(0xFF888888)),
-                      const SizedBox(width: 4),
+                      Icon(Icons.location_on, size: 13, color: const Color(0xFF888888)),
+                      const SizedBox(width: 3),
                       Expanded(
                         child: Text(
                           ubicacion,
@@ -153,28 +155,29 @@ class DestinationCard extends StatelessWidget {
                       ),
                     ],
                   ),
-                  const SizedBox(height: 8),
+                  const SizedBox(height: 6),
+                  // Precio y cupos
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       Text(
                         '\$${precio.toStringAsFixed(0)}',
                         style: GoogleFonts.outfit(
-                          fontSize: screenWidth > 1200 ? 22 : 20,
+                          fontSize: screenWidth > 1200 ? 19 : 17,
                           fontWeight: FontWeight.bold,
                           color: _primaryColor,
                         ),
                       ),
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
                         decoration: BoxDecoration(
                           color: _cuposColor.withOpacity(0.15),
-                          borderRadius: BorderRadius.circular(12),
+                          borderRadius: BorderRadius.circular(8),
                         ),
                         child: Text(
                           _cuposTexto,
                           style: GoogleFonts.outfit(
-                            fontSize: 10,
+                            fontSize: 11,
                             fontWeight: FontWeight.w600,
                             color: _cuposColor,
                           ),
@@ -182,7 +185,8 @@ class DestinationCard extends StatelessWidget {
                       ),
                     ],
                   ),
-                  const SizedBox(height: 8),
+                  const SizedBox(height: 4),
+                  // Botón "Ver más"
                   Align(
                     alignment: Alignment.centerRight,
                     child: TextButton(

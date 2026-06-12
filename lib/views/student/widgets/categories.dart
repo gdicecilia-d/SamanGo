@@ -12,9 +12,11 @@ class CategoriesSection extends StatelessWidget {
     final isMobile = screenWidth < 850;
     final isLargeScreen = screenWidth > 1400;
 
-    final double cardHeight = isMobile ? 120 : (isLargeScreen ? 180 : 140);
+    // Altura de las tarjetas 
+    final double cardHeight = isMobile ? 140 : (isLargeScreen ? 220 : 160);
     
-    final double titleFontSize = isMobile ? 20 : (isLargeScreen ? 28 : 24);
+    // Tamaño del título
+    final double titleFontSize = isMobile ? 22 : (isLargeScreen ? 32 : 26);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -30,7 +32,7 @@ class CategoriesSection extends StatelessWidget {
             ),
           ),
         ),
-        const SizedBox(height: 16),
+        const SizedBox(height: 20),
         Padding(
           padding: EdgeInsets.symmetric(horizontal: isMobile ? 16 : 24),
           child: isMobile
@@ -48,11 +50,11 @@ class CategoriesSection extends StatelessWidget {
               : Row(
                   children: [
                     Expanded(child: _buildCategoryCard('Playas / Cayos', 'assets/images/playas_cayos.png', cardHeight, context)),
-                    const SizedBox(width: 16),
+                    const SizedBox(width: 20),
                     Expanded(child: _buildCategoryCard('Montañas / Trekking', 'assets/images/montañas_trekking.png', cardHeight, context)),
-                    const SizedBox(width: 16),
+                    const SizedBox(width: 20),
                     Expanded(child: _buildCategoryCard('Aventura / Ríos', 'assets/images/aventuras_rios.png', cardHeight, context)),
-                    const SizedBox(width: 16),
+                    const SizedBox(width: 20),
                     Expanded(child: _buildCategoryCard('Cultura / Ciudades', 'assets/images/cultura_ciudades.png', cardHeight, context)),
                   ],
                 ),
@@ -64,7 +66,8 @@ class CategoriesSection extends StatelessWidget {
   Widget _buildCategoryCard(String title, String imagePath, double cardHeight, BuildContext context) {
     final screenWidth = MediaQuery.of(context).size.width;
     final isLargeScreen = screenWidth > 1400;
-    final double fontSize = isLargeScreen ? 20 : 16;
+    // Fuente más grande
+    final double fontSize = isLargeScreen ? 22 : 18;
     
     return MouseRegion(
       cursor: SystemMouseCursors.click,
@@ -87,7 +90,7 @@ class CategoriesSection extends StatelessWidget {
           height: cardHeight,
           width: double.infinity,
           decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(16),
+            borderRadius: BorderRadius.circular(20),
             image: DecorationImage(
               image: AssetImage(imagePath),
               fit: BoxFit.cover,
@@ -95,24 +98,27 @@ class CategoriesSection extends StatelessWidget {
           ),
           child: Container(
             decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(16),
+              borderRadius: BorderRadius.circular(20),
               gradient: LinearGradient(
                 begin: Alignment.center,
                 end: Alignment.bottomCenter,
                 colors: [
                   Colors.black.withOpacity(0.4),
-                  Colors.black.withOpacity(0.7),
+                  Colors.black.withOpacity(0.75),
                 ],
               ),
             ),
             child: Center(
-              child: Text(
-                title,
-                textAlign: TextAlign.center,
-                style: GoogleFonts.outfit(
-                  fontSize: fontSize,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.white,
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 12),
+                child: Text(
+                  title,
+                  textAlign: TextAlign.center,
+                  style: GoogleFonts.outfit(
+                    fontSize: fontSize,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.white,
+                  ),
                 ),
               ),
             ),

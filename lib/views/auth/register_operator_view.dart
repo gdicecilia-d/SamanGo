@@ -10,6 +10,7 @@ import 'select_role_view.dart';
 import '../../models/validators.dart';
 import '../../controllers/auth_controller.dart';
 import '../../utils/responsive.dart';
+import '../student/terms_view.dart';
 
 class RegisterOperatorView extends StatefulWidget {
   const RegisterOperatorView({super.key});
@@ -634,20 +635,9 @@ class _RegisterOperatorViewState extends State<RegisterOperatorView> {
         Expanded(
           child: GestureDetector(
             onTap: () {
-              showDialog(
-                context: context,
-                builder: (context) => AlertDialog(
-                  title: const Text('Términos y Condiciones'),
-                  content: const SingleChildScrollView(
-                    child: Text('Aquí van los términos y condiciones de la aplicación...'),
-                  ),
-                  actions: [
-                    TextButton(
-                      onPressed: () => Navigator.pop(context),
-                      child: const Text('Cerrar', style: TextStyle(color: Color(0xFFFC6707))),
-                    ),
-                  ],
-                ),
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const TermsView()),
               );
             },
             child: const Text(
@@ -841,20 +831,9 @@ class _RegisterOperatorViewState extends State<RegisterOperatorView> {
         Expanded(
           child: GestureDetector(
             onTap: () {
-              showDialog(
-                context: context,
-                builder: (context) => AlertDialog(
-                  title: Text('Términos y Condiciones', style: GoogleFonts.outfit(fontWeight: FontWeight.bold)),
-                  content: SingleChildScrollView(
-                    child: Text('Aquí van los términos y condiciones de la aplicación...', style: GoogleFonts.outfit()),
-                  ),
-                  actions: [
-                    TextButton(
-                      onPressed: () => Navigator.pop(context),
-                      child: Text('Cerrar', style: GoogleFonts.outfit(color: const Color(0xFFFC6707))),
-                    ),
-                  ],
-                ),
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const TermsView()),
               );
             },
             child: Text(

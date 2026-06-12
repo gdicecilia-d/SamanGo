@@ -1,12 +1,21 @@
 // Pantalla que muestra los resultados de la búsqueda
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:provider/provider.dart';
 import '../shared/app_header.dart';
 import 'widgets/destination_card.dart';
 import 'widgets/horizontal_scroll_section.dart';
+import 'widgets/student_footer.dart';
 import 'destination_detail_view.dart';
 import 'favorites_view.dart';
+import 'edit_profile_view.dart';
+import 'student_home_view.dart';
+import '../../controllers/auth_controller.dart';
+import '../../views/shared/widgets/custom_dialog.dart';
+import '../auth/login_view.dart';
+import 'notifications_view.dart';
 
 class SearchResultsView extends StatefulWidget {
   final String destino;
@@ -31,6 +40,55 @@ class SearchResultsView extends StatefulWidget {
 class _SearchResultsViewState extends State<SearchResultsView> {
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
   final List<String> _menuItems = ['Inicio', 'Mis Viajes', 'Favoritos'];
+
+  void _handleMenuSelected(String menu) {
+    if (menu == 'Inicio') {
+      Navigator.pushAndRemoveUntil(
+        context,
+        MaterialPageRoute(builder: (_) => const StudentHomeView()),
+        (route) => false,
+      );
+    } else if (menu == 'Mis Viajes') {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Mis Viajes - Próximamente'), backgroundColor: Color(0xFFFC6707)),
+      );
+    } else if (menu == 'Favoritos') {
+      Navigator.push(
+        context,
+        MaterialPageRoute(builder: (_) => const FavoritesView()),
+      );
+    }
+  }
+
+  void _handleEditProfile() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (_) => const EditProfileView()),
+    );
+  }
+
+  void _handleLogout() {
+    CustomConfirmDialog.show(
+      context: context,
+      title: 'Cerrar Sesión',
+      message: '¿Estás seguro de que deseas cerrar sesión?',
+      confirmText: 'Salir',
+      icon: Icons.logout,
+    ).then((confirm) async {
+      if (confirm == true) {
+        await Provider.of<AuthController>(context, listen: false).logout();
+        if (!context.mounted) return;
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (_) => const LoginView()),
+        );
+      }
+    });
+  }
+
+  void _openDrawer() {
+    _scaffoldKey.currentState?.openEndDrawer();
+  }
 
   Future<List<QueryDocumentSnapshot>> _buscarDestinos() async {
     Query query = FirebaseFirestore.instance.collection('destinos');
@@ -89,29 +147,17 @@ class _SearchResultsViewState extends State<SearchResultsView> {
     return Scaffold(
       key: _scaffoldKey,
       backgroundColor: Colors.white,
+      endDrawer: isMobile ? _buildDrawer() : null,
       body: Column(
         children: [
           AppHeader(
             activeMenu: '',
-            onMenuSelected: (menu) {
-              if (menu == 'Inicio') {
-                Navigator.pop(context);
-              } else if (menu == 'Mis Viajes') {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Mis Viajes - Próximamente'), backgroundColor: Color(0xFFFC6707)),
-                );
-              } else if (menu == 'Favoritos') {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (_) => const FavoritesView()),
-                );
-              }
-            },
-            onEditProfile: () {},
-            onLogout: () {},
+            onMenuSelected: _handleMenuSelected,
+            onEditProfile: _handleEditProfile,
+            onLogout: _handleLogout,
             menuItems: _menuItems,
             isMobile: isMobile,
-            onMenuTap: null,
+            onMenuTap: isMobile ? _openDrawer : null,
           ),
           Expanded(
             child: FutureBuilder<List<QueryDocumentSnapshot>>(
@@ -244,32 +290,37 @@ class _SearchResultsViewState extends State<SearchResultsView> {
                               ),
                             )
                           : SingleChildScrollView(
-                              child: HorizontalScrollSection(
-                                title: '',
-                                showTitle: false,
-                                children: resultados.map((doc) {
-                                  final data = doc.data() as Map<String, dynamic>;
-                                  final isOffer = data['isOffer'] == true;
-                                  
-                                  return DestinationCard(
-                                    id: doc.id,
-                                    nombre: data['nombre'] ?? 'Sin título',
-                                    ubicacion: data['ubicacion'] ?? '',
-                                    precio: (data['precio'] ?? 0).toDouble(),
-                                    duracion: data['duracion'] ?? 'Full Day',
-                                    imagenUrl: data['imagen'] ?? '',
-                                    isOffer: isOffer,
-                                    cuposDisponibles: data['cuposDisponibles'] ?? 0,
-                                    onTap: () {
-                                      Navigator.push(
-                                        context,
-                                        MaterialPageRoute(
-                                          builder: (_) => DestinationDetailView(destinoId: doc.id),
-                                        ),
+                              child: Column(
+                                children: [
+                                  HorizontalScrollSection(
+                                    title: '',
+                                    showTitle: false,
+                                    children: resultados.map((doc) {
+                                      final data = doc.data() as Map<String, dynamic>;
+                                      final isOffer = data['isOffer'] == true;
+                                      
+                                      return DestinationCard(
+                                        id: doc.id,
+                                        nombre: data['nombre'] ?? 'Sin título',
+                                        ubicacion: data['ubicacion'] ?? '',
+                                        precio: (data['precio'] ?? 0).toDouble(),
+                                        duracion: data['duracion'] ?? 'Full Day',
+                                        imagenUrl: data['imagen'] ?? '',
+                                        isOffer: isOffer,
+                                        cuposDisponibles: data['cuposDisponibles'] ?? 0,
+                                        onTap: () {
+                                          Navigator.push(
+                                            context,
+                                            MaterialPageRoute(
+                                              builder: (_) => DestinationDetailView(destinoId: doc.id),
+                                            ),
+                                          );
+                                        },
                                       );
-                                    },
-                                  );
-                                }).toList(),
+                                    }).toList(),
+                                  ),
+                                  const SizedBox(height: 40),
+                                ],
                               ),
                             ),
                     ),
@@ -278,8 +329,140 @@ class _SearchResultsViewState extends State<SearchResultsView> {
               },
             ),
           ),
+          StudentFooter(isMobile: isMobile),
         ],
       ),
+    );
+  }
+
+  Widget _buildDrawer() {
+    final auth = Provider.of<AuthController>(context);
+    final user = auth.usuarioActual;
+    
+    return Drawer(
+      backgroundColor: Colors.white,
+      width: 280,
+      child: SafeArea(
+        child: Column(
+          children: [
+            const SizedBox(height: 24),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 24),
+              child: Row(
+                children: [
+                  GestureDetector(
+                    onTap: _handleEditProfile,
+                    child: Container(
+                      width: 50,
+                      height: 50,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        border: Border.all(color: const Color(0xFFFC6707), width: 2),
+                      ),
+                      child: ClipOval(
+                        child: user?.fotoBase64 != null && user!.fotoBase64!.isNotEmpty
+                            ? Image.memory(
+                                base64Decode(user.fotoBase64!),
+                                width: 50,
+                                height: 50,
+                                fit: BoxFit.cover,
+                              )
+                            : const CircleAvatar(
+                                backgroundColor: Color(0xFFFDDBB3),
+                                child: Icon(Icons.person, color: Color(0xFFFC6707), size: 28),
+                              ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          user?.nombre ?? 'Estudiante',
+                          style: GoogleFonts.outfit(fontSize: 16, fontWeight: FontWeight.bold, color: const Color(0xFF333333)),
+                        ),
+                        Text(
+                          user?.apellido ?? '',
+                          style: GoogleFonts.outfit(fontSize: 14, color: const Color(0xFF666666)),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 16),
+            const Divider(height: 1, thickness: 1, color: Color(0xFFE0E0E0)),
+            Expanded(
+              child: SingleChildScrollView(
+                child: Column(
+                  children: [
+                    _buildDrawerItem('Inicio', Icons.home_outlined, () {
+                      Navigator.pop(context);
+                      Navigator.pushAndRemoveUntil(
+                        context,
+                        MaterialPageRoute(builder: (_) => const StudentHomeView()),
+                        (route) => false,
+                      );
+                    }),
+                    _buildDrawerItem('Mis Viajes', Icons.airplane_ticket_outlined, () {
+                      Navigator.pop(context);
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text('Mis Viajes - Próximamente'),
+                          backgroundColor: Color(0xFFFC6707),
+                        ),
+                      );
+                    }),
+                    _buildDrawerItem('Favoritos', Icons.favorite_border, () {
+                      Navigator.pop(context);
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (_) => const FavoritesView()),
+                      );
+                    }),
+                    _buildDrawerItem('Notificaciones', Icons.notifications_outlined, () {
+                      Navigator.pop(context);
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (_) => const NotificationsView()),
+                      );
+                    }),
+                    const SizedBox(height: 16),
+                  ],
+                ),
+              ),
+            ),
+            Column(
+              children: [
+                const Divider(height: 1, thickness: 1, color: Color(0xFFE0E0E0)),
+                _buildDrawerItem('Cerrar Sesión', Icons.logout_outlined, () {
+                  Navigator.pop(context);
+                  _handleLogout();
+                }),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildDrawerItem(String title, IconData icon, VoidCallback onTap) {
+    final isActive = title == 'Favoritos';
+    return ListTile(
+      leading: Icon(icon, color: const Color(0xFFFC6707)),
+      title: Text(
+        title,
+        style: GoogleFonts.outfit(
+          fontSize: 16,
+          fontWeight: isActive ? FontWeight.bold : FontWeight.w500,
+          color: isActive ? const Color(0xFFFC6707) : const Color(0xFF333333),
+        ),
+      ),
+      onTap: onTap,
     );
   }
 

@@ -131,16 +131,17 @@ class _SearchBarWidgetState extends State<SearchBarWidget> {
   }
 
   Widget _buildDesktopLayout(bool isLargeScreen) {
-    final imageHeight = isLargeScreen ? 250.0 : 200.0;
-    final containerHeight = isLargeScreen ? 280.0 : 220.0;
+    // Altura 
+    final imageHeight = isLargeScreen ? 160.0 : 170.0;
+    final containerHeight = isLargeScreen ? 190.0 : 200.0;
     final fontSize = isLargeScreen ? 16.0 : 14.0;
-    final paddingHorizontal = isLargeScreen ? 40.0 : 24.0;
 
     return Container(
-      margin: EdgeInsets.symmetric(horizontal: paddingHorizontal),
+      margin: EdgeInsets.zero,
       height: containerHeight,
+      width: double.infinity,
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(16),
         image: const DecorationImage(
           image: AssetImage('assets/images/imagen_buscador.png'),
           fit: BoxFit.cover,
@@ -148,7 +149,7 @@ class _SearchBarWidgetState extends State<SearchBarWidget> {
       ),
       child: Center(
         child: Container(
-          margin: const EdgeInsets.symmetric(horizontal: 20),
+          margin: const EdgeInsets.symmetric(horizontal: 24),
           padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
           decoration: BoxDecoration(
             color: Colors.white.withOpacity(0.9),

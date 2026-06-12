@@ -153,6 +153,8 @@ class _AppHeaderState extends State<AppHeader> {
                         ),
                       ),
                       const SizedBox(height: 8),
+                      const Divider(height: 1, thickness: 1, color: Color(0xFFE0E0E0)),
+                      const SizedBox(height: 8),
                       MouseRegion(
                         cursor: SystemMouseCursors.click,
                         child: GestureDetector(
@@ -204,7 +206,7 @@ class _AppHeaderState extends State<AppHeader> {
     final double iconSize = isLargeScreen ? 28.0 : 24.0;
     final double paddingHorizontal = isLargeScreen ? 48.0 : 24.0;
     
-    // Cell
+    // Cell 
     if (widget.isMobile) {
       return Container(
         color: Colors.white,
@@ -237,7 +239,7 @@ class _AppHeaderState extends State<AppHeader> {
       );
     }
 
-    // Compu
+    // Compu 
     return Container(
       decoration: const BoxDecoration(
         color: Colors.white,

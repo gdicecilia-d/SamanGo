@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
@@ -13,8 +14,10 @@ import 'edit_profile_view.dart';
 import 'payment_view.dart';
 import 'ticket_view.dart';
 import 'review_view.dart';
+import 'widgets/student_footer.dart';
 import '../../views/shared/widgets/custom_dialog.dart';
 import '../auth/login_view.dart';
+import 'notifications_view.dart';
 
 class MyTripsView extends StatefulWidget {
   const MyTripsView({super.key});
@@ -132,7 +135,7 @@ class _MyTripsViewState extends State<MyTripsView> with SingleTickerProviderStat
                 final reservas = snapshot.data ?? [];
 
                 final solicitudes = reservas.where((r) => r.estadoActual == EstadoReserva.solicitado).toList();
-                final listosParaPagar = reservas.where((r) => r.estadoActual == EstadoReserva.aceptado || r.estadoActual == EstadoReserva.verificandoPago).toList();
+                final listosParaPagar = reservas.where((r) => r.estadoActual == EstadoReserva.aceptado).toList();
                 final proximos = reservas.where((r) => r.estadoActual == EstadoReserva.pagado).toList();
                 final disfrutados = reservas.where((r) => r.estadoActual == EstadoReserva.disfrutado).toList();
 
@@ -148,8 +151,127 @@ class _MyTripsViewState extends State<MyTripsView> with SingleTickerProviderStat
               },
             ),
           ),
+          StudentFooter(isMobile: isMobile),
         ],
       ),
+    );
+  }
+
+  Widget _buildDrawer() {
+    final auth = Provider.of<AuthController>(context);
+    final user = auth.usuarioActual;
+    
+    return Drawer(
+      backgroundColor: Colors.white,
+      width: 280,
+      child: SafeArea(
+        child: Column(
+          children: [
+            const SizedBox(height: 24),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 24),
+              child: Row(
+                children: [
+                  GestureDetector(
+                    onTap: _handleEditProfile,
+                    child: Container(
+                      width: 50,
+                      height: 50,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        border: Border.all(color: const Color(0xFFFC6707), width: 2),
+                      ),
+                      child: ClipOval(
+                        child: user?.fotoBase64 != null && user!.fotoBase64!.isNotEmpty
+                            ? Image.memory(
+                                base64Decode(user.fotoBase64!),
+                                width: 50,
+                                height: 50,
+                                fit: BoxFit.cover,
+                              )
+                            : const CircleAvatar(
+                                backgroundColor: Color(0xFFFDDBB3),
+                                child: Icon(Icons.person, color: Color(0xFFFC6707), size: 28),
+                              ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          user?.nombre ?? 'Estudiante',
+                          style: GoogleFonts.outfit(fontSize: 16, fontWeight: FontWeight.bold, color: const Color(0xFF333333)),
+                        ),
+                        Text(
+                          user?.apellido ?? '',
+                          style: GoogleFonts.outfit(fontSize: 14, color: const Color(0xFF666666)),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 16),
+            const Divider(height: 1, thickness: 1, color: Color(0xFFE0E0E0)),
+            Expanded(
+              child: SingleChildScrollView(
+                child: Column(
+                  children: [
+                    _buildDrawerItem('Inicio', Icons.home_outlined, () {
+                      Navigator.pop(context);
+                      _handleMenuSelected('Inicio');
+                    }),
+                    _buildDrawerItem('Mis Viajes', Icons.airplane_ticket_outlined, () {
+                      Navigator.pop(context);
+                    }),
+                    _buildDrawerItem('Favoritos', Icons.favorite_border, () {
+                      Navigator.pop(context);
+                      _handleMenuSelected('Favoritos');
+                    }),
+                    _buildDrawerItem('Notificaciones', Icons.notifications_outlined, () {
+                      Navigator.pop(context);
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (_) => const NotificationsView()),
+                      );
+                    }),
+                    const SizedBox(height: 16),
+                  ],
+                ),
+              ),
+            ),
+            Column(
+              children: [
+                const Divider(height: 1, thickness: 1, color: Color(0xFFE0E0E0)),
+                _buildDrawerItem('Cerrar Sesión', Icons.logout_outlined, () {
+                  Navigator.pop(context);
+                  _handleLogout();
+                }),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildDrawerItem(String title, IconData icon, VoidCallback onTap) {
+    final isActive = title == 'Mis Viajes';
+    return ListTile(
+      leading: Icon(icon, color: const Color(0xFFFC6707)),
+      title: Text(
+        title,
+        style: GoogleFonts.outfit(
+          fontSize: 16,
+          fontWeight: isActive ? FontWeight.bold : FontWeight.w500,
+          color: isActive ? const Color(0xFFFC6707) : const Color(0xFF333333),
+        ),
+      ),
+      onTap: onTap,
     );
   }
 
@@ -197,12 +319,12 @@ class _MyTripsViewState extends State<MyTripsView> with SingleTickerProviderStat
         } else if (reserva.estadoActual == EstadoReserva.aceptado) {
           statusText = 'Listo para Pagar';
           statusColor = Colors.green;
-        } else if (reserva.estadoActual == EstadoReserva.verificandoPago) {
-          statusText = 'Verificando Pago';
-          statusColor = Colors.amber;
         } else if (reserva.estadoActual == EstadoReserva.pagado) {
           statusText = 'Confirmado';
           statusColor = Colors.blue;
+        } else if (reserva.estadoActual == EstadoReserva.disfrutado) {
+          statusText = 'Disfrutado';
+          statusColor = Colors.purple;
         }
 
         return Card(
@@ -256,7 +378,6 @@ class _MyTripsViewState extends State<MyTripsView> with SingleTickerProviderStat
           ElevatedButton(
             onPressed: () {
               ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Cancelando...')));
-              // Cancel logic
             },
             style: ElevatedButton.styleFrom(backgroundColor: Colors.purple, foregroundColor: Colors.white),
             child: const Text('Cancelar solicitud'),
@@ -323,40 +444,5 @@ class _MyTripsViewState extends State<MyTripsView> with SingleTickerProviderStat
       );
     }
     return const SizedBox();
-  }
-
-  Widget _buildDrawer() {
-    return Drawer(
-      backgroundColor: Colors.white,
-      child: ListView(
-        padding: EdgeInsets.zero,
-        children: [
-          const DrawerHeader(
-            decoration: BoxDecoration(color: Color(0xFFFC6707)),
-            child: Text('SamanGo', style: TextStyle(color: Colors.white, fontSize: 24)),
-          ),
-          ListTile(
-            title: const Text('Inicio'),
-            onTap: () {
-              Navigator.pop(context);
-              _handleMenuSelected('Inicio');
-            },
-          ),
-          ListTile(
-            title: const Text('Mis Viajes', style: TextStyle(color: Color(0xFFFC6707), fontWeight: FontWeight.bold)),
-            onTap: () {
-              Navigator.pop(context);
-            },
-          ),
-          ListTile(
-            title: const Text('Favoritos'),
-            onTap: () {
-              Navigator.pop(context);
-              _handleMenuSelected('Favoritos');
-            },
-          ),
-        ],
-      ),
-    );
   }
 }

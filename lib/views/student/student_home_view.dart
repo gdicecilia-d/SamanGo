@@ -1,4 +1,5 @@
 // Home estudiante 
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
@@ -17,6 +18,7 @@ import '../../views/shared/widgets/custom_dialog.dart';
 import '../auth/login_view.dart';
 import '../../controllers/notificacion_controller.dart';
 import 'widgets/notifications_panel.dart';
+import 'notifications_view.dart';
 
 class StudentHomeView extends StatefulWidget {
   const StudentHomeView({super.key});
@@ -153,7 +155,7 @@ class _StudentHomeViewState extends State<StudentHomeView> {
                         ),
                         const SizedBox(height: 24),
                         _buildMainContent(isMobile: true),
-                        _buildFooter(true),
+                        const SizedBox(height: 40),
                       ],
                     ),
                   )
@@ -242,16 +244,28 @@ class _StudentHomeViewState extends State<StudentHomeView> {
               padding: const EdgeInsets.symmetric(horizontal: 24),
               child: Row(
                 children: [
-                  Container(
-                    width: 50,
-                    height: 50,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      border: Border.all(color: const Color(0xFFFC6707), width: 2),
-                    ),
-                    child: const CircleAvatar(
-                      backgroundColor: Color(0xFFFDDBB3),
-                      child: Icon(Icons.person, color: Color(0xFFFC6707), size: 28),
+                  GestureDetector(
+                    onTap: _handleEditProfile,
+                    child: Container(
+                      width: 50,
+                      height: 50,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        border: Border.all(color: const Color(0xFFFC6707), width: 2),
+                      ),
+                      child: ClipOval(
+                        child: user?.fotoBase64 != null && user!.fotoBase64!.isNotEmpty
+                            ? Image.memory(
+                                base64Decode(user.fotoBase64!),
+                                width: 50,
+                                height: 50,
+                                fit: BoxFit.cover,
+                              )
+                            : const CircleAvatar(
+                                backgroundColor: Color(0xFFFDDBB3),
+                                child: Icon(Icons.person, color: Color(0xFFFC6707), size: 28),
+                              ),
+                      ),
                     ),
                   ),
                   const SizedBox(width: 12),
@@ -275,27 +289,42 @@ class _StudentHomeViewState extends State<StudentHomeView> {
             ),
             const SizedBox(height: 16),
             const Divider(height: 1, thickness: 1, color: Color(0xFFE0E0E0)),
-            _buildDrawerItem('Inicio', Icons.home_outlined, () {
-              Navigator.pop(context);
-            }),
-            _buildDrawerItem('Mis Viajes', Icons.airplane_ticket_outlined, () {
-              Navigator.pop(context);
-              _handleMenuSelected('Mis Viajes');
-            }),
-            _buildDrawerItem('Favoritos', Icons.favorite_border, () {
-              Navigator.pop(context);
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (_) => const FavoritesView()),
-              );
-            }),
-            const Spacer(),
-            const Divider(height: 1, thickness: 1, color: Color(0xFFE0E0E0)),
-            _buildDrawerItem('Cerrar Sesión', Icons.logout_outlined, () {
-              Navigator.pop(context);
-              _handleLogout();
-            }),
-            const SizedBox(height: 24),
+            Expanded(
+              child: SingleChildScrollView(
+                child: Column(
+                  children: [
+                    _buildDrawerItem('Inicio', Icons.home_outlined, () {
+                      Navigator.pop(context);
+                    }),
+                    _buildDrawerItem('Mis Viajes', Icons.airplane_ticket_outlined, () {
+                      Navigator.pop(context);
+                      _handleMenuSelected('Mis Viajes');
+                    }),
+                    _buildDrawerItem('Favoritos', Icons.favorite_border, () {
+                      Navigator.pop(context);
+                      _handleMenuSelected('Favoritos');
+                    }),
+                    _buildDrawerItem('Notificaciones', Icons.notifications_outlined, () {
+                      Navigator.pop(context);
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (_) => const NotificationsView()),
+                      );
+                    }),
+                    const SizedBox(height: 16),
+                  ],
+                ),
+              ),
+            ),
+            Column(
+              children: [
+                const Divider(height: 1, thickness: 1, color: Color(0xFFE0E0E0)),
+                _buildDrawerItem('Cerrar Sesión', Icons.logout_outlined, () {
+                  Navigator.pop(context);
+                  _handleLogout();
+                }),
+              ],
+            ),
           ],
         ),
       ),
@@ -303,11 +332,16 @@ class _StudentHomeViewState extends State<StudentHomeView> {
   }
 
   Widget _buildDrawerItem(String title, IconData icon, VoidCallback onTap) {
+    final isActive = title == _activeMenu;
     return ListTile(
       leading: Icon(icon, color: const Color(0xFFFC6707)),
       title: Text(
         title,
-        style: GoogleFonts.outfit(fontSize: 16, fontWeight: FontWeight.w500, color: const Color(0xFF333333)),
+        style: GoogleFonts.outfit(
+          fontSize: 16,
+          fontWeight: isActive ? FontWeight.bold : FontWeight.w500,
+          color: isActive ? const Color(0xFFFC6707) : const Color(0xFF333333),
+        ),
       ),
       onTap: onTap,
     );
@@ -478,7 +512,7 @@ class _StudentHomeViewState extends State<StudentHomeView> {
   Widget _buildFooter(bool isMobile) {
     return Container(
       width: double.infinity,
-      padding: EdgeInsets.symmetric(vertical: isMobile ? 16 : 20),
+      padding: EdgeInsets.symmetric(vertical: isMobile ? 12 : 16),
       margin: const EdgeInsets.only(top: 40),
       decoration: const BoxDecoration(
         color: Color(0xFFFC6707),

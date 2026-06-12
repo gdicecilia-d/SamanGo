@@ -24,6 +24,8 @@ class _HorizontalScrollSectionState extends State<HorizontalScrollSection> {
   final ScrollController _scrollController = ScrollController();
   bool _showLeftArrow = false;
   bool _showRightArrow = false;
+  bool _hoverLeft = false;
+  bool _hoverRight = false;
 
   @override
   void initState() {
@@ -70,6 +72,16 @@ class _HorizontalScrollSectionState extends State<HorizontalScrollSection> {
   Widget build(BuildContext context) {
     final screenWidth = MediaQuery.of(context).size.width;
     final isMobile = screenWidth < 850;
+    
+    // Altura
+    double containerHeight;
+    if (screenWidth < 600) {
+      containerHeight = 250;
+    } else if (screenWidth < 1200) {
+      containerHeight = 290;
+    } else {
+      containerHeight = 340;
+    }
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -126,7 +138,7 @@ class _HorizontalScrollSectionState extends State<HorizontalScrollSection> {
           Stack(
             children: [
               SizedBox(
-                height: isMobile ? 290 : 400,
+                height: containerHeight,
                 child: ListView.separated(
                   controller: _scrollController,
                   scrollDirection: Axis.horizontal,
@@ -136,6 +148,7 @@ class _HorizontalScrollSectionState extends State<HorizontalScrollSection> {
                   itemBuilder: (context, index) => widget.children[index],
                 ),
               ),
+              // Flecha izquierda
               if (_showLeftArrow && !isMobile)
                 Positioned(
                   left: 8,
@@ -144,25 +157,30 @@ class _HorizontalScrollSectionState extends State<HorizontalScrollSection> {
                   child: Center(
                     child: MouseRegion(
                       cursor: SystemMouseCursors.click,
+                      onEnter: (_) => setState(() => _hoverLeft = true),
+                      onExit: (_) => setState(() => _hoverLeft = false),
                       child: GestureDetector(
                         onTap: _scrollLeft,
-                        child: Container(
+                        child: AnimatedContainer(
+                          duration: const Duration(milliseconds: 150),
                           width: 40,
                           height: 40,
                           decoration: BoxDecoration(
-                            color: const Color(0xFFFC6707),
+                            color: _hoverLeft ? const Color(0xFFFC6707) : Colors.transparent,
                             shape: BoxShape.circle,
-                            boxShadow: [
-                              BoxShadow(
-                                color: Colors.black.withOpacity(0.2),
-                                blurRadius: 8,
-                                offset: const Offset(0, 2),
-                              ),
-                            ],
+                            boxShadow: _hoverLeft
+                                ? [
+                                    BoxShadow(
+                                      color: Colors.black.withOpacity(0.2),
+                                      blurRadius: 8,
+                                      offset: const Offset(0, 2),
+                                    ),
+                                  ]
+                                : null,
                           ),
-                          child: const Icon(
+                          child: Icon(
                             Icons.chevron_left,
-                            color: Colors.white,
+                            color: _hoverLeft ? Colors.white : const Color(0xFFCCCCCC),
                             size: 32,
                           ),
                         ),
@@ -170,6 +188,7 @@ class _HorizontalScrollSectionState extends State<HorizontalScrollSection> {
                     ),
                   ),
                 ),
+              // Flecha derecha
               if (_showRightArrow && !isMobile)
                 Positioned(
                   right: 8,
@@ -178,25 +197,30 @@ class _HorizontalScrollSectionState extends State<HorizontalScrollSection> {
                   child: Center(
                     child: MouseRegion(
                       cursor: SystemMouseCursors.click,
+                      onEnter: (_) => setState(() => _hoverRight = true),
+                      onExit: (_) => setState(() => _hoverRight = false),
                       child: GestureDetector(
                         onTap: _scrollRight,
-                        child: Container(
+                        child: AnimatedContainer(
+                          duration: const Duration(milliseconds: 150),
                           width: 40,
                           height: 40,
                           decoration: BoxDecoration(
-                            color: const Color(0xFFFC6707),
+                            color: _hoverRight ? const Color(0xFFFC6707) : Colors.transparent,
                             shape: BoxShape.circle,
-                            boxShadow: [
-                              BoxShadow(
-                                color: Colors.black.withOpacity(0.2),
-                                blurRadius: 8,
-                                offset: const Offset(0, 2),
-                              ),
-                            ],
+                            boxShadow: _hoverRight
+                                ? [
+                                    BoxShadow(
+                                      color: Colors.black.withOpacity(0.2),
+                                      blurRadius: 8,
+                                      offset: const Offset(0, 2),
+                                    ),
+                                  ]
+                                : null,
                           ),
-                          child: const Icon(
+                          child: Icon(
                             Icons.chevron_right,
-                            color: Colors.white,
+                            color: _hoverRight ? Colors.white : const Color(0xFFCCCCCC),
                             size: 32,
                           ),
                         ),
