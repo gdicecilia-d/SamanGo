@@ -12,6 +12,7 @@ import 'widgets/student_footer.dart';
 import 'destination_detail_view.dart';
 import 'edit_profile_view.dart';
 import 'student_home_view.dart';
+import 'my_trips_view.dart';
 import '../../views/shared/widgets/custom_dialog.dart';
 import '../auth/login_view.dart';
 import 'notifications_view.dart';
@@ -47,11 +48,9 @@ class _FavoritesViewState extends State<FavoritesView> {
         (route) => false,
       );
     } else if (menu == 'Mis Viajes') {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Mis Viajes - Próximamente'),
-          backgroundColor: Color(0xFFFC6707),
-        ),
+      Navigator.push(
+        context,
+        MaterialPageRoute(builder: (_) => const MyTripsView()),
       );
     }
   }
@@ -332,11 +331,9 @@ class _FavoritesViewState extends State<FavoritesView> {
                     }),
                     _buildDrawerItem('Mis Viajes', Icons.airplane_ticket_outlined, () {
                       Navigator.pop(context);
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text('Mis Viajes - Próximamente'),
-                          backgroundColor: Color(0xFFFC6707),
-                        ),
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (_) => const MyTripsView()),
                       );
                     }),
                     _buildDrawerItem('Favoritos', Icons.favorite, () {

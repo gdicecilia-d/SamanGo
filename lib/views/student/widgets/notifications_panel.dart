@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import '../../../controllers/notificacion_controller.dart';
-import '../destination_detail_view.dart';
 
 class NotificationsPanel extends StatelessWidget {
   const NotificationsPanel({super.key});
@@ -90,16 +89,9 @@ class NotificationsPanel extends StatelessWidget {
                       ),
                       child: InkWell(
                         onTap: () {
+                          // OPERADOR: SOLO marcar como leída, NO navegar
                           if (!notificacion.leida) {
                             notificacionController.marcarComoLeida(notificacion.id);
-                          }
-                          if (notificacion.idPaquete != null && notificacion.idPaquete!.isNotEmpty) {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (_) => DestinationDetailView(destinoId: notificacion.idPaquete!),
-                              ),
-                            );
                           }
                         },
                         child: Padding(
@@ -126,7 +118,7 @@ class NotificationsPanel extends StatelessWidget {
                                         fontSize: 11,
                                         color: const Color(0xFF666666),
                                       ),
-                                      maxLines: 2,
+                                      maxLines: 3,
                                       overflow: TextOverflow.ellipsis,
                                     ),
                                   ],

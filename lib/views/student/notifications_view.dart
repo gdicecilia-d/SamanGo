@@ -310,6 +310,7 @@ class _NotificationsViewState extends State<NotificationsView> {
         color: Colors.transparent,
         child: InkWell(
           onTap: () {
+            // ESTUDIANTE: marcar como leída y navegar al destino si tiene idPaquete
             if (!leida) {
               controller.marcarComoLeida(notificacionId);
             }
@@ -361,7 +362,7 @@ class _NotificationsViewState extends State<NotificationsView> {
                           fontSize: 13,
                           color: const Color(0xFF666666),
                         ),
-                        maxLines: 2,
+                        maxLines: 3,
                         overflow: TextOverflow.ellipsis,
                       ),
                       const SizedBox(height: 6),

@@ -9,7 +9,12 @@ import '../shared/app_header.dart';
 import 'favorites_view.dart';
 import 'student_home_view.dart';
 import 'checkout_view.dart';
+import 'my_trips_view.dart';
+import 'edit_profile_view.dart';
 import '../../controllers/favoritos_controller.dart';
+import '../../controllers/auth_controller.dart';
+import '../../views/shared/widgets/custom_dialog.dart';
+import '../auth/login_view.dart';
 
 class DestinationDetailView extends StatefulWidget {
   final String destinoId;
@@ -62,6 +67,32 @@ class _DestinationDetailViewState extends State<DestinationDetailView> {
         );
       }
     }
+  }
+
+  void _handleEditProfile() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (_) => const EditProfileView()),
+    );
+  }
+
+  void _handleLogout() {
+    CustomConfirmDialog.show(
+      context: context,
+      title: 'Cerrar Sesión',
+      message: '¿Estás seguro de que deseas cerrar sesión?',
+      confirmText: 'Salir',
+      icon: Icons.logout,
+    ).then((confirm) async {
+      if (confirm == true) {
+        await Provider.of<AuthController>(context, listen: false).logout();
+        if (!context.mounted) return;
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (_) => const LoginView()),
+        );
+      }
+    });
   }
 
   bool _esBase64(String url) {
@@ -159,16 +190,14 @@ class _DestinationDetailViewState extends State<DestinationDetailView> {
                           MaterialPageRoute(builder: (_) => const FavoritesView()),
                         );
                       } else if (menu == 'Mis Viajes') {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text('Mis Viajes - Próximamente'),
-                            backgroundColor: Color(0xFFFC6707),
-                          ),
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(builder: (_) => const MyTripsView()),
                         );
                       }
                     },
-                    onEditProfile: () {},
-                    onLogout: () {},
+                    onEditProfile: _handleEditProfile,
+                    onLogout: _handleLogout,
                     menuItems: const ['Inicio', 'Mis Viajes', 'Favoritos'],
                     isMobile: isMobile,
                     onMenuTap: null,
@@ -235,7 +264,7 @@ class _DestinationDetailViewState extends State<DestinationDetailView> {
                   ),
                 ],
               ),
-              // Botón volver flotante sobre la foto
+              // Botón volver flotante 
               Positioned(
                 top: backButtonTop,
                 right: 24,
@@ -414,15 +443,17 @@ class _DestinationDetailViewState extends State<DestinationDetailView> {
           flex: 3,
           child: Padding(
             padding: EdgeInsets.only(top: paddingHorizontal, right: paddingHorizontal, bottom: paddingHorizontal),
-            child: _buildConversionCard(
-              primaryColor, 
-              precio, 
-              priceFontSize, 
-              sectionFontSize, 
-              buttonFontSize, 
-              buttonPaddingVertical,
-              isLargeScreen,
-              destinoData,
+            child: SingleChildScrollView(
+              child: _buildConversionCard(
+                primaryColor, 
+                precio, 
+                priceFontSize, 
+                sectionFontSize, 
+                buttonFontSize, 
+                buttonPaddingVertical,
+                isLargeScreen,
+                destinoData,
+              ),
             ),
           ),
         ),

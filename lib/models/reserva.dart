@@ -1,5 +1,3 @@
-// Modelo Reserva
-// Relaciona un Estudiante con un Paquete Turístico
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'estado_reserva.dart';
 
@@ -17,6 +15,11 @@ class Reserva {
   final double totalGeneral;
   final String? comprobanteUrl;
   final Map<String, dynamic> historial;
+  
+  // Campos del estudiante
+  final String nombreEstudiante;
+  final String apellidoEstudiante;
+  final String carnetEstudiante;
 
   const Reserva({
     required this.id,
@@ -32,6 +35,9 @@ class Reserva {
     this.totalGeneral = 0.0,
     this.comprobanteUrl,
     this.historial = const {},
+    required this.nombreEstudiante,
+    required this.apellidoEstudiante,
+    required this.carnetEstudiante,
   });
 
   factory Reserva.fromMap(String id, Map<String, dynamic> map) {
@@ -51,6 +57,9 @@ class Reserva {
       totalGeneral: (map['totalGeneral'] ?? 0.0).toDouble(),
       comprobanteUrl: map['comprobanteUrl'] as String?,
       historial: Map<String, dynamic>.from(map['historial'] ?? {}),
+      nombreEstudiante: map['nombreEstudiante'] as String? ?? '',
+      apellidoEstudiante: map['apellidoEstudiante'] as String? ?? '',
+      carnetEstudiante: map['carnetEstudiante'] as String? ?? '',
     );
   }
 
@@ -68,6 +77,9 @@ class Reserva {
       'totalGeneral': totalGeneral,
       if (comprobanteUrl != null) 'comprobanteUrl': comprobanteUrl,
       'historial': historial,
+      'nombreEstudiante': nombreEstudiante,
+      'apellidoEstudiante': apellidoEstudiante,
+      'carnetEstudiante': carnetEstudiante,
     };
   }
 
@@ -83,6 +95,9 @@ class Reserva {
     double? totalGeneral,
     String? comprobanteUrl,
     Map<String, dynamic>? historial,
+    String? nombreEstudiante,
+    String? apellidoEstudiante,
+    String? carnetEstudiante,
   }) {
     return Reserva(
       id: id ?? this.id,
@@ -98,6 +113,9 @@ class Reserva {
       totalGeneral: totalGeneral ?? this.totalGeneral,
       comprobanteUrl: comprobanteUrl ?? this.comprobanteUrl,
       historial: historial ?? this.historial,
+      nombreEstudiante: nombreEstudiante ?? this.nombreEstudiante,
+      apellidoEstudiante: apellidoEstudiante ?? this.apellidoEstudiante,
+      carnetEstudiante: carnetEstudiante ?? this.carnetEstudiante,
     );
   }
 }

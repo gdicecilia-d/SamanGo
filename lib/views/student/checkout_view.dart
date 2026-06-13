@@ -14,6 +14,7 @@ import 'favorites_view.dart';
 import 'edit_profile_view.dart';
 import '../../views/shared/widgets/custom_dialog.dart';
 import '../auth/login_view.dart';
+import '../../services/notificacion_service.dart';
 
 class CheckoutView extends StatefulWidget {
   final String destinoId;
@@ -39,19 +40,27 @@ class _CheckoutViewState extends State<CheckoutView> {
   DateTime _fechaPublicacion = DateTime.now();
   List<DateTime> _fechasDisponibles = [];
   
+  DateTime _mesActual = DateTime.now();
+  bool _yaSolicitado = false;
+  bool _cargandoVerificacion = true;
+  bool _enviando = false;
+  
   late ImageProvider? _backgroundImage;
   late ImageProvider? _paqueteImagen;
 
   final List<Map<String, dynamic>> _extrasDisponibles = [
-    {'nombre': 'Full Day Cayo de Agua', 'precio': 45.0},
-    {'nombre': 'Kit de Snorkeling Profesional', 'precio': 15.0},
-    {'nombre': 'Seguro de Viaje Básico', 'precio': 10.0},
-    {'nombre': 'Transporte VIP al Puerto', 'precio': 20.0},
+    {'nombre': 'Seguro de Viaje', 'precio': 15.0},
+    {'nombre': 'Guía Digital y Mapa Offline', 'precio': 8.0},
+    {'nombre': 'Kit de Snacks e Hidratación', 'precio': 12.0},
+    {'nombre': 'Kit de Souvenir Oficial', 'precio': 10.0},
+    {'nombre': 'Traslado Exclusivo', 'precio': 25.0},
+    {'nombre': 'Kit de Fotografía Básico', 'precio': 18.0},
+    {'nombre': 'Atención y Logística Personalizada', 'precio': 20.0},
+    {'nombre': 'Kit de Equipamiento de Aventura', 'precio': 22.0},
   ];
 
   bool get _isOffer => widget.destinoData['isOffer'] ?? false;
   Color get _primaryColor => _isOffer ? const Color(0xFF9C27B0) : const Color(0xFFFC6707);
-  Color get _primaryLight => _isOffer ? const Color(0xFF9C27B0).withOpacity(0.1) : const Color(0xFFFC6707).withOpacity(0.1);
 
   @override
   void initState() {
@@ -59,6 +68,7 @@ class _CheckoutViewState extends State<CheckoutView> {
     _inicializarFechas();
     _cargarImagenes();
     _actualizarAcompanantes();
+    _verificarSiYaSolicito();
   }
 
   void _inicializarFechas() {
@@ -66,9 +76,10 @@ class _CheckoutViewState extends State<CheckoutView> {
       _fechaPublicacion = DateTime.parse(widget.destinoData['fechaPublicacion']);
     }
     
+    final hoy = DateTime.now();
     _fechasDisponibles = [];
     for (int i = 0; i < 30; i++) {
-      _fechasDisponibles.add(_fechaPublicacion.add(Duration(days: i + 1)));
+      _fechasDisponibles.add(hoy.add(Duration(days: i)));
     }
   }
 
@@ -134,8 +145,15 @@ class _CheckoutViewState extends State<CheckoutView> {
   }
 
   bool _esFechaDisponible(DateTime date) {
-    return _fechasDisponibles.any((fecha) => 
-      fecha.year == date.year && fecha.month == date.month && fecha.day == date.day);
+    final hoy = DateTime.now();
+    final limite = hoy.add(const Duration(days: 30));
+    
+    final normalizedDate = DateTime(date.year, date.month, date.day);
+    final normalizedHoy = DateTime(hoy.year, hoy.month, hoy.day);
+    final normalizedLimite = DateTime(limite.year, limite.month, limite.day);
+    
+    return normalizedDate.isAfter(normalizedHoy.subtract(const Duration(days: 1))) &&
+           normalizedDate.isBefore(normalizedLimite.add(const Duration(days: 1)));
   }
 
   int get _maxDiasSeleccionables {
@@ -155,6 +173,8 @@ class _CheckoutViewState extends State<CheckoutView> {
   }
 
   void _seleccionarFecha(DateTime fecha) {
+    if (!_esFechaDisponible(fecha)) return;
+    
     setState(() {
       if (_esFullDay()) {
         _fechaInicio = fecha;
@@ -184,12 +204,15 @@ class _CheckoutViewState extends State<CheckoutView> {
   bool _isFechaSeleccionada(DateTime fecha) {
     if (_esFullDay()) {
       return _fechaInicio != null && 
-             _fechaInicio!.day == fecha.day &&
-             _fechaInicio!.month == fecha.month;
+             _fechaInicio!.year == fecha.year &&
+             _fechaInicio!.month == fecha.month &&
+             _fechaInicio!.day == fecha.day;
     } else {
       if (_fechaInicio == null) return false;
       if (_fechaFin == null) {
-        return _fechaInicio!.day == fecha.day && _fechaInicio!.month == fecha.month;
+        return _fechaInicio!.year == fecha.year &&
+               _fechaInicio!.month == fecha.month &&
+               _fechaInicio!.day == fecha.day;
       }
       return fecha.isAfter(_fechaInicio!.subtract(const Duration(days: 1))) &&
              fecha.isBefore(_fechaFin!.add(const Duration(days: 1)));
@@ -200,6 +223,12 @@ class _CheckoutViewState extends State<CheckoutView> {
     if (_esFullDay()) return false;
     if (_fechaInicio == null || _fechaFin == null) return false;
     return fecha.isAfter(_fechaInicio!) && fecha.isBefore(_fechaFin!);
+  }
+
+  void _cambiarMes(int delta) {
+    setState(() {
+      _mesActual = DateTime(_mesActual.year, _mesActual.month + delta, 1);
+    });
   }
 
   double get _subtotal {
@@ -225,6 +254,7 @@ class _CheckoutViewState extends State<CheckoutView> {
   }
 
   void _mostrarMensaje(String mensaje) {
+    ScaffoldMessenger.of(context).clearSnackBars();
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(mensaje),
@@ -234,7 +264,42 @@ class _CheckoutViewState extends State<CheckoutView> {
     );
   }
 
+  Future<void> _verificarSiYaSolicito() async {
+    final auth = Provider.of<AuthController>(context, listen: false);
+    final userId = auth.usuarioActual?.id;
+    
+    if (userId == null) {
+      setState(() {
+        _cargandoVerificacion = false;
+      });
+      return;
+    }
+    
+    try {
+      final reservasQuery = await FirebaseFirestore.instance
+          .collection('reservas')
+          .where('estudianteId', isEqualTo: userId)
+          .where('paqueteId', isEqualTo: widget.destinoId)
+          .where('estadoActual', whereIn: ['solicitado', 'aceptado'])
+          .get();
+      
+      setState(() {
+        _yaSolicitado = reservasQuery.docs.isNotEmpty;
+        _cargandoVerificacion = false;
+      });
+    } catch (e) {
+      setState(() {
+        _cargandoVerificacion = false;
+      });
+    }
+  }
+
   Future<void> _enviarSolicitud() async {
+    if (_yaSolicitado) {
+      _mostrarMensaje('Ya tienes una solicitud activa para este destino');
+      return;
+    }
+    
     if (_fechaInicio == null) {
       _mostrarMensaje('Selecciona una fecha para tu viaje');
       return;
@@ -244,11 +309,19 @@ class _CheckoutViewState extends State<CheckoutView> {
       return;
     }
 
-    final auth = Provider.of<AuthController>(context, listen: false);
-    final reservaCtrl = Provider.of<ReservaController>(context, listen: false);
-    final userId = auth.usuarioActual?.id;
+    setState(() {
+      _enviando = true;
+    });
 
-    if (userId == null) return;
+    final auth = Provider.of<AuthController>(context, listen: false);
+    final userId = auth.usuarioActual?.id;
+    final usuario = auth.usuarioActual;
+
+    if (userId == null || usuario == null) {
+      setState(() { _enviando = false; });
+      _mostrarMensaje('Error: Usuario no identificado');
+      return;
+    }
 
     final fechaFinCalculada = _fechaFin ?? _fechaInicio!;
     final fechaFinReal = fechaFinCalculada.add(const Duration(days: 1));
@@ -258,29 +331,77 @@ class _CheckoutViewState extends State<CheckoutView> {
       'carnet': a['carnet'],
     }).toList();
 
-    final nuevaReserva = Reserva(
-      id: '',
-      estudianteId: userId,
-      paqueteId: widget.destinoId,
-      estadoActual: EstadoReserva.solicitado,
-      fechaInicio: _fechaInicio,
-      fechaFin: fechaFinReal,
-      numeroPersonas: _numeroPersonas,
-      datosAcompanantes: acompanantesFinales,
-      extrasSeleccionados: _extrasSeleccionados,
-      subtotal: _subtotal,
-      totalGeneral: _totalGeneral,
-    );
-
-    final exito = await reservaCtrl.crearReserva(nuevaReserva);
-
-    if (exito && mounted) {
-      _mostrarMensaje('¡Solicitud enviada con éxito!');
-      Navigator.pushAndRemoveUntil(
-        context,
-        MaterialPageRoute(builder: (_) => const StudentHomeView()),
-        (route) => false,
+    try {
+      // Crear la reserva directamente en Firestore
+      final reservaRef = FirebaseFirestore.instance.collection('reservas').doc();
+      final nuevaReserva = {
+        'estudianteId': userId,
+        'paqueteId': widget.destinoId,
+        'estadoActual': 'solicitado',
+        'fechaInicio': Timestamp.fromDate(_fechaInicio!),
+        'fechaFin': Timestamp.fromDate(fechaFinReal),
+        'numeroPersonas': _numeroPersonas,
+        'datosAcompanantes': acompanantesFinales,
+        'extrasSeleccionados': _extrasSeleccionados,
+        'subtotal': _subtotal,
+        'totalGeneral': _totalGeneral,
+        'nombreEstudiante': usuario.nombre,
+        'apellidoEstudiante': usuario.apellido ?? '',
+        'carnetEstudiante': usuario.carnet ?? '',
+        'historial': {
+          'solicitado': FieldValue.serverTimestamp(),
+        },
+        'fechaCreacion': FieldValue.serverTimestamp(),
+      };
+      
+      await reservaRef.set(nuevaReserva);
+      final reservaId = reservaRef.id;
+      
+      // Notificar al operador
+      final destinoDoc = await FirebaseFirestore.instance
+          .collection('destinos')
+          .doc(widget.destinoId)
+          .get();
+      final destino = destinoDoc.data() as Map<String, dynamic>?;
+      final operadorId = destino?['operadorId'];
+      
+      if (operadorId != null) {
+        await NotificacionService().notificarNuevaSolicitud(
+          operadorId: operadorId,
+          estudianteNombre: usuario.nombre,
+          estudianteApellido: usuario.apellido ?? '',
+          estudianteCarnet: usuario.carnet ?? '',
+          nombrePaquete: widget.destinoData['nombre'] ?? 'destino',
+          reservaId: reservaId,
+        );
+      }
+      
+      setState(() {
+        _yaSolicitado = true;
+        _enviando = false;
+      });
+      
+      // Mostrar mensaje de éxito
+      ScaffoldMessenger.of(context).clearSnackBars();
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: const Text('¡Solicitud enviada con éxito!'),
+          backgroundColor: _primaryColor,
+          duration: const Duration(seconds: 2),
+        ),
       );
+      
+      // Esperar y regresar
+      await Future.delayed(const Duration(seconds: 1));
+      if (mounted) {
+        Navigator.pop(context);
+      }
+    } catch (e) {
+      setState(() {
+        _enviando = false;
+      });
+      print('Error al enviar solicitud: $e');
+      _mostrarMensaje('Error al enviar la solicitud: ${e.toString()}');
     }
   }
 
@@ -336,10 +457,23 @@ class _CheckoutViewState extends State<CheckoutView> {
     final isMobile = screenWidth < 850;
     final isLargeScreen = screenWidth > 1400;
     
-    final double titleFontSize = isMobile ? 24 : (isLargeScreen ? 36 : 28);
-    final double paddingHorizontal = isMobile ? 16 : (isLargeScreen ? 48 : 32);
-    final double cardPadding = isMobile ? 16 : (isLargeScreen ? 28 : 24);
-    final double sectionFontSize = isMobile ? 16 : (isLargeScreen ? 20 : 18);
+    final double titleFontSize = isMobile ? 24 : (isLargeScreen ? 44 : 32);
+    final double subtitleFontSize = isMobile ? 14 : (isLargeScreen ? 20 : 16);
+    final double sectionFontSize = isMobile ? 18 : (isLargeScreen ? 26 : 20);
+    final double buttonFontSize = isMobile ? 16 : (isLargeScreen ? 22 : 16);
+    final double buttonPaddingVertical = isMobile ? 14 : (isLargeScreen ? 20 : 14);
+    final double priceFontSize = isMobile ? 36 : (isLargeScreen ? 56 : 42);
+    final double paddingHorizontal = isMobile ? 16 : (isLargeScreen ? 48 : 24);
+    final double cardPadding = isMobile ? 24 : (isLargeScreen ? 40 : 28);
+    final double backButtonSize = isLargeScreen ? 20 : 16;
+    final double backButtonTop = isMobile ? 80 : (isLargeScreen ? 100 : 80);
+    
+    final double selectorWidth = isLargeScreen ? 320 : (isMobile ? 240 : 280);
+    final double selectorButtonSize = isLargeScreen ? 52 : (isMobile ? 44 : 48);
+    final double selectorIconSize = isLargeScreen ? 26 : (isMobile ? 22 : 24);
+    final double selectorFontSize = isLargeScreen ? 18 : (isMobile ? 15 : 16);
+    
+    final double calendarWidth = isLargeScreen ? 400 : (isMobile ? double.infinity : 360);
 
     return Scaffold(
       backgroundColor: Colors.white,
@@ -370,13 +504,42 @@ class _CheckoutViewState extends State<CheckoutView> {
               ),
               Expanded(
                 child: isMobile
-                    ? _buildMobileLayout(titleFontSize, cardPadding, sectionFontSize)
-                    : _buildDesktopLayout(titleFontSize, cardPadding, sectionFontSize, paddingHorizontal),
+                    ? _buildMobileLayout(
+                        titleFontSize,
+                        subtitleFontSize,
+                        sectionFontSize,
+                        buttonFontSize,
+                        buttonPaddingVertical,
+                        priceFontSize,
+                        paddingHorizontal,
+                        cardPadding,
+                        selectorWidth,
+                        selectorButtonSize,
+                        selectorIconSize,
+                        selectorFontSize,
+                        calendarWidth,
+                      )
+                    : _buildDesktopLayout(
+                        titleFontSize,
+                        subtitleFontSize,
+                        sectionFontSize,
+                        buttonFontSize,
+                        buttonPaddingVertical,
+                        priceFontSize,
+                        paddingHorizontal,
+                        cardPadding,
+                        isLargeScreen,
+                        selectorWidth,
+                        selectorButtonSize,
+                        selectorIconSize,
+                        selectorFontSize,
+                        calendarWidth,
+                      ),
               ),
             ],
           ),
           Positioned(
-            top: 80,
+            top: backButtonTop,
             right: 24,
             child: MouseRegion(
               cursor: SystemMouseCursors.click,
@@ -398,12 +561,12 @@ class _CheckoutViewState extends State<CheckoutView> {
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Icon(Icons.arrow_back, color: _primaryColor, size: 18),
+                      Icon(Icons.arrow_back, color: _primaryColor, size: backButtonSize),
                       const SizedBox(width: 4),
                       Text(
                         'Volver',
                         style: GoogleFonts.outfit(
-                          fontSize: 14,
+                          fontSize: backButtonSize,
                           color: _primaryColor,
                           fontWeight: FontWeight.w500,
                         ),
@@ -419,45 +582,107 @@ class _CheckoutViewState extends State<CheckoutView> {
     );
   }
 
-  Widget _buildMobileLayout(double titleFontSize, double cardPadding, double sectionFontSize) {
+  Widget _buildMobileLayout(
+    double titleFontSize,
+    double subtitleFontSize,
+    double sectionFontSize,
+    double buttonFontSize,
+    double buttonPaddingVertical,
+    double priceFontSize,
+    double paddingHorizontal,
+    double cardPadding,
+    double selectorWidth,
+    double selectorButtonSize,
+    double selectorIconSize,
+    double selectorFontSize,
+    double calendarWidth,
+  ) {
     return SingleChildScrollView(
-      physics: const BouncingScrollPhysics(),
-      padding: const EdgeInsets.all(16),
+      padding: EdgeInsets.all(paddingHorizontal),
       child: Column(
         children: [
-          _buildContentCard(titleFontSize, cardPadding, sectionFontSize),
+          _buildContentCard(
+            titleFontSize,
+            subtitleFontSize,
+            sectionFontSize,
+            cardPadding,
+            selectorWidth,
+            selectorButtonSize,
+            selectorIconSize,
+            selectorFontSize,
+            calendarWidth,
+            isMobile: true,
+          ),
           const SizedBox(height: 16),
-          _buildResumenCard(cardPadding),
+          _buildResumenCard(cardPadding, priceFontSize, sectionFontSize, buttonFontSize, buttonPaddingVertical),
           const SizedBox(height: 80),
         ],
       ),
     );
   }
 
-  Widget _buildDesktopLayout(double titleFontSize, double cardPadding, double sectionFontSize, double paddingHorizontal) {
+  Widget _buildDesktopLayout(
+    double titleFontSize,
+    double subtitleFontSize,
+    double sectionFontSize,
+    double buttonFontSize,
+    double buttonPaddingVertical,
+    double priceFontSize,
+    double paddingHorizontal,
+    double cardPadding,
+    bool isLargeScreen,
+    double selectorWidth,
+    double selectorButtonSize,
+    double selectorIconSize,
+    double selectorFontSize,
+    double calendarWidth,
+  ) {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Expanded(
           flex: 7,
           child: SingleChildScrollView(
-            physics: const BouncingScrollPhysics(),
             padding: EdgeInsets.all(paddingHorizontal),
-            child: _buildContentCard(titleFontSize, cardPadding, sectionFontSize),
+            child: _buildContentCard(
+              titleFontSize,
+              subtitleFontSize,
+              sectionFontSize,
+              cardPadding,
+              selectorWidth,
+              selectorButtonSize,
+              selectorIconSize,
+              selectorFontSize,
+              calendarWidth,
+              isMobile: false,
+            ),
           ),
         ),
         Expanded(
           flex: 3,
           child: Padding(
             padding: EdgeInsets.only(top: paddingHorizontal, right: paddingHorizontal, bottom: paddingHorizontal),
-            child: _buildResumenCard(cardPadding),
+            child: SingleChildScrollView(
+              child: _buildResumenCard(cardPadding, priceFontSize, sectionFontSize, buttonFontSize, buttonPaddingVertical),
+            ),
           ),
         ),
       ],
     );
   }
 
-  Widget _buildContentCard(double titleFontSize, double cardPadding, double sectionFontSize) {
+  Widget _buildContentCard(
+    double titleFontSize,
+    double subtitleFontSize,
+    double sectionFontSize,
+    double cardPadding,
+    double selectorWidth,
+    double selectorButtonSize,
+    double selectorIconSize,
+    double selectorFontSize,
+    double calendarWidth, {
+    required bool isMobile,
+  }) {
     return Container(
       decoration: BoxDecoration(
         color: Colors.white.withOpacity(0.95),
@@ -473,7 +698,6 @@ class _CheckoutViewState extends State<CheckoutView> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Header con título, duración y ubicación
           Padding(
             padding: EdgeInsets.all(cardPadding),
             child: Column(
@@ -490,23 +714,23 @@ class _CheckoutViewState extends State<CheckoutView> {
                 const SizedBox(height: 8),
                 Row(
                   children: [
-                    Icon(Icons.access_time, size: 16, color: const Color(0xFF888888)),
+                    Icon(Icons.access_time, size: subtitleFontSize - 2, color: const Color(0xFF888888)),
                     const SizedBox(width: 4),
                     Text(
                       widget.destinoData['duracion'] ?? 'Full Day',
                       style: GoogleFonts.outfit(
-                        fontSize: 14,
+                        fontSize: subtitleFontSize - 2,
                         color: const Color(0xFF888888),
                       ),
                     ),
                     const SizedBox(width: 16),
-                    Icon(Icons.location_on, size: 16, color: const Color(0xFF888888)),
+                    Icon(Icons.location_on, size: subtitleFontSize - 2, color: const Color(0xFF888888)),
                     const SizedBox(width: 4),
                     Expanded(
                       child: Text(
                         widget.destinoData['ubicacion'] ?? '',
                         style: GoogleFonts.outfit(
-                          fontSize: 14,
+                          fontSize: subtitleFontSize - 2,
                           color: const Color(0xFF888888),
                         ),
                         overflow: TextOverflow.ellipsis,
@@ -520,7 +744,6 @@ class _CheckoutViewState extends State<CheckoutView> {
           const Divider(height: 1, thickness: 1, color: Color(0xFFE0E0E0)),
           const SizedBox(height: 24),
           
-          // FILA 1: ¿Cuándo viajas? (izquierda) + Personaliza tu experiencia (derecha)
           Padding(
             padding: EdgeInsets.symmetric(horizontal: cardPadding),
             child: Row(
@@ -539,11 +762,14 @@ class _CheckoutViewState extends State<CheckoutView> {
                         ),
                       ),
                       const SizedBox(height: 12),
-                      _buildCalendario(),
+                      SizedBox(
+                        width: calendarWidth,
+                        child: _buildCalendario(),
+                      ),
                     ],
                   ),
                 ),
-                const SizedBox(width: 32),
+                const SizedBox(width: 48),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -566,13 +792,11 @@ class _CheckoutViewState extends State<CheckoutView> {
           ),
           const SizedBox(height: 32),
           
-          // FILA 2: ¿Quiénes van? (izquierda) + Foto (derecha)
           Padding(
             padding: EdgeInsets.symmetric(horizontal: cardPadding),
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // ¿Quiénes van? (izquierda)
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -593,29 +817,28 @@ class _CheckoutViewState extends State<CheckoutView> {
                           color: const Color(0xFF888888),
                         ),
                       ),
-                      const SizedBox(height: 12),
-                      _buildSelectorPersonas(),
+                      const SizedBox(height: 16),
+                      _buildSelectorPersonas(selectorWidth, selectorButtonSize, selectorIconSize, selectorFontSize),
                       if (_numeroPersonas > 1) ...[
-                        const SizedBox(height: 20),
+                        const SizedBox(height: 24),
                         ..._buildFormularioAcompanantes(),
                       ],
                     ],
                   ),
                 ),
-                const SizedBox(width: 32),
-                // Foto del paquete (derecha)
+                const SizedBox(width: 24),
                 Expanded(
                   child: ClipRRect(
                     borderRadius: BorderRadius.circular(16),
                     child: _paqueteImagen != null
                         ? Image(
                             image: _paqueteImagen!,
-                            height: 200,
+                            height: 250,
                             width: double.infinity,
                             fit: BoxFit.cover,
                           )
                         : Container(
-                            height: 200,
+                            height: 250,
                             color: const Color(0xFFFDDBB3),
                             child: Icon(Icons.image, size: 50, color: _primaryColor),
                           ),
@@ -631,8 +854,14 @@ class _CheckoutViewState extends State<CheckoutView> {
   }
 
   Widget _buildCalendario() {
-    final now = DateTime.now();
     final monthNames = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
+    final screenWidth = MediaQuery.of(context).size.width;
+    final isLargeScreen = screenWidth > 1400;
+    
+    final firstDayOfMonth = DateTime(_mesActual.year, _mesActual.month, 1);
+    final daysInMonth = DateTime(_mesActual.year, _mesActual.month + 1, 0).day;
+    final firstWeekday = firstDayOfMonth.weekday;
+    int startOffset = firstWeekday == 7 ? 0 : firstWeekday;
     
     return Container(
       width: double.infinity,
@@ -652,25 +881,45 @@ class _CheckoutViewState extends State<CheckoutView> {
               ),
             ),
             child: Row(
-              mainAxisAlignment: MainAxisAlignment.center,
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                GestureDetector(
-                  onTap: () {},
-                  child: Icon(Icons.chevron_left, color: Colors.white, size: 18),
-                ),
-                const SizedBox(width: 20),
-                Text(
-                  '${monthNames[now.month - 1]} ${now.year}',
-                  style: GoogleFonts.outfit(
-                    fontSize: 13,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.white,
+                const SizedBox(width: 40),
+                Expanded(
+                  child: Center(
+                    child: Text(
+                      '${monthNames[_mesActual.month - 1]} ${_mesActual.year}',
+                      style: GoogleFonts.outfit(
+                        fontSize: isLargeScreen ? 14 : 12,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white,
+                      ),
+                    ),
                   ),
                 ),
-                const SizedBox(width: 20),
-                GestureDetector(
-                  onTap: () {},
-                  child: Icon(Icons.chevron_right, color: Colors.white, size: 18),
+                Row(
+                  children: [
+                    MouseRegion(
+                      cursor: SystemMouseCursors.click,
+                      child: GestureDetector(
+                        onTap: () => _cambiarMes(-1),
+                        child: Container(
+                          padding: const EdgeInsets.all(8),
+                          child: Icon(Icons.chevron_left, color: Colors.white, size: isLargeScreen ? 20 : 16),
+                        ),
+                      ),
+                    ),
+                    MouseRegion(
+                      cursor: SystemMouseCursors.click,
+                      child: GestureDetector(
+                        onTap: () => _cambiarMes(1),
+                        child: Container(
+                          padding: const EdgeInsets.all(8),
+                          child: Icon(Icons.chevron_right, color: Colors.white, size: isLargeScreen ? 20 : 16),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 16),
+                  ],
                 ),
               ],
             ),
@@ -687,7 +936,7 @@ class _CheckoutViewState extends State<CheckoutView> {
                         dia,
                         textAlign: TextAlign.center,
                         style: GoogleFonts.outfit(
-                          fontSize: 11,
+                          fontSize: isLargeScreen ? 11 : 10,
                           fontWeight: FontWeight.w600,
                           color: const Color(0xFF888888),
                         ),
@@ -699,25 +948,18 @@ class _CheckoutViewState extends State<CheckoutView> {
                 GridView.builder(
                   shrinkWrap: true,
                   physics: const NeverScrollableScrollPhysics(),
-                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                  gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
                     crossAxisCount: 7,
-                    childAspectRatio: 1.8,
+                    childAspectRatio: isLargeScreen ? 1.6 : 1.4,
                     mainAxisSpacing: 4,
                     crossAxisSpacing: 4,
                   ),
-                  itemCount: 35,
+                  itemCount: 42,
                   itemBuilder: (context, index) {
-                    final firstDayOfMonth = DateTime(now.year, now.month, 1);
-                    final firstWeekday = firstDayOfMonth.weekday;
-                    int startOffset = firstWeekday == 7 ? 0 : firstWeekday;
-                    
                     final dayNumber = index - startOffset + 1;
+                    if (dayNumber < 1 || dayNumber > daysInMonth) return Container();
                     
-                    if (dayNumber < 1 || dayNumber > DateTime(now.year, now.month + 1, 0).day) {
-                      return Container();
-                    }
-                    
-                    final fecha = DateTime(now.year, now.month, dayNumber);
+                    final fecha = DateTime(_mesActual.year, _mesActual.month, dayNumber);
                     final esDisponible = _esFechaDisponible(fecha);
                     final esSeleccionada = _isFechaSeleccionada(fecha);
                     final esEnRango = _isFechaEnRango(fecha);
@@ -749,7 +991,7 @@ class _CheckoutViewState extends State<CheckoutView> {
                           child: Text(
                             '$dayNumber',
                             style: GoogleFonts.outfit(
-                              fontSize: 12,
+                              fontSize: isLargeScreen ? 13 : 11,
                               fontWeight: FontWeight.w500,
                               color: textColor,
                             ),
@@ -759,14 +1001,14 @@ class _CheckoutViewState extends State<CheckoutView> {
                     );
                   },
                 ),
-                const SizedBox(height: 12),
+                const SizedBox(height: 10),
                 Text(
                   _esFullDay() 
-                      ? 'Selecciona tu día de viaje.\nLas fechas en verde están disponibles.'
-                      : 'Selecciona tu rango de viaje (máximo $_maxDiasSeleccionables días).\nLas fechas en verde están disponibles.',
+                      ? 'Selecciona tu día de viaje.\nLas fechas en verde están disponibles dentro de los próximos 30 días.'
+                      : 'Selecciona tu rango de viaje (máximo $_maxDiasSeleccionables días).\nLas fechas en verde están disponibles dentro de los próximos 30 días.',
                   textAlign: TextAlign.center,
                   style: GoogleFonts.outfit(
-                    fontSize: 10,
+                    fontSize: isLargeScreen ? 10 : 9,
                     color: const Color(0xFF888888),
                   ),
                 ),
@@ -778,22 +1020,22 @@ class _CheckoutViewState extends State<CheckoutView> {
     );
   }
 
-  Widget _buildSelectorPersonas() {
+  Widget _buildSelectorPersonas(double selectorWidth, double selectorButtonSize, double selectorIconSize, double selectorFontSize) {
     return Container(
-      width: 200,
+      width: selectorWidth,
       decoration: BoxDecoration(
         border: Border.all(color: _primaryColor, width: 1.5),
-        borderRadius: BorderRadius.circular(40),
+        borderRadius: BorderRadius.circular(50),
       ),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           Container(
-            width: 36,
-            height: 36,
+            width: selectorButtonSize,
+            height: selectorButtonSize,
             decoration: BoxDecoration(
               color: const Color(0xFFF5F5F5),
-              borderRadius: BorderRadius.circular(20),
+              borderRadius: BorderRadius.circular(selectorButtonSize / 2),
             ),
             child: IconButton(
               onPressed: _numeroPersonas > 1 ? () {
@@ -802,7 +1044,7 @@ class _CheckoutViewState extends State<CheckoutView> {
                   _actualizarAcompanantes();
                 });
               } : null,
-              icon: const Icon(Icons.remove, color: Color(0xFF666666), size: 18),
+              icon: Icon(Icons.remove, color: Color(0xFF666666), size: selectorIconSize),
               padding: EdgeInsets.zero,
               constraints: const BoxConstraints(),
             ),
@@ -810,17 +1052,17 @@ class _CheckoutViewState extends State<CheckoutView> {
           Text(
             _textoPersonas,
             style: GoogleFonts.outfit(
-              fontSize: 14,
+              fontSize: selectorFontSize,
               fontWeight: FontWeight.w500,
               color: const Color(0xFF333333),
             ),
           ),
           Container(
-            width: 36,
-            height: 36,
+            width: selectorButtonSize,
+            height: selectorButtonSize,
             decoration: BoxDecoration(
               color: const Color(0xFFF5F5F5),
-              borderRadius: BorderRadius.circular(20),
+              borderRadius: BorderRadius.circular(selectorButtonSize / 2),
             ),
             child: IconButton(
               onPressed: _numeroPersonas < 6 ? () {
@@ -829,7 +1071,7 @@ class _CheckoutViewState extends State<CheckoutView> {
                   _actualizarAcompanantes();
                 });
               } : null,
-              icon: const Icon(Icons.add, color: Color(0xFF666666), size: 18),
+              icon: Icon(Icons.add, color: Color(0xFF666666), size: selectorIconSize),
               padding: EdgeInsets.zero,
               constraints: const BoxConstraints(),
             ),
@@ -946,7 +1188,10 @@ class _CheckoutViewState extends State<CheckoutView> {
   }
 
   Widget _buildExtraCheckbox(Map<String, dynamic> extra) {
+    final screenWidth = MediaQuery.of(context).size.width;
+    final isLargeScreen = screenWidth > 1400;
     final isSelected = _extrasSeleccionados.contains(extra['nombre']);
+    
     return GestureDetector(
       onTap: () {
         setState(() {
@@ -962,18 +1207,18 @@ class _CheckoutViewState extends State<CheckoutView> {
         child: Row(
           children: [
             Container(
-              width: 18,
-              height: 18,
+              width: isLargeScreen ? 20 : 18,
+              height: isLargeScreen ? 20 : 18,
               decoration: BoxDecoration(
                 color: isSelected ? _primaryColor : Colors.white,
                 borderRadius: BorderRadius.circular(4),
                 border: Border.all(color: _primaryColor, width: 1.5),
               ),
               child: isSelected
-                  ? const Icon(Icons.check, size: 12, color: Colors.white)
+                  ? Icon(Icons.check, size: isLargeScreen ? 14 : 12, color: Colors.white)
                   : null,
             ),
-            const SizedBox(width: 10),
+            const SizedBox(width: 12),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -981,7 +1226,7 @@ class _CheckoutViewState extends State<CheckoutView> {
                   Text(
                     extra['nombre'],
                     style: GoogleFonts.outfit(
-                      fontSize: 13,
+                      fontSize: isLargeScreen ? 14 : 13,
                       fontWeight: FontWeight.w500,
                       color: const Color(0xFF333333),
                     ),
@@ -989,7 +1234,7 @@ class _CheckoutViewState extends State<CheckoutView> {
                   Text(
                     '+\$${extra['precio']} por persona',
                     style: GoogleFonts.outfit(
-                      fontSize: 11,
+                      fontSize: isLargeScreen ? 12 : 11,
                       color: const Color(0xFF888888),
                     ),
                   ),
@@ -1002,7 +1247,10 @@ class _CheckoutViewState extends State<CheckoutView> {
     );
   }
 
-  Widget _buildResumenCard(double cardPadding) {
+  Widget _buildResumenCard(double cardPadding, double priceFontSize, double sectionFontSize, double buttonFontSize, double buttonPaddingVertical) {
+    final screenWidth = MediaQuery.of(context).size.width;
+    final isLargeScreen = screenWidth > 1400;
+    
     return Container(
       padding: EdgeInsets.all(cardPadding),
       decoration: BoxDecoration(
@@ -1020,38 +1268,46 @@ class _CheckoutViewState extends State<CheckoutView> {
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
           Text(
-            'Resumen de tu Reserva',
+            '\$${_totalGeneral.toStringAsFixed(0)}',
             style: GoogleFonts.outfit(
-              fontSize: 20,
+              fontSize: priceFontSize,
               fontWeight: FontWeight.bold,
               color: _primaryColor,
             ),
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 8),
+          Text(
+            'Total por ${_numeroPersonas} persona${_numeroPersonas == 1 ? '' : 's'}',
+            style: GoogleFonts.outfit(
+              fontSize: sectionFontSize - 6,
+              color: const Color(0xFF888888),
+            ),
+          ),
+          const SizedBox(height: 24),
           const Divider(height: 1, thickness: 1, color: Color(0xFFE0E0E0)),
-          const SizedBox(height: 12),
-          _buildResumenRow('Paquete:', widget.destinoData['nombre'] ?? 'Destino'),
-          const SizedBox(height: 8),
-          _buildResumenRow('Fecha:', _getRangoFechasTexto()),
-          const SizedBox(height: 8),
-          _buildResumenRow('Personas:', '$_numeroPersonas (${_textoPersonas})'),
           const SizedBox(height: 16),
-          _buildResumenRow('Subtotal (x$_numeroPersonas):', '\$${_subtotal.toStringAsFixed(2)}', bold: true),
+          _buildResumenRow('Paquete:', widget.destinoData['nombre'] ?? 'Destino', isLargeScreen: isLargeScreen),
+          const SizedBox(height: 8),
+          _buildResumenRow('Fecha:', _getRangoFechasTexto(), isLargeScreen: isLargeScreen),
+          const SizedBox(height: 8),
+          _buildResumenRow('Personas:', '$_numeroPersonas (${_textoPersonas})', isLargeScreen: isLargeScreen),
+          const SizedBox(height: 16),
+          _buildResumenRow('Subtotal:', '\$${_subtotal.toStringAsFixed(2)}', bold: true, isLargeScreen: isLargeScreen),
           if (_extrasSeleccionados.isNotEmpty) ...[
             const SizedBox(height: 8),
             ..._extrasSeleccionados.map((extra) {
               final precioExtra = _extrasDisponibles.firstWhere((e) => e['nombre'] == extra)['precio'] * _numeroPersonas;
               return Padding(
                 padding: const EdgeInsets.only(bottom: 4),
-                child: _buildResumenRow('  - $extra:', '+\$${precioExtra.toStringAsFixed(2)}', isExtra: true),
+                child: _buildResumenRow('  - $extra:', '+\$${precioExtra.toStringAsFixed(2)}', isExtra: true, isLargeScreen: isLargeScreen),
               );
             }),
           ],
-          const SizedBox(height: 12),
+          const SizedBox(height: 16),
           const Divider(height: 1, thickness: 1, color: Color(0xFFE0E0E0)),
-          const SizedBox(height: 12),
-          _buildResumenRow('Total General:', '\$${_totalGeneral.toStringAsFixed(2)}', bold: true, isTotal: true),
-          const SizedBox(height: 20),
+          const SizedBox(height: 16),
+          _buildResumenRow('Total General:', '\$${_totalGeneral.toStringAsFixed(2)}', bold: true, isTotal: true, isLargeScreen: isLargeScreen),
+          const SizedBox(height: 24),
           Container(
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
@@ -1063,34 +1319,48 @@ class _CheckoutViewState extends State<CheckoutView> {
                 Icon(Icons.info_outline, color: _primaryColor, size: 18),
                 const SizedBox(width: 8),
                 Expanded(
-                  child: Text(
-                    'Al hacer clic, creará una solicitud para que el operador verifique cupos. Podrás pagar una vez sea confirmada.',
-                    style: GoogleFonts.outfit(
-                      fontSize: 11,
-                      color: _primaryColor,
-                    ),
-                  ),
+                  child: _cargandoVerificacion
+                      ? const SizedBox(
+                          height: 20,
+                          width: 20,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : (_yaSolicitado
+                          ? Text(
+                              'Ya tienes una solicitud activa para este destino',
+                              style: GoogleFonts.outfit(
+                                fontSize: 11,
+                                color: _primaryColor,
+                              ),
+                            )
+                          : Text(
+                              'Al hacer clic, creará una solicitud para que el operador verifique cupos',
+                              style: GoogleFonts.outfit(
+                                fontSize: 11,
+                                color: _primaryColor,
+                              ),
+                            )),
                 ),
               ],
             ),
           ),
-          const SizedBox(height: 20),
+          const SizedBox(height: 24),
           SizedBox(
             width: double.infinity,
             child: ElevatedButton(
-              onPressed: _enviarSolicitud,
+              onPressed: (_cargandoVerificacion || _yaSolicitado || _enviando) ? null : _enviarSolicitud,
               style: ElevatedButton.styleFrom(
                 backgroundColor: _primaryColor,
                 foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(vertical: 14),
+                padding: EdgeInsets.symmetric(vertical: buttonPaddingVertical),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(30),
                 ),
               ),
               child: Text(
-                'Solicitar',
+                _enviando ? 'Enviando...' : (_cargandoVerificacion ? 'Verificando...' : (_yaSolicitado ? 'Ya solicitado' : 'Solicitar')),
                 style: GoogleFonts.outfit(
-                  fontSize: 16,
+                  fontSize: buttonFontSize,
                   fontWeight: FontWeight.bold,
                 ),
               ),
@@ -1114,14 +1384,14 @@ class _CheckoutViewState extends State<CheckoutView> {
     return meses[month - 1];
   }
 
-  Widget _buildResumenRow(String label, String value, {bool bold = false, bool isTotal = false, bool isExtra = false}) {
+  Widget _buildResumenRow(String label, String value, {bool bold = false, bool isTotal = false, bool isExtra = false, bool isLargeScreen = false}) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
         Text(
           label,
           style: GoogleFonts.outfit(
-            fontSize: isTotal ? 16 : (isExtra ? 12 : 13),
+            fontSize: isTotal ? (isLargeScreen ? 18 : 16) : (isExtra ? (isLargeScreen ? 13 : 12) : (isLargeScreen ? 14 : 13)),
             fontWeight: bold ? FontWeight.bold : FontWeight.normal,
             color: isExtra ? const Color(0xFF888888) : const Color(0xFF333333),
           ),
@@ -1129,7 +1399,7 @@ class _CheckoutViewState extends State<CheckoutView> {
         Text(
           value,
           style: GoogleFonts.outfit(
-            fontSize: isTotal ? 18 : (isExtra ? 12 : 13),
+            fontSize: isTotal ? (isLargeScreen ? 20 : 18) : (isExtra ? (isLargeScreen ? 13 : 12) : (isLargeScreen ? 14 : 13)),
             fontWeight: bold ? FontWeight.bold : FontWeight.w500,
             color: isTotal ? _primaryColor : const Color(0xFF333333),
           ),
