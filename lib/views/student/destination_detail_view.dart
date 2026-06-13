@@ -15,6 +15,7 @@ import '../../controllers/favoritos_controller.dart';
 import '../../controllers/auth_controller.dart';
 import '../../views/shared/widgets/custom_dialog.dart';
 import '../auth/login_view.dart';
+import 'notifications_view.dart';
 
 class DestinationDetailView extends StatefulWidget {
   final String destinoId;
@@ -26,6 +27,7 @@ class DestinationDetailView extends StatefulWidget {
 }
 
 class _DestinationDetailViewState extends State<DestinationDetailView> {
+  final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
   late Future<DocumentSnapshot> _destinoFuture;
 
   @override
@@ -95,6 +97,10 @@ class _DestinationDetailViewState extends State<DestinationDetailView> {
     });
   }
 
+  void _openDrawer() {
+    _scaffoldKey.currentState?.openEndDrawer();
+  }
+
   bool _esBase64(String url) {
     return url.startsWith('data:image');
   }
@@ -124,7 +130,9 @@ class _DestinationDetailViewState extends State<DestinationDetailView> {
     final double backButtonTop = isMobile ? 80 : (isLargeScreen ? 100 : 80);
 
     return Scaffold(
+      key: _scaffoldKey,
       backgroundColor: Colors.white,
+      endDrawer: isMobile ? _buildDrawer() : null,
       body: FutureBuilder<DocumentSnapshot>(
         future: _destinoFuture,
         builder: (context, snapshot) {
@@ -200,7 +208,7 @@ class _DestinationDetailViewState extends State<DestinationDetailView> {
                     onLogout: _handleLogout,
                     menuItems: const ['Inicio', 'Mis Viajes', 'Favoritos'],
                     isMobile: isMobile,
-                    onMenuTap: null,
+                    onMenuTap: isMobile ? _openDrawer : null,
                   ),
                   Expanded(
                     child: isMobile
@@ -308,6 +316,134 @@ class _DestinationDetailViewState extends State<DestinationDetailView> {
           );
         },
       ),
+    );
+  }
+
+  Widget _buildDrawer() {
+    final auth = Provider.of<AuthController>(context);
+    final user = auth.usuarioActual;
+    
+    return Drawer(
+      backgroundColor: Colors.white,
+      width: 280,
+      child: SafeArea(
+        child: Column(
+          children: [
+            const SizedBox(height: 24),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 24),
+              child: Row(
+                children: [
+                  GestureDetector(
+                    onTap: _handleEditProfile,
+                    child: Container(
+                      width: 50,
+                      height: 50,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        border: Border.all(color: const Color(0xFFFC6707), width: 2),
+                      ),
+                      child: ClipOval(
+                        child: user?.fotoBase64 != null && user!.fotoBase64!.isNotEmpty
+                            ? Image.memory(
+                                base64Decode(user.fotoBase64!),
+                                width: 50,
+                                height: 50,
+                                fit: BoxFit.cover,
+                              )
+                            : const CircleAvatar(
+                                backgroundColor: Color(0xFFFDDBB3),
+                                child: Icon(Icons.person, color: Color(0xFFFC6707), size: 28),
+                              ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          user?.nombre ?? 'Estudiante',
+                          style: GoogleFonts.outfit(fontSize: 16, fontWeight: FontWeight.bold, color: const Color(0xFF333333)),
+                        ),
+                        Text(
+                          user?.apellido ?? '',
+                          style: GoogleFonts.outfit(fontSize: 14, color: const Color(0xFF666666)),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 16),
+            const Divider(height: 1, thickness: 1, color: Color(0xFFE0E0E0)),
+            Expanded(
+              child: SingleChildScrollView(
+                child: Column(
+                  children: [
+                    _buildDrawerItem('Inicio', Icons.home_outlined, () {
+                      Navigator.pop(context);
+                      Navigator.pushAndRemoveUntil(
+                        context,
+                        MaterialPageRoute(builder: (_) => const StudentHomeView()),
+                        (route) => false,
+                      );
+                    }),
+                    _buildDrawerItem('Mis Viajes', Icons.airplane_ticket_outlined, () {
+                      Navigator.pop(context);
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (_) => const MyTripsView()),
+                      );
+                    }),
+                    _buildDrawerItem('Favoritos', Icons.favorite_border, () {
+                      Navigator.pop(context);
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (_) => const FavoritesView()),
+                      );
+                    }),
+                    _buildDrawerItem('Notificaciones', Icons.notifications_outlined, () {
+                      Navigator.pop(context);
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (_) => const NotificationsView()),
+                      );
+                    }),
+                    const SizedBox(height: 16),
+                  ],
+                ),
+              ),
+            ),
+            Column(
+              children: [
+                const Divider(height: 1, thickness: 1, color: Color(0xFFE0E0E0)),
+                _buildDrawerItem('Cerrar Sesión', Icons.logout_outlined, () {
+                  Navigator.pop(context);
+                  _handleLogout();
+                }),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildDrawerItem(String title, IconData icon, VoidCallback onTap) {
+    return ListTile(
+      leading: Icon(icon, color: const Color(0xFFFC6707)),
+      title: Text(
+        title,
+        style: GoogleFonts.outfit(
+          fontSize: 16,
+          fontWeight: FontWeight.w500,
+          color: const Color(0xFF333333),
+        ),
+      ),
+      onTap: onTap,
     );
   }
 

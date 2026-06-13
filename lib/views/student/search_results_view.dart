@@ -12,6 +12,7 @@ import 'destination_detail_view.dart';
 import 'favorites_view.dart';
 import 'edit_profile_view.dart';
 import 'student_home_view.dart';
+import 'my_trips_view.dart';
 import '../../controllers/auth_controller.dart';
 import '../../views/shared/widgets/custom_dialog.dart';
 import '../auth/login_view.dart';
@@ -49,8 +50,9 @@ class _SearchResultsViewState extends State<SearchResultsView> {
         (route) => false,
       );
     } else if (menu == 'Mis Viajes') {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Mis Viajes - Próximamente'), backgroundColor: Color(0xFFFC6707)),
+      Navigator.push(
+        context,
+        MaterialPageRoute(builder: (_) => const MyTripsView()),
       );
     } else if (menu == 'Favoritos') {
       Navigator.push(
@@ -195,7 +197,60 @@ class _SearchResultsViewState extends State<SearchResultsView> {
                               color: const Color(0xFF333333),
                             ),
                           ),
-                          MouseRegion(
+                          if (!isMobile)
+                            MouseRegion(
+                              cursor: SystemMouseCursors.click,
+                              child: GestureDetector(
+                                onTap: () => Navigator.pop(context),
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                                  decoration: BoxDecoration(
+                                    color: Colors.white,
+                                    borderRadius: BorderRadius.circular(30),
+                                    border: Border.all(
+                                      color: const Color(0xFFFC6707),
+                                      width: 1,
+                                    ),
+                                    boxShadow: [
+                                      BoxShadow(
+                                        color: Colors.black.withOpacity(0.05),
+                                        blurRadius: 4,
+                                        offset: const Offset(0, 2),
+                                      ),
+                                    ],
+                                  ),
+                                  child: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Icon(
+                                        Icons.arrow_back,
+                                        color: const Color(0xFFFC6707),
+                                        size: 16,
+                                      ),
+                                      const SizedBox(width: 4),
+                                      Text(
+                                        'Volver',
+                                        style: GoogleFonts.outfit(
+                                          fontSize: 13,
+                                          color: const Color(0xFFFC6707),
+                                          fontWeight: FontWeight.w500,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            ),
+                        ],
+                      ),
+                    ),
+                    
+                    if (isMobile)
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 4),
+                        child: Align(
+                          alignment: Alignment.centerRight,
+                          child: MouseRegion(
                             cursor: SystemMouseCursors.click,
                             child: GestureDetector(
                               onTap: () => Navigator.pop(context),
@@ -238,9 +293,8 @@ class _SearchResultsViewState extends State<SearchResultsView> {
                               ),
                             ),
                           ),
-                        ],
+                        ),
                       ),
-                    ),
                     
                     if (_getFiltrosActivos().isNotEmpty)
                       Padding(
@@ -409,11 +463,9 @@ class _SearchResultsViewState extends State<SearchResultsView> {
                     }),
                     _buildDrawerItem('Mis Viajes', Icons.airplane_ticket_outlined, () {
                       Navigator.pop(context);
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text('Mis Viajes - Próximamente'),
-                          backgroundColor: Color(0xFFFC6707),
-                        ),
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (_) => const MyTripsView()),
                       );
                     }),
                     _buildDrawerItem('Favoritos', Icons.favorite_border, () {
@@ -451,15 +503,14 @@ class _SearchResultsViewState extends State<SearchResultsView> {
   }
 
   Widget _buildDrawerItem(String title, IconData icon, VoidCallback onTap) {
-    final isActive = title == 'Favoritos';
     return ListTile(
       leading: Icon(icon, color: const Color(0xFFFC6707)),
       title: Text(
         title,
         style: GoogleFonts.outfit(
           fontSize: 16,
-          fontWeight: isActive ? FontWeight.bold : FontWeight.w500,
-          color: isActive ? const Color(0xFFFC6707) : const Color(0xFF333333),
+          fontWeight: FontWeight.w500,
+          color: const Color(0xFF333333),
         ),
       ),
       onTap: onTap,

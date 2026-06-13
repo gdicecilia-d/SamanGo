@@ -15,6 +15,7 @@ import 'edit_profile_view.dart';
 import '../../views/shared/widgets/custom_dialog.dart';
 import '../auth/login_view.dart';
 import '../../services/notificacion_service.dart';
+import 'notifications_view.dart';
 
 class CheckoutView extends StatefulWidget {
   final String destinoId;
@@ -31,6 +32,8 @@ class CheckoutView extends StatefulWidget {
 }
 
 class _CheckoutViewState extends State<CheckoutView> {
+  final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
+  
   DateTime? _fechaInicio;
   DateTime? _fechaFin;
   int _numeroPersonas = 1;
@@ -332,7 +335,6 @@ class _CheckoutViewState extends State<CheckoutView> {
     }).toList();
 
     try {
-      // Crear la reserva directamente en Firestore
       final reservaRef = FirebaseFirestore.instance.collection('reservas').doc();
       final nuevaReserva = {
         'estudianteId': userId,
@@ -357,7 +359,6 @@ class _CheckoutViewState extends State<CheckoutView> {
       await reservaRef.set(nuevaReserva);
       final reservaId = reservaRef.id;
       
-      // Notificar al operador
       final destinoDoc = await FirebaseFirestore.instance
           .collection('destinos')
           .doc(widget.destinoId)
@@ -381,7 +382,6 @@ class _CheckoutViewState extends State<CheckoutView> {
         _enviando = false;
       });
       
-      // Mostrar mensaje de éxito
       ScaffoldMessenger.of(context).clearSnackBars();
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -391,7 +391,6 @@ class _CheckoutViewState extends State<CheckoutView> {
         ),
       );
       
-      // Esperar y regresar
       await Future.delayed(const Duration(seconds: 1));
       if (mounted) {
         Navigator.pop(context);
@@ -451,6 +450,10 @@ class _CheckoutViewState extends State<CheckoutView> {
     });
   }
 
+  void _openDrawer() {
+    _scaffoldKey.currentState?.openEndDrawer();
+  }
+
   @override
   Widget build(BuildContext context) {
     final screenWidth = MediaQuery.of(context).size.width;
@@ -476,7 +479,9 @@ class _CheckoutViewState extends State<CheckoutView> {
     final double calendarWidth = isLargeScreen ? 400 : (isMobile ? double.infinity : 360);
 
     return Scaffold(
+      key: _scaffoldKey,
       backgroundColor: Colors.white,
+      endDrawer: isMobile ? _buildDrawer() : null,
       body: Stack(
         children: [
           Container(
@@ -500,7 +505,7 @@ class _CheckoutViewState extends State<CheckoutView> {
                 onLogout: _handleLogout,
                 menuItems: const ['Inicio', 'Mis Viajes', 'Favoritos'],
                 isMobile: isMobile,
-                onMenuTap: null,
+                onMenuTap: isMobile ? _openDrawer : null,
               ),
               Expanded(
                 child: isMobile
@@ -582,6 +587,124 @@ class _CheckoutViewState extends State<CheckoutView> {
     );
   }
 
+  Widget _buildDrawer() {
+    final auth = Provider.of<AuthController>(context);
+    final user = auth.usuarioActual;
+    
+    return Drawer(
+      backgroundColor: Colors.white,
+      width: 280,
+      child: SafeArea(
+        child: Column(
+          children: [
+            const SizedBox(height: 24),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 24),
+              child: Row(
+                children: [
+                  GestureDetector(
+                    onTap: _handleEditProfile,
+                    child: Container(
+                      width: 50,
+                      height: 50,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        border: Border.all(color: const Color(0xFFFC6707), width: 2),
+                      ),
+                      child: ClipOval(
+                        child: user?.fotoBase64 != null && user!.fotoBase64!.isNotEmpty
+                            ? Image.memory(
+                                base64Decode(user.fotoBase64!),
+                                width: 50,
+                                height: 50,
+                                fit: BoxFit.cover,
+                              )
+                            : const CircleAvatar(
+                                backgroundColor: Color(0xFFFDDBB3),
+                                child: Icon(Icons.person, color: Color(0xFFFC6707), size: 28),
+                              ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          user?.nombre ?? 'Estudiante',
+                          style: GoogleFonts.outfit(fontSize: 16, fontWeight: FontWeight.bold, color: const Color(0xFF333333)),
+                        ),
+                        Text(
+                          user?.apellido ?? '',
+                          style: GoogleFonts.outfit(fontSize: 14, color: const Color(0xFF666666)),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 16),
+            const Divider(height: 1, thickness: 1, color: Color(0xFFE0E0E0)),
+            Expanded(
+              child: SingleChildScrollView(
+                child: Column(
+                  children: [
+                    _buildDrawerItem('Inicio', Icons.home_outlined, () {
+                      Navigator.pop(context);
+                      _handleMenuSelected('Inicio');
+                    }),
+                    _buildDrawerItem('Mis Viajes', Icons.airplane_ticket_outlined, () {
+                      Navigator.pop(context);
+                      _handleMenuSelected('Mis Viajes');
+                    }),
+                    _buildDrawerItem('Favoritos', Icons.favorite_border, () {
+                      Navigator.pop(context);
+                      _handleMenuSelected('Favoritos');
+                    }),
+                    _buildDrawerItem('Notificaciones', Icons.notifications_outlined, () {
+                      Navigator.pop(context);
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (_) => const NotificationsView()),
+                      );
+                    }),
+                    const SizedBox(height: 16),
+                  ],
+                ),
+              ),
+            ),
+            Column(
+              children: [
+                const Divider(height: 1, thickness: 1, color: Color(0xFFE0E0E0)),
+                _buildDrawerItem('Cerrar Sesión', Icons.logout_outlined, () {
+                  Navigator.pop(context);
+                  _handleLogout();
+                }),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildDrawerItem(String title, IconData icon, VoidCallback onTap) {
+    return ListTile(
+      leading: Icon(icon, color: const Color(0xFFFC6707)),
+      title: Text(
+        title,
+        style: GoogleFonts.outfit(
+          fontSize: 16,
+          fontWeight: FontWeight.w500,
+          color: const Color(0xFF333333),
+        ),
+      ),
+      onTap: onTap,
+    );
+  }
+
   Widget _buildMobileLayout(
     double titleFontSize,
     double subtitleFontSize,
@@ -601,7 +724,7 @@ class _CheckoutViewState extends State<CheckoutView> {
       padding: EdgeInsets.all(paddingHorizontal),
       child: Column(
         children: [
-          _buildContentCard(
+          _buildMobileContentCard(
             titleFontSize,
             subtitleFontSize,
             sectionFontSize,
@@ -611,7 +734,6 @@ class _CheckoutViewState extends State<CheckoutView> {
             selectorIconSize,
             selectorFontSize,
             calendarWidth,
-            isMobile: true,
           ),
           const SizedBox(height: 16),
           _buildResumenCard(cardPadding, priceFontSize, sectionFontSize, buttonFontSize, buttonPaddingVertical),
@@ -644,7 +766,7 @@ class _CheckoutViewState extends State<CheckoutView> {
           flex: 7,
           child: SingleChildScrollView(
             padding: EdgeInsets.all(paddingHorizontal),
-            child: _buildContentCard(
+            child: _buildDesktopContentCard(
               titleFontSize,
               subtitleFontSize,
               sectionFontSize,
@@ -654,7 +776,6 @@ class _CheckoutViewState extends State<CheckoutView> {
               selectorIconSize,
               selectorFontSize,
               calendarWidth,
-              isMobile: false,
             ),
           ),
         ),
@@ -671,7 +792,8 @@ class _CheckoutViewState extends State<CheckoutView> {
     );
   }
 
-  Widget _buildContentCard(
+  // Desktop
+  Widget _buildDesktopContentCard(
     double titleFontSize,
     double subtitleFontSize,
     double sectionFontSize,
@@ -680,9 +802,8 @@ class _CheckoutViewState extends State<CheckoutView> {
     double selectorButtonSize,
     double selectorIconSize,
     double selectorFontSize,
-    double calendarWidth, {
-    required bool isMobile,
-  }) {
+    double calendarWidth,
+  ) {
     return Container(
       decoration: BoxDecoration(
         color: Colors.white.withOpacity(0.95),
@@ -744,6 +865,7 @@ class _CheckoutViewState extends State<CheckoutView> {
           const Divider(height: 1, thickness: 1, color: Color(0xFFE0E0E0)),
           const SizedBox(height: 24),
           
+          // Calendario + Personaliza
           Padding(
             padding: EdgeInsets.symmetric(horizontal: cardPadding),
             child: Row(
@@ -792,6 +914,7 @@ class _CheckoutViewState extends State<CheckoutView> {
           ),
           const SizedBox(height: 32),
           
+          // ¿Quiénes van? + Foto
           Padding(
             padding: EdgeInsets.symmetric(horizontal: cardPadding),
             child: Row(
@@ -845,6 +968,182 @@ class _CheckoutViewState extends State<CheckoutView> {
                   ),
                 ),
               ],
+            ),
+          ),
+          const SizedBox(height: 24),
+        ],
+      ),
+    );
+  }
+
+  // Cell
+  Widget _buildMobileContentCard(
+    double titleFontSize,
+    double subtitleFontSize,
+    double sectionFontSize,
+    double cardPadding,
+    double selectorWidth,
+    double selectorButtonSize,
+    double selectorIconSize,
+    double selectorFontSize,
+    double calendarWidth,
+  ) {
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white.withOpacity(0.95),
+        borderRadius: BorderRadius.circular(24),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.08),
+            blurRadius: 20,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Padding(
+            padding: EdgeInsets.all(cardPadding),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  widget.destinoData['nombre'] ?? 'Destino',
+                  style: GoogleFonts.outfit(
+                    fontSize: titleFontSize,
+                    fontWeight: FontWeight.bold,
+                    color: const Color(0xFF333333),
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Row(
+                  children: [
+                    Icon(Icons.access_time, size: subtitleFontSize - 2, color: const Color(0xFF888888)),
+                    const SizedBox(width: 4),
+                    Text(
+                      widget.destinoData['duracion'] ?? 'Full Day',
+                      style: GoogleFonts.outfit(
+                        fontSize: subtitleFontSize - 2,
+                        color: const Color(0xFF888888),
+                      ),
+                    ),
+                    const SizedBox(width: 16),
+                    Icon(Icons.location_on, size: subtitleFontSize - 2, color: const Color(0xFF888888)),
+                    const SizedBox(width: 4),
+                    Expanded(
+                      child: Text(
+                        widget.destinoData['ubicacion'] ?? '',
+                        style: GoogleFonts.outfit(
+                          fontSize: subtitleFontSize - 2,
+                          color: const Color(0xFF888888),
+                        ),
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+          const Divider(height: 1, thickness: 1, color: Color(0xFFE0E0E0)),
+          const SizedBox(height: 24),
+          
+          // Calendario
+          Padding(
+            padding: EdgeInsets.symmetric(horizontal: cardPadding),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  '¿Cuándo viajas? 📅',
+                  style: GoogleFonts.outfit(
+                    fontSize: sectionFontSize,
+                    fontWeight: FontWeight.bold,
+                    color: const Color(0xFF333333),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                SizedBox(
+                  width: calendarWidth,
+                  child: _buildCalendario(),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 32),
+          
+          // ¿Quiénes van?
+          Padding(
+            padding: EdgeInsets.symmetric(horizontal: cardPadding),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  '¿Quiénes van? 👥',
+                  style: GoogleFonts.outfit(
+                    fontSize: sectionFontSize,
+                    fontWeight: FontWeight.bold,
+                    color: const Color(0xFF333333),
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  'Reserva para ti y tus amigos.',
+                  style: GoogleFonts.outfit(
+                    fontSize: 13,
+                    color: const Color(0xFF888888),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                _buildSelectorPersonas(selectorWidth, selectorButtonSize, selectorIconSize, selectorFontSize),
+                if (_numeroPersonas > 1) ...[
+                  const SizedBox(height: 24),
+                  ..._buildFormularioAcompanantes(),
+                ],
+              ],
+            ),
+          ),
+          const SizedBox(height: 32),
+          
+          // Personaliza tu experiencia
+          Padding(
+            padding: EdgeInsets.symmetric(horizontal: cardPadding),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Personaliza tu experiencia 🎁',
+                  style: GoogleFonts.outfit(
+                    fontSize: sectionFontSize,
+                    fontWeight: FontWeight.bold,
+                    color: const Color(0xFF333333),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                ..._extrasDisponibles.map((extra) => _buildExtraCheckbox(extra)),
+              ],
+            ),
+          ),
+          const SizedBox(height: 32),
+          
+          // Foto 
+          Padding(
+            padding: EdgeInsets.symmetric(horizontal: cardPadding),
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(16),
+              child: _paqueteImagen != null
+                  ? Image(
+                      image: _paqueteImagen!,
+                      height: 200,
+                      width: double.infinity,
+                      fit: BoxFit.cover,
+                    )
+                  : Container(
+                      height: 200,
+                      color: const Color(0xFFFDDBB3),
+                      child: Icon(Icons.image, size: 50, color: _primaryColor),
+                    ),
             ),
           ),
           const SizedBox(height: 24),
