@@ -93,7 +93,7 @@ class _AdminHomeViewState extends State<AdminHomeView> {
     }
   }
 
-  // ── NAVEGACIÓN ────────────────────────────────────────────────────────────
+  // Navegar 
 
   void _handleMenuSelected(String menu) {
     if (menu == 'Usuarios') {
@@ -138,7 +138,7 @@ class _AdminHomeViewState extends State<AdminHomeView> {
 
   void _openDrawer() => _scaffoldKey.currentState?.openEndDrawer();
 
-  // ── BUILD ─────────────────────────────────────────────────────────────────
+  // Build 
 
   @override
   Widget build(BuildContext context) {

@@ -175,6 +175,48 @@ class _CheckoutViewState extends State<CheckoutView> {
     return duracion == 'Full Day' || !duracion.contains('noches');
   }
 
+  int get _diasSeleccionados {
+    if (_fechaInicio == null) return 0;
+    if (_esFullDay()) return 1;
+    if (_fechaFin == null) return 1;
+    return _fechaFin!.difference(_fechaInicio!).inDays + 1;
+  }
+
+  String get _mensajeProgreso {
+    final diasRequeridos = _maxDiasSeleccionables;
+    if (_esFullDay()) {
+      if (_fechaInicio == null) {
+        return "📅 Selecciona un día";
+      }
+      return "✅ Día seleccionado: ${_formatearFecha(_fechaInicio!)}";
+    }
+    
+    if (_fechaInicio == null) {
+      return "📅 Selecciona el primer día ($diasRequeridos días)";
+    }
+    
+    if (_fechaFin == null) {
+      final diasFaltantes = diasRequeridos - 1;
+      return "📅 Selecciona el día de fin (faltan $diasFaltantes día${diasFaltantes != 1 ? 's' : ''})";
+    }
+    
+    final seleccionados = _diasSeleccionados;
+    if (seleccionados == diasRequeridos) {
+      return "✅ Rango completo: ${_formatearRango()}";
+    }
+    return "⚠️ Has seleccionado $seleccionados de $diasRequeridos días";
+  }
+
+  String _formatearFecha(DateTime fecha) {
+    return '${fecha.day}/${fecha.month}';
+  }
+
+  String _formatearRango() {
+    if (_fechaInicio == null) return '';
+    if (_fechaFin == null) return _formatearFecha(_fechaInicio!);
+    return '${_formatearFecha(_fechaInicio!)} - ${_formatearFecha(_fechaFin!)}';
+  }
+
   void _seleccionarFecha(DateTime fecha) {
     if (!_esFechaDisponible(fecha)) return;
     
@@ -1162,160 +1204,202 @@ class _CheckoutViewState extends State<CheckoutView> {
     final firstWeekday = firstDayOfMonth.weekday;
     int startOffset = firstWeekday == 7 ? 0 : firstWeekday;
     
-    return Container(
-      width: double.infinity,
-      decoration: BoxDecoration(
-        border: Border.all(color: _primaryColor, width: 1),
-        borderRadius: BorderRadius.circular(16),
-      ),
-      child: Column(
-        children: [
+    return Column(
+      children: [
+        // Mensaje de progreso
+        if (_maxDiasSeleccionables > 1 || _fechaInicio != null)
           Container(
-            padding: const EdgeInsets.symmetric(vertical: 8),
+            padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 12),
+            margin: const EdgeInsets.only(bottom: 8),
             decoration: BoxDecoration(
-              color: _primaryColor,
-              borderRadius: const BorderRadius.only(
-                topLeft: Radius.circular(15),
-                topRight: Radius.circular(15),
-              ),
+              color: _diasSeleccionados == _maxDiasSeleccionables && !_esFullDay()
+                  ? const Color(0xFFE8F5E9)
+                  : const Color(0xFFFFF3E0),
+              borderRadius: BorderRadius.circular(20),
             ),
             child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              mainAxisSize: MainAxisSize.min,
               children: [
-                const SizedBox(width: 40),
-                Expanded(
-                  child: Center(
-                    child: Text(
-                      '${monthNames[_mesActual.month - 1]} ${_mesActual.year}',
-                      style: GoogleFonts.outfit(
-                        fontSize: isLargeScreen ? 14 : 12,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.white,
-                      ),
-                    ),
-                  ),
+                Icon(
+                  _diasSeleccionados == _maxDiasSeleccionables && !_esFullDay()
+                      ? Icons.check_circle
+                      : Icons.info_outline,
+                  size: 14,
+                  color: _diasSeleccionados == _maxDiasSeleccionables && !_esFullDay()
+                      ? const Color(0xFF4CAF50)
+                      : _primaryColor,
                 ),
-                Row(
-                  children: [
-                    MouseRegion(
-                      cursor: SystemMouseCursors.click,
-                      child: GestureDetector(
-                        onTap: () => _cambiarMes(-1),
-                        child: Container(
-                          padding: const EdgeInsets.all(8),
-                          child: Icon(Icons.chevron_left, color: Colors.white, size: isLargeScreen ? 20 : 16),
-                        ),
-                      ),
-                    ),
-                    MouseRegion(
-                      cursor: SystemMouseCursors.click,
-                      child: GestureDetector(
-                        onTap: () => _cambiarMes(1),
-                        child: Container(
-                          padding: const EdgeInsets.all(8),
-                          child: Icon(Icons.chevron_right, color: Colors.white, size: isLargeScreen ? 20 : 16),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 16),
-                  ],
+                const SizedBox(width: 6),
+                Text(
+                  _mensajeProgreso,
+                  style: GoogleFonts.outfit(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w500,
+                    color: _diasSeleccionados == _maxDiasSeleccionables && !_esFullDay()
+                        ? const Color(0xFF2E7D32)
+                        : _primaryColor,
+                  ),
                 ),
               ],
             ),
           ),
-          Padding(
-            padding: const EdgeInsets.all(12),
-            child: Column(
-              children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceAround,
-                  children: ['D', 'L', 'M', 'M', 'J', 'V', 'S'].map((dia) {
-                    return Expanded(
-                      child: Text(
-                        dia,
-                        textAlign: TextAlign.center,
-                        style: GoogleFonts.outfit(
-                          fontSize: isLargeScreen ? 11 : 10,
-                          fontWeight: FontWeight.w600,
-                          color: const Color(0xFF888888),
-                        ),
-                      ),
-                    );
-                  }).toList(),
-                ),
-                const SizedBox(height: 6),
-                GridView.builder(
-                  shrinkWrap: true,
-                  physics: const NeverScrollableScrollPhysics(),
-                  gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                    crossAxisCount: 7,
-                    childAspectRatio: isLargeScreen ? 1.6 : 1.4,
-                    mainAxisSpacing: 4,
-                    crossAxisSpacing: 4,
+        
+        Container(
+          width: double.infinity,
+          decoration: BoxDecoration(
+            border: Border.all(color: _primaryColor, width: 1),
+            borderRadius: BorderRadius.circular(16),
+          ),
+          child: Column(
+            children: [
+              Container(
+                padding: const EdgeInsets.symmetric(vertical: 8),
+                decoration: BoxDecoration(
+                  color: _primaryColor,
+                  borderRadius: const BorderRadius.only(
+                    topLeft: Radius.circular(15),
+                    topRight: Radius.circular(15),
                   ),
-                  itemCount: 42,
-                  itemBuilder: (context, index) {
-                    final dayNumber = index - startOffset + 1;
-                    if (dayNumber < 1 || dayNumber > daysInMonth) return Container();
-                    
-                    final fecha = DateTime(_mesActual.year, _mesActual.month, dayNumber);
-                    final esDisponible = _esFechaDisponible(fecha);
-                    final esSeleccionada = _isFechaSeleccionada(fecha);
-                    final esEnRango = _isFechaEnRango(fecha);
-                    
-                    Color? bgColor;
-                    Color textColor = const Color(0xFF333333);
-                    
-                    if (esSeleccionada) {
-                      bgColor = _primaryColor;
-                      textColor = Colors.white;
-                    } else if (esEnRango) {
-                      bgColor = _primaryColor.withOpacity(0.2);
-                    } else if (esDisponible) {
-                      bgColor = const Color(0xFFE8F5E9);
-                      textColor = const Color(0xFF2E7D32);
-                    } else {
-                      textColor = const Color(0xFFCCCCCC);
-                    }
-                    
-                    return GestureDetector(
-                      onTap: esDisponible ? () => _seleccionarFecha(fecha) : null,
-                      child: Container(
-                        margin: const EdgeInsets.all(2),
-                        decoration: BoxDecoration(
-                          color: bgColor,
-                          shape: BoxShape.circle,
-                        ),
-                        child: Center(
-                          child: Text(
-                            '$dayNumber',
-                            style: GoogleFonts.outfit(
-                              fontSize: isLargeScreen ? 13 : 11,
-                              fontWeight: FontWeight.w500,
-                              color: textColor,
-                            ),
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    const SizedBox(width: 40),
+                    Expanded(
+                      child: Center(
+                        child: Text(
+                          '${monthNames[_mesActual.month - 1]} ${_mesActual.year}',
+                          style: GoogleFonts.outfit(
+                            fontSize: isLargeScreen ? 14 : 12,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white,
                           ),
                         ),
                       ),
-                    );
-                  },
+                    ),
+                    Row(
+                      children: [
+                        MouseRegion(
+                          cursor: SystemMouseCursors.click,
+                          child: GestureDetector(
+                            onTap: () => _cambiarMes(-1),
+                            child: Container(
+                              padding: const EdgeInsets.all(8),
+                              child: Icon(Icons.chevron_left, color: Colors.white, size: isLargeScreen ? 20 : 16),
+                            ),
+                          ),
+                        ),
+                        MouseRegion(
+                          cursor: SystemMouseCursors.click,
+                          child: GestureDetector(
+                            onTap: () => _cambiarMes(1),
+                            child: Container(
+                              padding: const EdgeInsets.all(8),
+                              child: Icon(Icons.chevron_right, color: Colors.white, size: isLargeScreen ? 20 : 16),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 16),
+                      ],
+                    ),
+                  ],
                 ),
-                const SizedBox(height: 10),
-                Text(
-                  _esFullDay() 
-                      ? 'Selecciona tu día de viaje.\nLas fechas en verde están disponibles dentro de los próximos 30 días.'
-                      : 'Selecciona tu rango de viaje (máximo $_maxDiasSeleccionables días).\nLas fechas en verde están disponibles dentro de los próximos 30 días.',
-                  textAlign: TextAlign.center,
-                  style: GoogleFonts.outfit(
-                    fontSize: isLargeScreen ? 10 : 9,
-                    color: const Color(0xFF888888),
-                  ),
+              ),
+              Padding(
+                padding: const EdgeInsets.all(12),
+                child: Column(
+                  children: [
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceAround,
+                      children: ['D', 'L', 'M', 'M', 'J', 'V', 'S'].map((dia) {
+                        return Expanded(
+                          child: Text(
+                            dia,
+                            textAlign: TextAlign.center,
+                            style: GoogleFonts.outfit(
+                              fontSize: isLargeScreen ? 11 : 10,
+                              fontWeight: FontWeight.w600,
+                              color: const Color(0xFF888888),
+                            ),
+                          ),
+                        );
+                      }).toList(),
+                    ),
+                    const SizedBox(height: 6),
+                    GridView.builder(
+                      shrinkWrap: true,
+                      physics: const NeverScrollableScrollPhysics(),
+                      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                        crossAxisCount: 7,
+                        childAspectRatio: isLargeScreen ? 1.6 : 1.4,
+                        mainAxisSpacing: 4,
+                        crossAxisSpacing: 4,
+                      ),
+                      itemCount: 42,
+                      itemBuilder: (context, index) {
+                        final dayNumber = index - startOffset + 1;
+                        if (dayNumber < 1 || dayNumber > daysInMonth) return Container();
+                        
+                        final fecha = DateTime(_mesActual.year, _mesActual.month, dayNumber);
+                        final esDisponible = _esFechaDisponible(fecha);
+                        final esSeleccionada = _isFechaSeleccionada(fecha);
+                        final esEnRango = _isFechaEnRango(fecha);
+                        
+                        Color? bgColor;
+                        Color textColor = const Color(0xFF333333);
+                        
+                        if (esSeleccionada) {
+                          bgColor = _primaryColor;
+                          textColor = Colors.white;
+                        } else if (esEnRango) {
+                          bgColor = _primaryColor.withOpacity(0.2);
+                        } else if (esDisponible) {
+                          bgColor = const Color(0xFFE8F5E9);
+                          textColor = const Color(0xFF2E7D32);
+                        } else {
+                          textColor = const Color(0xFFCCCCCC);
+                        }
+                        
+                        return GestureDetector(
+                          onTap: esDisponible ? () => _seleccionarFecha(fecha) : null,
+                          child: Container(
+                            margin: const EdgeInsets.all(2),
+                            decoration: BoxDecoration(
+                              color: bgColor,
+                              shape: BoxShape.circle,
+                            ),
+                            child: Center(
+                              child: Text(
+                                '$dayNumber',
+                                style: GoogleFonts.outfit(
+                                  fontSize: isLargeScreen ? 13 : 11,
+                                  fontWeight: FontWeight.w500,
+                                  color: textColor,
+                                ),
+                              ),
+                            ),
+                          ),
+                        );
+                      },
+                    ),
+                    const SizedBox(height: 10),
+                    Text(
+                      _esFullDay() 
+                          ? 'Las fechas en verde están disponibles dentro de los próximos 30 días.'
+                          : 'Selecciona tu rango de viaje (máximo $_maxDiasSeleccionables días).\nLas fechas en verde están disponibles.',
+                      textAlign: TextAlign.center,
+                      style: GoogleFonts.outfit(
+                        fontSize: isLargeScreen ? 10 : 9,
+                        color: const Color(0xFF888888),
+                      ),
+                    ),
+                  ],
                 ),
-              ],
-            ),
+              ),
+            ],
           ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 

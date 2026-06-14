@@ -37,10 +37,8 @@ class NotificacionService {
         .delete();
   }
 
-  // ── NOTIFICACIONES AL OPERADOR ───────────────────────────────────────────
-  // Se disparan cuando el estudiante realiza una acción sobre su reserva.
+  // Notificaciones del operador
 
-  // El estudiante solicitó un cupo: el operador debe revisarlo en "Solicitudes"
   Future<void> notificarNuevaSolicitud({
     required String operadorId,
     required String estudianteNombre,
@@ -61,7 +59,6 @@ class NotificacionService {
     );
   }
 
-  // El estudiante canceló antes de ser procesado: el cupo queda libre
   Future<void> notificarCancelacion({
     required String operadorId,
     required String estudianteNombre,
@@ -80,7 +77,7 @@ class NotificacionService {
     );
   }
 
-  // El estudiante subió el comprobante: el operador debe verificarlo en "Pagos"
+
   Future<void> notificarPagoRecibido({
     required String operadorId,
     required String estudianteNombre,
@@ -99,7 +96,6 @@ class NotificacionService {
     );
   }
 
-  // El estudiante cambió la fecha de su reserva pagada: el operador debe ajustar su logística
   Future<void> notificarCambioFecha({
     required String operadorId,
     required String estudianteNombre,
@@ -120,10 +116,8 @@ class NotificacionService {
     );
   }
 
-  // ── NOTIFICACIONES AL ESTUDIANTE ─────────────────────────────────────────
-  // Se disparan cuando el operador toma una decisión sobre la reserva.
+  // Notificaciones para el estudiante
 
-  // El operador aceptó la solicitud: el estudiante ya puede pagar
   Future<void> notificarSolicitudAceptada({
     required String estudianteId,
     required String nombrePaquete,
@@ -141,7 +135,7 @@ class NotificacionService {
     );
   }
 
-  // El operador rechazó la solicitud: se incluye el motivo si fue proporcionado
+
   Future<void> notificarSolicitudRechazada({
     required String estudianteId,
     required String nombrePaquete,
@@ -159,7 +153,6 @@ class NotificacionService {
     );
   }
 
-  // El operador confirmó el pago: el cupo queda asegurado
   Future<void> notificarPagoConfirmado({
     required String estudianteId,
     required String nombrePaquete,
@@ -177,7 +170,6 @@ class NotificacionService {
     );
   }
 
-  // El operador rechazó el comprobante: el estudiante debe subir uno nuevo
   Future<void> notificarPagoRechazado({
     required String estudianteId,
     required String nombrePaquete,
@@ -195,10 +187,8 @@ class NotificacionService {
     );
   }
 
-  // ── NOTIFICACIONES MASIVAS ───────────────────────────────────────────────
+  // Notificaciones generales 
 
-  // Envía una notificación a todos los estudiantes.
-  // Usa WriteBatch en grupos de 490 para no superar el límite de 500 de Firestore.
   Future<void> notificarAEstudiantes({
     required String titulo,
     required String mensaje,
@@ -248,7 +238,7 @@ class NotificacionService {
     );
   }
 
-  // ── HELPER PRIVADO ───────────────────────────────────────────────────────
+  // Helper privado 
 
   // Crea el documento de notificación en Firestore.
   // Todos los métodos públicos lo usan para no repetir la misma lógica.

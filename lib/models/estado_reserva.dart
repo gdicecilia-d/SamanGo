@@ -1,7 +1,4 @@
-// Todos los estados posibles de una reserva en SamanGo.
-// El flujo normal es:
-// solicitado → aceptado → verificandoPago → pagado → disfrutado
-// En cualquier punto puede ir a: rechazado o cancelado
+// Todos los estados posibles de una reserva en SamanGo
 
 enum EstadoReserva {
   solicitado,      // El estudiante envió la solicitud, espera respuesta del operador
@@ -82,19 +79,19 @@ extension EstadoReservaExtension on EstadoReserva {
   int get colorValue {
     switch (this) {
       case EstadoReserva.solicitado:
-        return 0xFFFF9800; // naranja
+        return 0xFFFF9800; 
       case EstadoReserva.aceptado:
-        return 0xFF2196F3; // azul
+        return 0xFF2196F3; 
       case EstadoReserva.verificandoPago:
-        return 0xFF9C27B0; // morado
+        return 0xFF9C27B0; 
       case EstadoReserva.pagado:
-        return 0xFF4CAF50; // verde
+        return 0xFF4CAF50; 
       case EstadoReserva.disfrutado:
-        return 0xFFFC6707; // naranja SamanGo
+        return 0xFFFC6707; 
       case EstadoReserva.rechazado:
-        return 0xFFF44336; // rojo
+        return 0xFFF44336; 
       case EstadoReserva.cancelado:
-        return 0xFF9E9E9E; // gris
+        return 0xFF9E9E9E; 
     }
   }
 }

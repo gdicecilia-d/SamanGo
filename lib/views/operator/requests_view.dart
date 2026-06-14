@@ -34,7 +34,7 @@ class _OperatorRequestsViewState extends State<OperatorRequestsView>
   @override
   void initState() {
     super.initState();
-    // 3 pestañas: Solicitudes / Pagos / En Curso (viajes aceptados y pagados)
+    // Solicitudes / Pagos / En Curso (viajes aceptados y pagados)
     _tabController = TabController(length: 3, vsync: this);
     _cargarPaquetesDelOperador();
   }
@@ -60,7 +60,7 @@ class _OperatorRequestsViewState extends State<OperatorRequestsView>
     super.dispose();
   }
 
-  // ── NAVEGACIÓN ────────────────────────────────────────────────────────────
+  // Navegación 
 
   void _handleMenuSelected(String menu) {
     if (menu == 'Inicio') {
@@ -101,7 +101,7 @@ class _OperatorRequestsViewState extends State<OperatorRequestsView>
 
   void _openDrawer() => _scaffoldKey.currentState?.openEndDrawer();
 
-  // ── ACCIONES DE SOLICITUD ─────────────────────────────────────────────────
+  // Acciones de solicitud 
 
   // Acepta la solicitud del estudiante y lo notifica
   Future<void> _aceptarSolicitud(Reserva reserva) async {
@@ -189,7 +189,7 @@ class _OperatorRequestsViewState extends State<OperatorRequestsView>
     ));
   }
 
-  // ── ACCIONES DE PAGO ──────────────────────────────────────────────────────
+  // Acciones de pago 
 
   // Muestra el comprobante de pago en un diálogo para revisarlo
   void _verComprobante(Reserva reserva) {
@@ -317,7 +317,7 @@ class _OperatorRequestsViewState extends State<OperatorRequestsView>
     ));
   }
 
-  // ── PUNTO 6: MARCAR COMO DISFRUTADO ──────────────────────────────────────
+  // Marcar como disfrutado 
 
   // El operador marca el viaje como disfrutado una vez que el estudiante ya lo realizó.
   // Esto habilita al estudiante para dejar su reseña en review_view.dart.
@@ -348,7 +348,7 @@ class _OperatorRequestsViewState extends State<OperatorRequestsView>
     ));
   }
 
-  // ── BUILD ─────────────────────────────────────────────────────────────────
+  // Build 
 
   @override
   Widget build(BuildContext context) {
@@ -436,7 +436,7 @@ class _OperatorRequestsViewState extends State<OperatorRequestsView>
     );
   }
 
-  // ── WIDGETS ───────────────────────────────────────────────────────────────
+  // Widgets 
 
   Widget _buildListaReservas(List<Reserva> reservas, String emptyMessage) {
     if (reservas.isEmpty) {

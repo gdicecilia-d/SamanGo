@@ -116,7 +116,7 @@ class _OperatorHomeViewState extends State<OperatorHomeView> {
     }
   }
 
-  // ── NAVEGACIÓN ────────────────────────────────────────────────────────────
+  // Navegar 
 
   void _handleMenuSelected(String menu) {
     if (menu == 'Publicar') {
@@ -193,7 +193,7 @@ class _OperatorHomeViewState extends State<OperatorHomeView> {
     }
   }
 
-  // ── BUILD ─────────────────────────────────────────────────────────────────
+  // Build 
 
   @override
   Widget build(BuildContext context) {
@@ -236,7 +236,7 @@ class _OperatorHomeViewState extends State<OperatorHomeView> {
     );
   }
 
-  // ── LAYOUTS ───────────────────────────────────────────────────────────────
+  // Layouts 
 
   Widget _buildMobileLayout(String empresa, String operadorId) {
     return SingleChildScrollView(
@@ -326,9 +326,9 @@ class _OperatorHomeViewState extends State<OperatorHomeView> {
     );
   }
 
-  // ── PUNTO 7: MÉTRICAS REALES DEL OPERADOR ────────────────────────────────
+  // Métricas del operador 
 
-  // Muestra 4 tarjetas: publicaciones, reservas pendientes, ingresos y calificación
+  // publicaciones, reservas pendientes, ingresos y calificación
   Widget _buildMetricasOperador({required bool isMobile}) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -451,7 +451,7 @@ class _OperatorHomeViewState extends State<OperatorHomeView> {
     );
   }
 
-  // ── PUBLICACIONES DEL OPERADOR ────────────────────────────────────────────
+  // Publicaciones 
 
   Widget _buildMainContent(
       {required bool isMobile, required String operadorId}) {

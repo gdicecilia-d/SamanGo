@@ -11,6 +11,7 @@ import 'student_home_view.dart';
 import 'my_trips_view.dart';
 import 'favorites_view.dart';
 import 'edit_profile_view.dart';
+import 'notifications_view.dart';
 import '../../views/shared/widgets/custom_dialog.dart';
 import '../auth/login_view.dart';
 import 'dart:convert';
@@ -26,6 +27,7 @@ class PaymentView extends StatefulWidget {
 }
 
 class _PaymentViewState extends State<PaymentView> {
+  final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
   bool _procesando = false;
   bool _pagoExitoso = false;
 
@@ -117,6 +119,11 @@ class _PaymentViewState extends State<PaymentView> {
         context,
         MaterialPageRoute(builder: (_) => const FavoritesView()),
       );
+    } else if (menu == 'Notificaciones') {
+      Navigator.push(
+        context,
+        MaterialPageRoute(builder: (_) => const NotificationsView()),
+      );
     }
   }
 
@@ -130,8 +137,8 @@ class _PaymentViewState extends State<PaymentView> {
   void _handleLogout() {
     CustomConfirmDialog.show(
       context: context,
-      title: 'Cerrar Sesión',
-      message: '¿Estás seguro de que deseas cerrar sesión?',
+      title: 'Cerrar Sesion',
+      message: '¿Estas seguro de que deseas cerrar sesion?',
       confirmText: 'Salir',
       icon: Icons.logout,
     ).then((confirm) async {
@@ -144,6 +151,10 @@ class _PaymentViewState extends State<PaymentView> {
         );
       }
     });
+  }
+
+  void _openDrawer() {
+    _scaffoldKey.currentState?.openEndDrawer();
   }
 
   void _irAMisViajes() {
@@ -163,19 +174,67 @@ class _PaymentViewState extends State<PaymentView> {
     final screenWidth = MediaQuery.of(context).size.width;
     final isMobile = screenWidth < 850;
     final isLargeScreen = screenWidth > 1400;
+    final double backButtonTop = isMobile ? 80 : 100;
+    final double backButtonSize = isLargeScreen ? 20 : 16;
+
+    double cardWidth;
+    double titleFontSize;
+    double sectionFontSize;
+    double paddingSize;
+    double buttonWidth;
+    double buttonFontSize;
+    double buttonPaddingVertical;
+    double imageHeight;
+    double infoFontSize;
+    double espacioEntreColumnas;
+    
+    if (isMobile) {
+      cardWidth = double.infinity;
+      titleFontSize = 24;
+      sectionFontSize = 18;
+      paddingSize = 20;
+      buttonWidth = double.infinity;
+      buttonFontSize = 14;
+      buttonPaddingVertical = 12;
+      imageHeight = 200;
+      infoFontSize = 14;
+      espacioEntreColumnas = 0;
+    } else if (isLargeScreen) {
+      cardWidth = 1200.0;
+      titleFontSize = 42;
+      sectionFontSize = 28;
+      paddingSize = 48;
+      buttonWidth = 350.0;
+      buttonFontSize = 18;
+      buttonPaddingVertical = 18;
+      imageHeight = 320;
+      infoFontSize = 18;
+      espacioEntreColumnas = 60;
+    } else {
+      cardWidth = 1000.0;
+      titleFontSize = 36;
+      sectionFontSize = 24;
+      paddingSize = 40;
+      buttonWidth = 320.0;
+      buttonFontSize = 16;
+      buttonPaddingVertical = 16;
+      imageHeight = 280;
+      infoFontSize = 16;
+      espacioEntreColumnas = 48;
+    }
 
     return Scaffold(
+      key: _scaffoldKey,
       backgroundColor: Colors.white,
+      endDrawer: isMobile ? _buildDrawer() : null,
       body: Stack(
         children: [
-          // Fondo difuminado con la imagen del destino
-          if (!_pagoExitoso)
-            Container(
-              decoration: BoxDecoration(
-                image: _getBackgroundImage(),
-                color: const Color(0xFFF5F5F5),
-              ),
+          Container(
+            decoration: BoxDecoration(
+              image: _getBackgroundImage(),
+              color: const Color(0xFFF5F5F5),
             ),
+          ),
           Column(
             children: [
               AppHeader(
@@ -185,26 +244,249 @@ class _PaymentViewState extends State<PaymentView> {
                 onLogout: _handleLogout,
                 menuItems: const ['Inicio', 'Mis Viajes', 'Favoritos'],
                 isMobile: isMobile,
-                onMenuTap: null,
+                onMenuTap: isMobile ? _openDrawer : null,
               ),
               Expanded(
                 child: _pagoExitoso
                     ? _buildSuccessScreen(isMobile, isLargeScreen)
-                    : _buildPaymentScreen(isMobile, isLargeScreen),
+                    : Center(
+                        child: SingleChildScrollView(
+                          padding: EdgeInsets.symmetric(
+                            horizontal: isMobile ? 16 : 48,
+                            vertical: isMobile ? 16 : 32,
+                          ),
+                          child: Container(
+                            width: cardWidth,
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              borderRadius: BorderRadius.circular(32),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.black.withOpacity(0.12),
+                                  blurRadius: 30,
+                                  offset: const Offset(0, 10),
+                                ),
+                              ],
+                            ),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Padding(
+                                  padding: EdgeInsets.all(paddingSize),
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        'Finalizar Pago',
+                                        style: GoogleFonts.outfit(
+                                          fontSize: titleFontSize,
+                                          fontWeight: FontWeight.bold,
+                                          color: const Color(0xFF333333),
+                                        ),
+                                      ),
+                                      SizedBox(height: isMobile ? 8 : 12),
+                                      Text(
+                                        widget.destinoData['nombre'] ?? 'Destino',
+                                        style: GoogleFonts.outfit(
+                                          fontSize: isMobile ? 14 : infoFontSize - 2,
+                                          color: const Color(0xFF666666),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                
+                                const Divider(height: 1, thickness: 1, color: Color(0xFFE0E0E0)),
+                                
+                                Padding(
+                                  padding: EdgeInsets.all(paddingSize),
+                                  child: isMobile
+                                      ? Column(
+                                          children: [
+                                            ClipRRect(
+                                              borderRadius: BorderRadius.circular(16),
+                                              child: _buildImageDestino(imageHeight),
+                                            ),
+                                            const SizedBox(height: 20),
+                                            _buildInfoRow('Destino:', widget.destinoData['ubicacion'] ?? widget.destinoData['nombre'] ?? 'No especificado', infoFontSize),
+                                            const SizedBox(height: 12),
+                                            _buildInfoRow('Fecha:', _formattedFecha, infoFontSize),
+                                            const SizedBox(height: 12),
+                                            _buildInfoRow('Precio Total:', '\$${widget.reserva.totalGeneral.toStringAsFixed(2)}', infoFontSize, isTotal: true),
+                                            const SizedBox(height: 24),
+                                            const Divider(height: 1, thickness: 1, color: Color(0xFFE0E0E0)),
+                                            const SizedBox(height: 24),
+                                            Text(
+                                              'Metodo de Pago',
+                                              style: GoogleFonts.outfit(
+                                                fontSize: infoFontSize + 4,
+                                                fontWeight: FontWeight.w600,
+                                                color: const Color(0xFF333333),
+                                              ),
+                                            ),
+                                            const SizedBox(height: 16),
+                                            _buildPaypalOption(infoFontSize),
+                                            const SizedBox(height: 20),
+                                            Text(
+                                              'El pago se procesara de forma inmediata a traves de la plataforma de PayPal',
+                                              textAlign: TextAlign.center,
+                                              style: GoogleFonts.outfit(
+                                                fontSize: infoFontSize - 2,
+                                                color: const Color(0xFF888888),
+                                              ),
+                                            ),
+                                            const SizedBox(height: 24),
+                                            const Divider(height: 1, thickness: 1, color: Color(0xFFE0E0E0)),
+                                            const SizedBox(height: 24),
+                                            Center(
+                                              child: SizedBox(
+                                                width: 240,
+                                                child: ElevatedButton(
+                                                  onPressed: _procesando ? null : _realizarPago,
+                                                  style: ElevatedButton.styleFrom(
+                                                    backgroundColor: _primaryColor,
+                                                    foregroundColor: Colors.white,
+                                                    padding: const EdgeInsets.symmetric(vertical: 14),
+                                                    shape: RoundedRectangleBorder(
+                                                      borderRadius: BorderRadius.circular(30),
+                                                    ),
+                                                  ),
+                                                  child: _procesando
+                                                      ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                                                      : Text(
+                                                          'Pagar',
+                                                          style: GoogleFonts.outfit(
+                                                            fontSize: infoFontSize,
+                                                            fontWeight: FontWeight.bold,
+                                                          ),
+                                                        ),
+                                                ),
+                                              ),
+                                            ),
+                                            const SizedBox(height: 16),
+                                            Text(
+                                              'Una vez verificado el pago por el sistema, podras descargar tu ticket para el viaje.',
+                                              textAlign: TextAlign.center,
+                                              style: GoogleFonts.outfit(
+                                                fontSize: infoFontSize - 3,
+                                                color: const Color(0xFF999999),
+                                              ),
+                                            ),
+                                          ],
+                                        )
+                                      : Row(
+                                          crossAxisAlignment: CrossAxisAlignment.start,
+                                          children: [
+                                            Expanded(
+                                              child: Column(
+                                                crossAxisAlignment: CrossAxisAlignment.start,
+                                                children: [
+                                                  ClipRRect(
+                                                    borderRadius: BorderRadius.circular(20),
+                                                    child: _buildImageDestino(imageHeight),
+                                                  ),
+                                                  SizedBox(height: isLargeScreen ? 32 : 24),
+                                                  Text(
+                                                    'Resumen del Viaje',
+                                                    style: GoogleFonts.outfit(
+                                                      fontSize: sectionFontSize,
+                                                      fontWeight: FontWeight.w600,
+                                                      color: const Color(0xFF333333),
+                                                    ),
+                                                  ),
+                                                  SizedBox(height: isLargeScreen ? 24 : 20),
+                                                  _buildInfoRow('Destino:', widget.destinoData['ubicacion'] ?? widget.destinoData['nombre'] ?? 'No especificado', infoFontSize),
+                                                  SizedBox(height: isLargeScreen ? 20 : 16),
+                                                  _buildInfoRow('Fecha:', _formattedFecha, infoFontSize),
+                                                  SizedBox(height: isLargeScreen ? 20 : 16),
+                                                  _buildInfoRow('Precio Total:', '\$${widget.reserva.totalGeneral.toStringAsFixed(2)}', infoFontSize, isTotal: true),
+                                                ],
+                                              ),
+                                            ),
+                                            SizedBox(width: espacioEntreColumnas),
+                                            Expanded(
+                                              child: Column(
+                                                crossAxisAlignment: CrossAxisAlignment.start,
+                                                children: [
+                                                  Text(
+                                                    'Metodo de Pago',
+                                                    style: GoogleFonts.outfit(
+                                                      fontSize: sectionFontSize,
+                                                      fontWeight: FontWeight.w600,
+                                                      color: const Color(0xFF333333),
+                                                    ),
+                                                  ),
+                                                  SizedBox(height: isLargeScreen ? 24 : 20),
+                                                  _buildPaypalOption(infoFontSize),
+                                                  SizedBox(height: isLargeScreen ? 32 : 24),
+                                                  Text(
+                                                    'El pago se procesara de forma inmediata a traves de la plataforma de PayPal',
+                                                    style: GoogleFonts.outfit(
+                                                      fontSize: infoFontSize - 2,
+                                                      color: const Color(0xFF888888),
+                                                    ),
+                                                  ),
+                                                  SizedBox(height: isLargeScreen ? 40 : 32),
+                                                  const Divider(height: 1, thickness: 1, color: Color(0xFFE0E0E0)),
+                                                  SizedBox(height: isLargeScreen ? 32 : 24),
+                                                  Center(
+                                                    child: SizedBox(
+                                                      width: buttonWidth,
+                                                      child: ElevatedButton(
+                                                        onPressed: _procesando ? null : _realizarPago,
+                                                        style: ElevatedButton.styleFrom(
+                                                          backgroundColor: _primaryColor,
+                                                          foregroundColor: Colors.white,
+                                                          padding: EdgeInsets.symmetric(vertical: buttonPaddingVertical),
+                                                          shape: RoundedRectangleBorder(
+                                                            borderRadius: BorderRadius.circular(40),
+                                                          ),
+                                                        ),
+                                                        child: _procesando
+                                                            ? SizedBox(height: buttonFontSize, width: buttonFontSize, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                                                            : Text(
+                                                                'Pagar',
+                                                                style: GoogleFonts.outfit(
+                                                                  fontSize: buttonFontSize,
+                                                                  fontWeight: FontWeight.bold,
+                                                                ),
+                                                              ),
+                                                      ),
+                                                    ),
+                                                  ),
+                                                  SizedBox(height: isLargeScreen ? 24 : 20),
+                                                  Text(
+                                                    'Una vez verificado el pago por el sistema, podras descargar tu ticket para el viaje.',
+                                                    textAlign: TextAlign.center,
+                                                    style: GoogleFonts.outfit(
+                                                      fontSize: infoFontSize - 4,
+                                                      color: const Color(0xFF999999),
+                                                    ),
+                                                  ),
+                                                ],
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
               ),
             ],
           ),
-          // Botón volver flotante
           if (!_pagoExitoso)
             Positioned(
-              top: isMobile ? 80 : 100,
+              top: backButtonTop,
               right: 24,
               child: MouseRegion(
                 cursor: SystemMouseCursors.click,
                 child: GestureDetector(
                   onTap: _volver,
                   child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
                     decoration: BoxDecoration(
                       color: Colors.white,
                       borderRadius: BorderRadius.circular(30),
@@ -219,12 +501,12 @@ class _PaymentViewState extends State<PaymentView> {
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        Icon(Icons.arrow_back, color: _primaryColor, size: isLargeScreen ? 20 : 16),
-                        const SizedBox(width: 4),
+                        Icon(Icons.arrow_back, color: _primaryColor, size: backButtonSize),
+                        const SizedBox(width: 6),
                         Text(
                           'Volver',
                           style: GoogleFonts.outfit(
-                            fontSize: isLargeScreen ? 16 : 14,
+                            fontSize: backButtonSize,
                             color: _primaryColor,
                             fontWeight: FontWeight.w500,
                           ),
@@ -236,6 +518,377 @@ class _PaymentViewState extends State<PaymentView> {
               ),
             ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildDrawer() {
+    final auth = Provider.of<AuthController>(context);
+    final user = auth.usuarioActual;
+    
+    return Drawer(
+      backgroundColor: Colors.white,
+      width: 280,
+      child: SafeArea(
+        child: Column(
+          children: [
+            const SizedBox(height: 24),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 24),
+              child: Row(
+                children: [
+                  GestureDetector(
+                    onTap: _handleEditProfile,
+                    child: Container(
+                      width: 50,
+                      height: 50,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        border: Border.all(color: const Color(0xFFFC6707), width: 2),
+                      ),
+                      child: ClipOval(
+                        child: user?.fotoBase64 != null && user!.fotoBase64!.isNotEmpty
+                            ? Image.memory(base64Decode(user.fotoBase64!), width: 50, height: 50, fit: BoxFit.cover)
+                            : const CircleAvatar(
+                                backgroundColor: Color(0xFFFDDBB3),
+                                child: Icon(Icons.person, color: Color(0xFFFC6707), size: 28),
+                              ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(user?.nombre ?? 'Estudiante', style: GoogleFonts.outfit(fontSize: 16, fontWeight: FontWeight.bold, color: const Color(0xFF333333))),
+                        Text(user?.apellido ?? '', style: GoogleFonts.outfit(fontSize: 14, color: const Color(0xFF666666))),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 16),
+            const Divider(height: 1, thickness: 1, color: Color(0xFFE0E0E0)),
+            Expanded(
+              child: SingleChildScrollView(
+                child: Column(
+                  children: [
+                    _buildDrawerItem('Inicio', Icons.home_outlined, () {
+                      Navigator.pop(context);
+                      _handleMenuSelected('Inicio');
+                    }),
+                    _buildDrawerItem('Mis Viajes', Icons.airplane_ticket_outlined, () {
+                      Navigator.pop(context);
+                      _handleMenuSelected('Mis Viajes');
+                    }),
+                    _buildDrawerItem('Favoritos', Icons.favorite_border, () {
+                      Navigator.pop(context);
+                      _handleMenuSelected('Favoritos');
+                    }),
+                    _buildDrawerItem('Notificaciones', Icons.notifications_outlined, () {
+                      Navigator.pop(context);
+                      _handleMenuSelected('Notificaciones');
+                    }),
+                    const SizedBox(height: 16),
+                  ],
+                ),
+              ),
+            ),
+            Column(
+              children: [
+                const Divider(height: 1, thickness: 1, color: Color(0xFFE0E0E0)),
+                _buildDrawerItem('Cerrar Sesion', Icons.logout_outlined, () {
+                  Navigator.pop(context);
+                  _handleLogout();
+                }),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildDrawerItem(String title, IconData icon, VoidCallback onTap) {
+    return ListTile(
+      leading: Icon(icon, color: const Color(0xFFFC6707)),
+      title: Text(
+        title,
+        style: GoogleFonts.outfit(
+          fontSize: 16,
+          fontWeight: FontWeight.w500,
+          color: const Color(0xFF333333),
+        ),
+      ),
+      onTap: onTap,
+    );
+  }
+
+  Widget _buildInfoRow(String label, String value, double fontSize, {bool isTotal = false}) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        Text(
+          label,
+          style: GoogleFonts.outfit(
+            fontSize: fontSize,
+            fontWeight: FontWeight.w500,
+            color: _primaryColor,
+          ),
+        ),
+        Text(
+          value,
+          style: GoogleFonts.outfit(
+            fontSize: fontSize,
+            fontWeight: isTotal ? FontWeight.bold : FontWeight.normal,
+            color: isTotal ? _primaryColor : const Color(0xFF333333),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildPaypalOption(double fontSize) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: _primaryLight,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: _primaryColor, width: 1.5),
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 22,
+            height: 22,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              border: Border.all(color: _primaryColor, width: 2),
+            ),
+            child: Center(
+              child: Container(
+                width: 14,
+                height: 14,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: _primaryColor,
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(width: 16),
+          Container(
+            width: 90,
+            height: 36,
+            decoration: BoxDecoration(
+              color: const Color(0xFF013088),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Center(
+              child: Text(
+                'PayPal',
+                style: GoogleFonts.outfit(
+                  fontSize: fontSize,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.white,
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Text(
+              'Pagar con PayPal',
+              style: GoogleFonts.outfit(
+                fontSize: fontSize - 2,
+                fontWeight: FontWeight.w500,
+                color: const Color(0xFF333333),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildImageDestino(double height) {
+    final imagenUrl = widget.destinoData['imagen'] ?? '';
+    
+    if (imagenUrl.isEmpty) {
+      return Container(
+        height: height,
+        width: double.infinity,
+        decoration: BoxDecoration(
+          color: const Color(0xFFFDDBB3),
+          borderRadius: BorderRadius.circular(20),
+        ),
+        child: Icon(Icons.image, size: height * 0.25, color: _primaryColor),
+      );
+    }
+    
+    if (imagenUrl.startsWith('data:image')) {
+      try {
+        final base64String = imagenUrl.split(',').last;
+        return ClipRRect(
+          borderRadius: BorderRadius.circular(20),
+          child: Image.memory(
+            base64Decode(base64String),
+            height: height,
+            width: double.infinity,
+            fit: BoxFit.cover,
+          ),
+        );
+      } catch (_) {
+        return Container(
+          height: height,
+          width: double.infinity,
+          decoration: BoxDecoration(
+            color: const Color(0xFFFDDBB3),
+            borderRadius: BorderRadius.circular(20),
+          ),
+          child: Icon(Icons.image, size: height * 0.25, color: _primaryColor),
+        );
+      }
+    }
+    
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(20),
+      child: Image.network(
+        imagenUrl,
+        height: height,
+        width: double.infinity,
+        fit: BoxFit.cover,
+        loadingBuilder: (context, child, loadingProgress) {
+          if (loadingProgress == null) return child;
+          return Container(
+            height: height,
+            width: double.infinity,
+            color: const Color(0xFFF5F5F5),
+            child: Center(
+              child: CircularProgressIndicator(strokeWidth: 2, color: _primaryColor),
+            ),
+          );
+        },
+        errorBuilder: (_, __, ___) => Container(
+          height: height,
+          width: double.infinity,
+          color: const Color(0xFFFDDBB3),
+          child: Icon(Icons.image, size: height * 0.25, color: _primaryColor),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSuccessScreen(bool isMobile, bool isLargeScreen) {
+    final screenWidth = MediaQuery.of(context).size.width;
+    final isSmallMobile = screenWidth < 380;
+    
+    double cardWidth;
+    double titleFontSize;
+    double paddingSize;
+    double iconSize;
+    
+    if (isMobile) {
+      cardWidth = double.infinity;
+      titleFontSize = 24;
+      paddingSize = 32;
+      iconSize = 80;
+    } else if (isLargeScreen) {
+      cardWidth = 700.0;
+      titleFontSize = 38;
+      paddingSize = 56;
+      iconSize = 120;
+    } else {
+      cardWidth = 600.0;
+      titleFontSize = 32;
+      paddingSize = 48;
+      iconSize = 100;
+    }
+    
+    return Center(
+      child: SingleChildScrollView(
+        padding: EdgeInsets.symmetric(horizontal: isMobile ? 16 : 48, vertical: 24),
+        child: Container(
+          width: cardWidth,
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(32),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.12),
+                blurRadius: 30,
+                offset: const Offset(0, 10),
+              ),
+            ],
+          ),
+          child: Padding(
+            padding: EdgeInsets.all(paddingSize),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Container(
+                  width: 120,
+                  height: 48,
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF013088),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Center(
+                    child: Text(
+                      'PayPal',
+                      style: GoogleFonts.outfit(
+                        fontSize: isSmallMobile ? 18 : 22,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white,
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 40),
+                Container(
+                  width: iconSize,
+                  height: iconSize,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: _primaryColor,
+                  ),
+                  child: Icon(
+                    Icons.check,
+                    size: iconSize * 0.5,
+                    color: Colors.white,
+                  ),
+                ),
+                const SizedBox(height: 32),
+                Text(
+                  'Transaccion Exitosa',
+                  style: GoogleFonts.outfit(
+                    fontSize: titleFontSize,
+                    fontWeight: FontWeight.bold,
+                    color: const Color(0xFF333333),
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 40),
+                MouseRegion(
+                  cursor: SystemMouseCursors.click,
+                  child: GestureDetector(
+                    onTap: _irAMisViajes,
+                    child: Text(
+                      'Ir a mis viajes',
+                      style: GoogleFonts.outfit(
+                        fontSize: isMobile ? 16 : 20,
+                        fontWeight: FontWeight.w600,
+                        color: _primaryColor,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
       ),
     );
   }
@@ -261,522 +914,6 @@ class _PaymentViewState extends State<PaymentView> {
       image: NetworkImage(imagenUrl),
       fit: BoxFit.cover,
       opacity: 0.15,
-    );
-  }
-
-  Widget _buildPaymentScreen(bool isMobile, bool isLargeScreen) {
-    final paddingHorizontal = isMobile ? 16.0 : (isLargeScreen ? 48.0 : 24.0);
-    final cardPadding = isMobile ? 20.0 : (isLargeScreen ? 40.0 : 28.0);
-    final titleFontSize = isMobile ? 24.0 : (isLargeScreen ? 32.0 : 28.0);
-    final subtitleFontSize = isMobile ? 14.0 : (isLargeScreen ? 18.0 : 16.0);
-    final sectionFontSize = isMobile ? 18.0 : (isLargeScreen ? 22.0 : 20.0);
-    final buttonFontSize = isMobile ? 16.0 : (isLargeScreen ? 20.0 : 18.0);
-    final buttonPaddingVertical = isMobile ? 14.0 : (isLargeScreen ? 20.0 : 16.0);
-
-    return Center(
-      child: SingleChildScrollView(
-        padding: EdgeInsets.all(paddingHorizontal),
-        child: Container(
-          constraints: BoxConstraints(
-            maxWidth: isLargeScreen ? 1200 : (isMobile ? double.infinity : 900),
-          ),
-          child: Column(
-            children: [
-              // Título
-              Text(
-                'Finalizar Pago',
-                style: GoogleFonts.outfit(
-                  fontSize: titleFontSize,
-                  fontWeight: FontWeight.bold,
-                  color: const Color(0xFF333333),
-                ),
-              ),
-              const SizedBox(height: 8),
-              Text(
-                widget.destinoData['nombre'] ?? 'Destino',
-                style: GoogleFonts.outfit(
-                  fontSize: subtitleFontSize,
-                  color: const Color(0xFF666666),
-                ),
-              ),
-              const SizedBox(height: 24),
-              
-              // Tarjeta principal
-              Container(
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(24),
-                  border: Border.all(color: const Color(0xFFE0E0E0), width: 1),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withOpacity(0.08),
-                      blurRadius: 20,
-                      offset: const Offset(0, 4),
-                    ),
-                  ],
-                ),
-                child: isMobile
-                    ? _buildMobileContent(cardPadding, sectionFontSize, subtitleFontSize, buttonFontSize, buttonPaddingVertical)
-                    : _buildDesktopContent(cardPadding, sectionFontSize, subtitleFontSize, buttonFontSize, buttonPaddingVertical, isLargeScreen),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildMobileContent(double cardPadding, double sectionFontSize, double subtitleFontSize, double buttonFontSize, double buttonPaddingVertical) {
-    return Column(
-      children: [
-        // Resumen del Viaje
-        Padding(
-          padding: EdgeInsets.all(cardPadding),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                'Resumen del Viaje',
-                style: GoogleFonts.outfit(
-                  fontSize: sectionFontSize,
-                  fontWeight: FontWeight.bold,
-                  color: const Color(0xFF333333),
-                ),
-              ),
-              const SizedBox(height: 12),
-              _buildImageDestino(),
-              const SizedBox(height: 16),
-              _buildInfoRow('Destino', widget.destinoData['ubicacion'] ?? widget.destinoData['nombre'] ?? 'No especificado'),
-              const SizedBox(height: 12),
-              _buildInfoRow('Fecha', _formattedFecha),
-              const SizedBox(height: 12),
-              _buildInfoRow('Precio Total', '\$${widget.reserva.totalGeneral.toStringAsFixed(2)}', isTotal: true),
-            ],
-          ),
-        ),
-        // Divisor
-        Container(height: 1, color: const Color(0xFFE0E0E0)),
-        // Método de Pago
-        Padding(
-          padding: EdgeInsets.all(cardPadding),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                'Método de Pago',
-                style: GoogleFonts.outfit(
-                  fontSize: sectionFontSize,
-                  fontWeight: FontWeight.bold,
-                  color: const Color(0xFF333333),
-                ),
-              ),
-              const SizedBox(height: 16),
-              _buildPaypalOption(),
-              const SizedBox(height: 20),
-              Text(
-                'El pago se procesará de forma inmediata a través de la plataforma de PayPal',
-                textAlign: TextAlign.center,
-                style: GoogleFonts.outfit(
-                  fontSize: subtitleFontSize - 2,
-                  color: const Color(0xFF888888),
-                ),
-              ),
-              const SizedBox(height: 20),
-              Container(height: 1, color: const Color(0xFFE0E0E0)),
-              const SizedBox(height: 24),
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton(
-                  onPressed: _procesando ? null : _realizarPago,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: _primaryColor,
-                    foregroundColor: Colors.white,
-                    padding: EdgeInsets.symmetric(vertical: buttonPaddingVertical),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(30),
-                    ),
-                  ),
-                  child: _procesando
-                      ? SizedBox(
-                          height: 20,
-                          width: 20,
-                          child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
-                        )
-                      : Text(
-                          'Pagar',
-                          style: GoogleFonts.outfit(
-                            fontSize: buttonFontSize,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                ),
-              ),
-              const SizedBox(height: 16),
-              Text(
-                'Una vez verificado el pago por el sistema, podrás descargar tu ticket para el viaje.',
-                textAlign: TextAlign.center,
-                style: GoogleFonts.outfit(
-                  fontSize: 11,
-                  color: const Color(0xFF999999),
-                ),
-              ),
-            ],
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildDesktopContent(double cardPadding, double sectionFontSize, double subtitleFontSize, double buttonFontSize, double buttonPaddingVertical, bool isLargeScreen) {
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        // Panel izquierdo - Resumen
-        Expanded(
-          child: Padding(
-            padding: EdgeInsets.all(cardPadding),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Resumen del Viaje',
-                  style: GoogleFonts.outfit(
-                    fontSize: sectionFontSize,
-                    fontWeight: FontWeight.bold,
-                    color: const Color(0xFF333333),
-                  ),
-                ),
-                const SizedBox(height: 16),
-                _buildImageDestino(),
-                const SizedBox(height: 20),
-                _buildInfoRow('Destino', widget.destinoData['ubicacion'] ?? widget.destinoData['nombre'] ?? 'No especificado'),
-                const SizedBox(height: 12),
-                _buildInfoRow('Fecha', _formattedFecha),
-                const SizedBox(height: 12),
-                _buildInfoRow('Precio Total', '\$${widget.reserva.totalGeneral.toStringAsFixed(2)}', isTotal: true),
-              ],
-            ),
-          ),
-        ),
-        // Divisor vertical
-        Container(
-          width: 1,
-          height: isLargeScreen ? 450 : 380,
-          color: _primaryColor,
-        ),
-        // Panel derecho - Método de Pago
-        Expanded(
-          child: Padding(
-            padding: EdgeInsets.all(cardPadding),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Método de Pago',
-                  style: GoogleFonts.outfit(
-                    fontSize: sectionFontSize,
-                    fontWeight: FontWeight.bold,
-                    color: const Color(0xFF333333),
-                  ),
-                ),
-                const SizedBox(height: 20),
-                _buildPaypalOption(),
-                const SizedBox(height: 24),
-                Text(
-                  'El pago se procesará de forma inmediata a través de la plataforma de PayPal',
-                  textAlign: TextAlign.center,
-                  style: GoogleFonts.outfit(
-                    fontSize: subtitleFontSize - 2,
-                    color: const Color(0xFF888888),
-                  ),
-                ),
-                const SizedBox(height: 24),
-                Container(height: 1, color: const Color(0xFFE0E0E0)),
-                const SizedBox(height: 24),
-                SizedBox(
-                  width: double.infinity,
-                  child: ElevatedButton(
-                    onPressed: _procesando ? null : _realizarPago,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: _primaryColor,
-                      foregroundColor: Colors.white,
-                      padding: EdgeInsets.symmetric(vertical: buttonPaddingVertical),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(30),
-                      ),
-                    ),
-                    child: _procesando
-                        ? SizedBox(
-                            height: 20,
-                            width: 20,
-                            child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
-                          )
-                        : Text(
-                            'Pagar',
-                            style: GoogleFonts.outfit(
-                              fontSize: buttonFontSize,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                  ),
-                ),
-                const SizedBox(height: 16),
-                Text(
-                  'Una vez verificado el pago por el sistema, podrás descargar tu ticket para el viaje.',
-                  textAlign: TextAlign.center,
-                  style: GoogleFonts.outfit(
-                    fontSize: 11,
-                    color: const Color(0xFF999999),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildImageDestino() {
-    final imagenUrl = widget.destinoData['imagen'] ?? '';
-    final imageHeight = 140.0;
-    
-    if (imagenUrl.isEmpty) {
-      return Container(
-        height: imageHeight,
-        width: double.infinity,
-        decoration: BoxDecoration(
-          color: const Color(0xFFFDDBB3),
-          borderRadius: BorderRadius.circular(16),
-        ),
-        child: Icon(Icons.image, size: 50, color: _primaryColor),
-      );
-    }
-    
-    if (imagenUrl.startsWith('data:image')) {
-      try {
-        final base64String = imagenUrl.split(',').last;
-        return ClipRRect(
-          borderRadius: BorderRadius.circular(16),
-          child: Image.memory(
-            base64Decode(base64String),
-            height: imageHeight,
-            width: double.infinity,
-            fit: BoxFit.cover,
-          ),
-        );
-      } catch (_) {
-        return Container(
-          height: imageHeight,
-          width: double.infinity,
-          decoration: BoxDecoration(
-            color: const Color(0xFFFDDBB3),
-            borderRadius: BorderRadius.circular(16),
-          ),
-          child: Icon(Icons.image, size: 50, color: _primaryColor),
-        );
-      }
-    }
-    
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(16),
-      child: Image.network(
-        imagenUrl,
-        height: imageHeight,
-        width: double.infinity,
-        fit: BoxFit.cover,
-        errorBuilder: (_, __, ___) => Container(
-          height: imageHeight,
-          width: double.infinity,
-          color: const Color(0xFFFDDBB3),
-          child: Icon(Icons.image, size: 50, color: _primaryColor),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildInfoRow(String label, String value, {bool isTotal = false}) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: [
-        Text(
-          label,
-          style: GoogleFonts.outfit(
-            fontSize: 14,
-            fontWeight: FontWeight.w500,
-            color: _primaryColor,
-          ),
-        ),
-        Text(
-          value,
-          style: GoogleFonts.outfit(
-            fontSize: 14,
-            fontWeight: isTotal ? FontWeight.bold : FontWeight.normal,
-            color: const Color(0xFF333333),
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildPaypalOption() {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: _primaryLight,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: _primaryColor, width: 1.5),
-      ),
-      child: Row(
-        children: [
-          // Radio button naranja
-          Container(
-            width: 20,
-            height: 20,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              border: Border.all(color: _primaryColor, width: 2),
-            ),
-            child: Center(
-              child: Container(
-                width: 12,
-                height: 12,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: _primaryColor,
-                ),
-              ),
-            ),
-          ),
-          const SizedBox(width: 16),
-          // Logo PayPal
-          Container(
-            width: 80,
-            height: 30,
-            decoration: BoxDecoration(
-              color: const Color(0xFF013088),
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: Center(
-              child: Text(
-                'PayPal',
-                style: GoogleFonts.outfit(
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.white,
-                ),
-              ),
-            ),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Text(
-              'Pagar con PayPal',
-              style: GoogleFonts.outfit(
-                fontSize: 14,
-                fontWeight: FontWeight.w500,
-                color: const Color(0xFF333333),
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildSuccessScreen(bool isMobile, bool isLargeScreen) {
-    final paddingHorizontal = isMobile ? 16.0 : (isLargeScreen ? 48.0 : 24.0);
-    final titleFontSize = isMobile ? 24.0 : (isLargeScreen ? 32.0 : 28.0);
-    
-    return Center(
-      child: SingleChildScrollView(
-        padding: EdgeInsets.all(paddingHorizontal),
-        child: Container(
-          constraints: BoxConstraints(
-            maxWidth: isLargeScreen ? 500 : (isMobile ? double.infinity : 450),
-          ),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(24),
-            border: Border.all(color: const Color(0xFFE0E0E0), width: 1),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withOpacity(0.08),
-                blurRadius: 20,
-                offset: const Offset(0, 4),
-              ),
-            ],
-          ),
-          child: Padding(
-            padding: EdgeInsets.all(isMobile ? 32 : 48),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                // Logo PayPal
-                Container(
-                  width: 100,
-                  height: 40,
-                  decoration: BoxDecoration(
-                    color: const Color(0xFF013088),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Center(
-                    child: Text(
-                      'PayPal',
-                      style: GoogleFonts.outfit(
-                        fontSize: 20,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.white,
-                      ),
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 32),
-                // Ícono de éxito
-                Container(
-                  width: isMobile ? 80 : 100,
-                  height: isMobile ? 80 : 100,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    color: _primaryColor,
-                  ),
-                  child: Icon(
-                    Icons.check,
-                    size: isMobile ? 40 : 50,
-                    color: Colors.white,
-                  ),
-                ),
-                const SizedBox(height: 24),
-                Text(
-                  'Transacción Exitosa',
-                  style: GoogleFonts.outfit(
-                    fontSize: titleFontSize,
-                    fontWeight: FontWeight.bold,
-                    color: const Color(0xFF333333),
-                  ),
-                  textAlign: TextAlign.center,
-                ),
-                const SizedBox(height: 32),
-                MouseRegion(
-                  cursor: SystemMouseCursors.click,
-                  child: GestureDetector(
-                    onTap: _irAMisViajes,
-                    child: Text(
-                      'Ir a mis viajes',
-                      style: GoogleFonts.outfit(
-                        fontSize: isMobile ? 14 : 16,
-                        fontWeight: FontWeight.w600,
-                        color: _primaryColor,
-                        decoration: TextDecoration.underline,
-                      ),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
     );
   }
 }
