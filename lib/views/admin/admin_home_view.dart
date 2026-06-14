@@ -1,7 +1,8 @@
-// Pantalla principal del Administrador - Dashboard
+// Dashboard del administrador con métricas reales traídas de Firestore
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../controllers/auth_controller.dart';
 import '../shared/app_header.dart';
 import '../../views/shared/widgets/custom_dialog.dart';
@@ -19,27 +20,95 @@ class AdminHomeView extends StatefulWidget {
 class _AdminHomeViewState extends State<AdminHomeView> {
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
   String _activeMenu = 'Dashboard';
-  final List<String> _menuItems = ['Dashboard', 'Gestión', 'Usuarios', 'Reportes'];
+  final List<String> _menuItems = [
+    'Dashboard',
+    'Gestión',
+    'Usuarios',
+    'Reportes'
+  ];
+
+  // Métricas cargadas desde Firestore
+  int _totalUsuarios = 0;
+  int _totalOperadores = 0;
+  int _totalEstudiantes = 0;
+  int _totalDestinos = 0;
+  int _totalReservas = 0;
+  double _totalIngresos = 0;
+  bool _cargando = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _cargarMetricas();
+  }
+
+  // Trae los conteos reales desde Firestore para mostrar en las tarjetas
+  Future<void> _cargarMetricas() async {
+    try {
+      final db = FirebaseFirestore.instance;
+
+      // Contamos usuarios por rol en paralelo para ser más rápidos
+      final results = await Future.wait([
+        db.collection('usuarios').get(),
+        db.collection('destinos').where('activo', isEqualTo: true).get(),
+        db.collection('reservas').get(),
+      ]);
+
+      final usuariosSnap = results[0];
+      final destinosSnap = results[1];
+      final reservasSnap = results[2];
+
+      // Separamos operadores y estudiantes del total de usuarios
+      int operadores = 0;
+      int estudiantes = 0;
+      for (final doc in usuariosSnap.docs) {
+        final rol = doc['rol'] as String? ?? '';
+        if (rol == 'operador') operadores++;
+        if (rol == 'estudiante') estudiantes++;
+      }
+
+      // Sumamos el totalGeneral de todas las reservas que están pagadas o disfrutadas
+      double ingresos = 0;
+      for (final doc in reservasSnap.docs) {
+        final estado = doc['estadoActual'] as String? ?? '';
+        if (estado == 'pagado' || estado == 'disfrutado') {
+          ingresos += (doc['totalGeneral'] as num? ?? 0).toDouble();
+        }
+      }
+
+      if (mounted) {
+        setState(() {
+          _totalUsuarios = usuariosSnap.docs.length;
+          _totalOperadores = operadores;
+          _totalEstudiantes = estudiantes;
+          _totalDestinos = destinosSnap.docs.length;
+          _totalReservas = reservasSnap.docs.length;
+          _totalIngresos = ingresos;
+          _cargando = false;
+        });
+      }
+    } catch (e) {
+      // Si falla la carga, simplemente dejamos los valores en 0
+      if (mounted) setState(() => _cargando = false);
+    }
+  }
+
+  // ── NAVEGACIÓN ────────────────────────────────────────────────────────────
 
   void _handleMenuSelected(String menu) {
     if (menu == 'Usuarios') {
       Navigator.push(
-        context,
-        MaterialPageRoute(builder: (_) => const AdminUsersView()),
-      );
+          context, MaterialPageRoute(builder: (_) => const AdminUsersView()));
     } else if (menu == 'Gestión') {
       _mostrarMensaje('Gestión - Próximamente');
     } else if (menu == 'Reportes') {
       _mostrarMensaje('Reportes - Próximamente');
     }
-    // Dashboard no cambia de página
   }
 
   void _handleEditProfile() {
-    Navigator.push(
-      context,
-      MaterialPageRoute(builder: (_) => const AdminEditProfileView()),
-    );
+    Navigator.push(context,
+        MaterialPageRoute(builder: (_) => const AdminEditProfileView()));
   }
 
   void _handleLogout() {
@@ -53,27 +122,23 @@ class _AdminHomeViewState extends State<AdminHomeView> {
       if (confirm == true) {
         await Provider.of<AuthController>(context, listen: false).logout();
         if (!context.mounted) return;
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(builder: (_) => const LoginView()),
-        );
+        Navigator.pushReplacement(context,
+            MaterialPageRoute(builder: (_) => const LoginView()));
       }
     });
   }
 
   void _mostrarMensaje(String mensaje) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(mensaje),
-        backgroundColor: const Color(0xFFFC6707),
-        duration: const Duration(seconds: 2),
-      ),
-    );
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+      content: Text(mensaje),
+      backgroundColor: const Color(0xFFFC6707),
+      duration: const Duration(seconds: 2),
+    ));
   }
 
-  void _openDrawer() {
-    _scaffoldKey.currentState?.openEndDrawer();
-  }
+  void _openDrawer() => _scaffoldKey.currentState?.openEndDrawer();
+
+  // ── BUILD ─────────────────────────────────────────────────────────────────
 
   @override
   Widget build(BuildContext context) {
@@ -96,7 +161,8 @@ class _AdminHomeViewState extends State<AdminHomeView> {
             onMenuTap: isMobile ? _openDrawer : null,
           ),
           Expanded(
-            child: isMobile ? _buildMobileLayout() : _buildDesktopLayout(),
+            child:
+                isMobile ? _buildMobileLayout() : _buildDesktopLayout(),
           ),
         ],
       ),
@@ -104,9 +170,9 @@ class _AdminHomeViewState extends State<AdminHomeView> {
   }
 
   Widget _buildDrawer() {
-    final auth = Provider.of<AuthController>(context);
-    final user = auth.usuarioActual;
-    
+    final user =
+        Provider.of<AuthController>(context).usuarioActual;
+
     return Drawer(
       backgroundColor: Colors.white,
       width: 280,
@@ -123,11 +189,13 @@ class _AdminHomeViewState extends State<AdminHomeView> {
                     height: 50,
                     decoration: BoxDecoration(
                       shape: BoxShape.circle,
-                      border: Border.all(color: const Color(0xFFFC6707), width: 2),
+                      border: Border.all(
+                          color: const Color(0xFFFC6707), width: 2),
                     ),
                     child: const CircleAvatar(
                       backgroundColor: Color(0xFFFDDBB3),
-                      child: Icon(Icons.admin_panel_settings, color: Color(0xFFFC6707), size: 28),
+                      child: Icon(Icons.admin_panel_settings,
+                          color: Color(0xFFFC6707), size: 28),
                     ),
                   ),
                   const SizedBox(width: 12),
@@ -137,12 +205,15 @@ class _AdminHomeViewState extends State<AdminHomeView> {
                       children: [
                         Text(
                           user?.nombre ?? 'Administrador',
-                          style: GoogleFonts.outfit(fontSize: 16, fontWeight: FontWeight.bold, color: const Color(0xFF333333)),
+                          style: GoogleFonts.outfit(
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                              color: const Color(0xFF333333)),
                         ),
-                        Text(
-                          'Administrador',
-                          style: GoogleFonts.outfit(fontSize: 12, color: const Color(0xFF666666)),
-                        ),
+                        Text('Administrador',
+                            style: GoogleFonts.outfit(
+                                fontSize: 12,
+                                color: const Color(0xFF666666))),
                       ],
                     ),
                   ),
@@ -150,10 +221,9 @@ class _AdminHomeViewState extends State<AdminHomeView> {
               ),
             ),
             const SizedBox(height: 16),
-            const Divider(height: 1, thickness: 1, color: Color(0xFFE0E0E0)),
+            const Divider(height: 1, color: Color(0xFFE0E0E0)),
             _buildDrawerItem('Dashboard', Icons.dashboard_outlined, () {
               Navigator.pop(context);
-              _handleMenuSelected('Dashboard');
             }),
             _buildDrawerItem('Gestión', Icons.settings_outlined, () {
               Navigator.pop(context);
@@ -168,7 +238,7 @@ class _AdminHomeViewState extends State<AdminHomeView> {
               _handleMenuSelected('Reportes');
             }),
             const Spacer(),
-            const Divider(height: 1, thickness: 1, color: Color(0xFFE0E0E0)),
+            const Divider(height: 1, color: Color(0xFFE0E0E0)),
             _buildDrawerItem('Cerrar Sesión', Icons.logout_outlined, () {
               Navigator.pop(context);
               _handleLogout();
@@ -180,7 +250,8 @@ class _AdminHomeViewState extends State<AdminHomeView> {
     );
   }
 
-  Widget _buildDrawerItem(String title, IconData icon, VoidCallback onTap) {
+  Widget _buildDrawerItem(
+      String title, IconData icon, VoidCallback onTap) {
     final isActive = title == _activeMenu;
     return ListTile(
       leading: Icon(icon, color: const Color(0xFFFC6707)),
@@ -188,8 +259,11 @@ class _AdminHomeViewState extends State<AdminHomeView> {
         title,
         style: GoogleFonts.outfit(
           fontSize: 16,
-          fontWeight: isActive ? FontWeight.bold : FontWeight.w500,
-          color: isActive ? const Color(0xFFFC6707) : const Color(0xFF333333),
+          fontWeight:
+              isActive ? FontWeight.bold : FontWeight.w500,
+          color: isActive
+              ? const Color(0xFFFC6707)
+              : const Color(0xFF333333),
         ),
       ),
       onTap: onTap,
@@ -224,14 +298,13 @@ class _AdminHomeViewState extends State<AdminHomeView> {
             ),
           ),
         ),
+        // Imagen decorativa lateral del campus
         Container(
           width: 320,
           decoration: BoxDecoration(
             border: Border(
               left: BorderSide(
-                color: Colors.grey.withOpacity(0.3),
-                width: 1.5,
-              ),
+                  color: Colors.grey.withOpacity(0.3), width: 1.5),
             ),
           ),
           child: Image.asset(
@@ -240,7 +313,6 @@ class _AdminHomeViewState extends State<AdminHomeView> {
             height: double.infinity,
             fit: BoxFit.cover,
             errorBuilder: (_, __, ___) => Container(
-              width: 320,
               color: const Color(0xFFFDDBB3),
               child: const Center(
                 child: Column(
@@ -261,39 +333,113 @@ class _AdminHomeViewState extends State<AdminHomeView> {
 
   Widget _buildMetricsContent({required bool isMobile}) {
     return Padding(
-      padding: EdgeInsets.symmetric(horizontal: isMobile ? 16 : 24),
+      padding:
+          EdgeInsets.symmetric(horizontal: isMobile ? 16 : 24),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                'Dashboard de Métricas',
+                style: GoogleFonts.outfit(
+                  fontSize: isMobile ? 24 : 28,
+                  fontWeight: FontWeight.bold,
+                  color: const Color(0xFF333333),
+                ),
+              ),
+              // Botón para refrescar las métricas manualmente
+              IconButton(
+                onPressed: () {
+                  setState(() => _cargando = true);
+                  _cargarMetricas();
+                },
+                icon: const Icon(Icons.refresh, color: Color(0xFFFC6707)),
+                tooltip: 'Actualizar métricas',
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
           Text(
-            'Dashboard de Métricas',
+            'Datos en tiempo real de la plataforma SamanGo',
             style: GoogleFonts.outfit(
-              fontSize: isMobile ? 24 : 28,
-              fontWeight: FontWeight.bold,
-              color: const Color(0xFF333333),
-            ),
+                fontSize: 14, color: const Color(0xFF888888)),
           ),
           const SizedBox(height: 24),
-          Row(
-            children: [
-              Expanded(child: _buildMetricCard('Total Usuarios', '0', Icons.people)),
-              const SizedBox(width: 16),
-              Expanded(child: _buildMetricCard('Operadores', '0', Icons.business)),
-              const SizedBox(width: 16),
-              Expanded(child: _buildMetricCard('Estudiantes', '0', Icons.school)),
-            ],
-          ),
-          const SizedBox(height: 16),
-          Row(
-            children: [
-              Expanded(child: _buildMetricCard('Destinos Activos', '0', Icons.tour)),
-              const SizedBox(width: 16),
-              Expanded(child: _buildMetricCard('Reservas', '0', Icons.receipt)),
-              const SizedBox(width: 16),
-              Expanded(child: _buildMetricCard('Ingresos', '\$0', Icons.attach_money)),
-            ],
-          ),
+
+          // Fila 1: usuarios
+          if (isMobile) ...[
+            _buildMetricCard(
+                'Total Usuarios', '$_totalUsuarios', Icons.people),
+            const SizedBox(height: 12),
+            Row(
+              children: [
+                Expanded(
+                    child: _buildMetricCard(
+                        'Operadores', '$_totalOperadores', Icons.business)),
+                const SizedBox(width: 12),
+                Expanded(
+                    child: _buildMetricCard(
+                        'Estudiantes', '$_totalEstudiantes', Icons.school)),
+              ],
+            ),
+            const SizedBox(height: 12),
+            Row(
+              children: [
+                Expanded(
+                    child: _buildMetricCard(
+                        'Destinos Activos', '$_totalDestinos', Icons.tour)),
+                const SizedBox(width: 12),
+                Expanded(
+                    child: _buildMetricCard(
+                        'Reservas', '$_totalReservas', Icons.receipt)),
+              ],
+            ),
+            const SizedBox(height: 12),
+            _buildMetricCard(
+                'Ingresos Confirmados',
+                '\$${_totalIngresos.toStringAsFixed(2)}',
+                Icons.attach_money),
+          ] else ...[
+            Row(
+              children: [
+                Expanded(
+                    child: _buildMetricCard(
+                        'Total Usuarios', '$_totalUsuarios', Icons.people)),
+                const SizedBox(width: 16),
+                Expanded(
+                    child: _buildMetricCard(
+                        'Operadores', '$_totalOperadores', Icons.business)),
+                const SizedBox(width: 16),
+                Expanded(
+                    child: _buildMetricCard(
+                        'Estudiantes', '$_totalEstudiantes', Icons.school)),
+              ],
+            ),
+            const SizedBox(height: 16),
+            Row(
+              children: [
+                Expanded(
+                    child: _buildMetricCard(
+                        'Destinos Activos', '$_totalDestinos', Icons.tour)),
+                const SizedBox(width: 16),
+                Expanded(
+                    child: _buildMetricCard(
+                        'Reservas', '$_totalReservas', Icons.receipt)),
+                const SizedBox(width: 16),
+                Expanded(
+                    child: _buildMetricCard(
+                        'Ingresos Confirmados',
+                        '\$${_totalIngresos.toStringAsFixed(2)}',
+                        Icons.attach_money)),
+              ],
+            ),
+          ],
+
           const SizedBox(height: 32),
+
+          // Sección de gráficos (pendiente de implementar con librería fl_chart)
           Container(
             width: double.infinity,
             padding: const EdgeInsets.all(32),
@@ -304,11 +450,13 @@ class _AdminHomeViewState extends State<AdminHomeView> {
             child: const Center(
               child: Column(
                 children: [
-                  Icon(Icons.show_chart, size: 48, color: Color(0xFFCCCCCC)),
+                  Icon(Icons.show_chart,
+                      size: 48, color: Color(0xFFCCCCCC)),
                   SizedBox(height: 12),
                   Text(
                     'Gráficos de tendencias - Próximamente',
-                    style: TextStyle(fontSize: 14, color: Color(0xFF999999)),
+                    style: TextStyle(
+                        fontSize: 14, color: Color(0xFF999999)),
                   ),
                 ],
               ),
@@ -319,6 +467,7 @@ class _AdminHomeViewState extends State<AdminHomeView> {
     );
   }
 
+  // Tarjeta individual de métrica. Muestra un spinner mientras carga.
   Widget _buildMetricCard(String title, String value, IconData icon) {
     return Container(
       padding: const EdgeInsets.all(16),
@@ -346,21 +495,27 @@ class _AdminHomeViewState extends State<AdminHomeView> {
             child: Icon(icon, color: const Color(0xFFFC6707), size: 24),
           ),
           const SizedBox(height: 12),
-          Text(
-            value,
-            style: GoogleFonts.outfit(
-              fontSize: 24,
-              fontWeight: FontWeight.bold,
-              color: const Color(0xFF333333),
-            ),
-          ),
+          // Mostramos el spinner mientras se cargan los datos
+          _cargando
+              ? const SizedBox(
+                  height: 28,
+                  width: 28,
+                  child: CircularProgressIndicator(
+                      strokeWidth: 2, color: Color(0xFFFC6707)),
+                )
+              : Text(
+                  value,
+                  style: GoogleFonts.outfit(
+                    fontSize: 24,
+                    fontWeight: FontWeight.bold,
+                    color: const Color(0xFF333333),
+                  ),
+                ),
           const SizedBox(height: 4),
           Text(
             title,
             style: GoogleFonts.outfit(
-              fontSize: 14,
-              color: const Color(0xFF888888),
-            ),
+                fontSize: 14, color: const Color(0xFF888888)),
           ),
         ],
       ),
@@ -370,7 +525,8 @@ class _AdminHomeViewState extends State<AdminHomeView> {
   Widget _buildFooter(bool isMobile) {
     return Container(
       width: double.infinity,
-      padding: EdgeInsets.symmetric(vertical: isMobile ? 16 : 20),
+      padding:
+          EdgeInsets.symmetric(vertical: isMobile ? 16 : 20),
       margin: EdgeInsets.only(top: isMobile ? 16 : 32),
       decoration: const BoxDecoration(
         color: Color(0xFFFC6707),
