@@ -208,7 +208,8 @@ class _FavoritesViewState extends State<FavoritesView> {
                         duracion: data['duracion'] ?? 'Full Day',
                         imagenUrl: data['imagen'] ?? '',
                         isOffer: isOffer,
-                        cuposDisponibles: data['cuposDisponibles'] ?? 0,
+                        calificacionPromedio: (data['calificacionPromedio'] as num?)?.toDouble() ?? 0.0,
+                        totalResenas: (data['totalResenas'] as num?)?.toInt() ?? 0,
                         onTap: () {
                           Navigator.push(
                             context,

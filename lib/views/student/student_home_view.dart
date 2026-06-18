@@ -390,7 +390,8 @@ class _StudentHomeViewState extends State<StudentHomeView> {
                 duracion: data['duracion'] ?? 'Full Day',
                 imagenUrl: data['imagen'] ?? '',
                 isOffer: false,
-                cuposDisponibles: data['cuposDisponibles'] ?? 0,
+                calificacionPromedio: (data['calificacionPromedio'] as num?)?.toDouble() ?? 0.0,
+                totalResenas: (data['totalResenas'] as num?)?.toInt() ?? 0,
                 onTap: () {
                   Navigator.push(
                     context,
@@ -448,7 +449,8 @@ class _StudentHomeViewState extends State<StudentHomeView> {
                 duracion: data['duracion'] ?? 'Full Day',
                 imagenUrl: data['imagen'] ?? '',
                 isOffer: true,
-                cuposDisponibles: data['cuposDisponibles'] ?? 0,
+                calificacionPromedio: (data['calificacionPromedio'] as num?)?.toDouble() ?? 0.0,
+                totalResenas: (data['totalResenas'] as num?)?.toInt() ?? 0,
                 onTap: () {
                   Navigator.push(
                     context,

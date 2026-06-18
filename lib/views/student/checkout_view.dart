@@ -41,7 +41,7 @@ class _CheckoutViewState extends State<CheckoutView> {
   final List<Map<String, String>> _acompanantes = [];
   
   DateTime _fechaPublicacion = DateTime.now();
-  List<DateTime> _fechasDisponibles = [];
+  List<Map<String, dynamic>> _bloquesDisponibles = [];
   
   DateTime _mesActual = DateTime.now();
   bool _yaSolicitado = false;
@@ -78,12 +78,76 @@ class _CheckoutViewState extends State<CheckoutView> {
     if (widget.destinoData['fechaPublicacion'] != null) {
       _fechaPublicacion = DateTime.parse(widget.destinoData['fechaPublicacion']);
     }
-    
+    _generarBloquesDisponibles();
+  }
+
+  void _generarBloquesDisponibles() {
+    _bloquesDisponibles.clear();
+    final duracion = widget.destinoData['duracion'] ?? 'Full Day';
     final hoy = DateTime.now();
-    _fechasDisponibles = [];
-    for (int i = 0; i < 30; i++) {
-      _fechasDisponibles.add(hoy.add(Duration(days: i)));
+    final fechaInicio = hoy.add(const Duration(days: 7));
+    
+    if (duracion == 'Full Day') {
+      // Full Day: solo sábados (3 sábados)
+      int sabadosEncontrados = 0;
+      DateTime fecha = fechaInicio;
+      while (sabadosEncontrados < 3 && fecha.difference(hoy).inDays <= 60) {
+        if (fecha.weekday == 6) { // Sábado
+          _bloquesDisponibles.add({
+            'fechaInicio': DateTime(fecha.year, fecha.month, fecha.day),
+            'fechaFin': DateTime(fecha.year, fecha.month, fecha.day),
+            'label': _formatearFecha(DateTime(fecha.year, fecha.month, fecha.day)),
+            'dias': 1,
+          });
+          sabadosEncontrados++;
+        }
+        fecha = fecha.add(const Duration(days: 1));
+      }
+    } else {
+      // Viaje de varias noches: extraer días de la semana
+      final match = RegExp(r'(\d+)').firstMatch(duracion);
+      if (match != null) {
+        final noches = int.parse(match.group(1)!);
+        final diasViaje = noches + 1;
+        
+        // Definir días de salida según la duración
+        List<int> diasSalida;
+        if (duracion.contains('2 noches')) {
+          diasSalida = [5, 6]; // Viernes o Sábado
+        } else if (duracion.contains('3 noches')) {
+          diasSalida = [4, 5]; // Jueves o Viernes
+        } else if (duracion.contains('4 noches')) {
+          diasSalida = [3, 4]; // Miércoles o Jueves
+        } else {
+          diasSalida = [5, 6]; // Por defecto Viernes o Sábado
+        }
+        
+        int bloquesGenerados = 0;
+        DateTime fecha = fechaInicio;
+        while (bloquesGenerados < 3 && fecha.difference(hoy).inDays <= 60) {
+          if (diasSalida.contains(fecha.weekday)) {
+            final fechaFin = fecha.add(Duration(days: diasViaje - 1));
+            _bloquesDisponibles.add({
+              'fechaInicio': DateTime(fecha.year, fecha.month, fecha.day),
+              'fechaFin': DateTime(fechaFin.year, fechaFin.month, fechaFin.day),
+              'label': _formatearRangoLabel(fecha, fechaFin),
+              'dias': diasViaje,
+            });
+            bloquesGenerados++;
+          }
+          fecha = fecha.add(const Duration(days: 1));
+        }
+      }
     }
+  }
+
+  String _formatearRangoLabel(DateTime inicio, DateTime fin) {
+    if (inicio == fin) return _formatearFecha(inicio);
+    return '${_formatearFecha(inicio)} - ${_formatearFecha(fin)}';
+  }
+
+  String _formatearFecha(DateTime fecha) {
+    return '${fecha.day}/${fecha.month}';
   }
 
   void _cargarImagenes() {
@@ -147,127 +211,28 @@ class _CheckoutViewState extends State<CheckoutView> {
     return true;
   }
 
-  bool _esFechaDisponible(DateTime date) {
-    final hoy = DateTime.now();
-    final limite = hoy.add(const Duration(days: 30));
-    
-    final normalizedDate = DateTime(date.year, date.month, date.day);
-    final normalizedHoy = DateTime(hoy.year, hoy.month, hoy.day);
-    final normalizedLimite = DateTime(limite.year, limite.month, limite.day);
-    
-    return normalizedDate.isAfter(normalizedHoy.subtract(const Duration(days: 1))) &&
-           normalizedDate.isBefore(normalizedLimite.add(const Duration(days: 1)));
-  }
-
-  int get _maxDiasSeleccionables {
-    final duracion = widget.destinoData['duracion'] ?? 'Full Day';
-    if (duracion == 'Full Day') return 1;
-    final match = RegExp(r'(\d+)').firstMatch(duracion);
-    if (match != null) {
-      final noches = int.parse(match.group(1)!);
-      return noches + 1;
-    }
-    return 1;
-  }
-
   bool _esFullDay() {
     final duracion = widget.destinoData['duracion'] ?? 'Full Day';
     return duracion == 'Full Day' || !duracion.contains('noches');
   }
 
-  int get _diasSeleccionados {
-    if (_fechaInicio == null) return 0;
-    if (_esFullDay()) return 1;
-    if (_fechaFin == null) return 1;
-    return _fechaFin!.difference(_fechaInicio!).inDays + 1;
-  }
-
-  String get _mensajeProgreso {
-    final diasRequeridos = _maxDiasSeleccionables;
-    if (_esFullDay()) {
-      if (_fechaInicio == null) {
-        return "📅 Selecciona un día";
-      }
-      return "✅ Día seleccionado: ${_formatearFecha(_fechaInicio!)}";
-    }
-    
-    if (_fechaInicio == null) {
-      return "📅 Selecciona el primer día ($diasRequeridos días)";
-    }
-    
-    if (_fechaFin == null) {
-      final diasFaltantes = diasRequeridos - 1;
-      return "📅 Selecciona el día de fin (faltan $diasFaltantes día${diasFaltantes != 1 ? 's' : ''})";
-    }
-    
-    final seleccionados = _diasSeleccionados;
-    if (seleccionados == diasRequeridos) {
-      return "✅ Rango completo: ${_formatearRango()}";
-    }
-    return "⚠️ Has seleccionado $seleccionados de $diasRequeridos días";
-  }
-
-  String _formatearFecha(DateTime fecha) {
-    return '${fecha.day}/${fecha.month}';
-  }
-
-  String _formatearRango() {
-    if (_fechaInicio == null) return '';
-    if (_fechaFin == null) return _formatearFecha(_fechaInicio!);
-    return '${_formatearFecha(_fechaInicio!)} - ${_formatearFecha(_fechaFin!)}';
-  }
-
-  void _seleccionarFecha(DateTime fecha) {
-    if (!_esFechaDisponible(fecha)) return;
-    
+  void _seleccionarBloque(Map<String, dynamic> bloque) {
     setState(() {
-      if (_esFullDay()) {
-        _fechaInicio = fecha;
-        _fechaFin = fecha;
-      } else {
-        if (_fechaInicio == null || (_fechaFin != null && _fechaInicio != null)) {
-          _fechaInicio = fecha;
-          _fechaFin = null;
-        } else if (_fechaInicio != null && _fechaFin == null) {
-          if (fecha.isAfter(_fechaInicio!)) {
-            final diasRango = fecha.difference(_fechaInicio!).inDays + 1;
-            if (diasRango <= _maxDiasSeleccionables) {
-              _fechaFin = fecha;
-            } else {
-              _fechaInicio = fecha;
-              _fechaFin = null;
-            }
-          } else {
-            _fechaInicio = fecha;
-            _fechaFin = null;
-          }
-        }
-      }
+      _fechaInicio = bloque['fechaInicio'];
+      _fechaFin = bloque['fechaFin'];
     });
   }
 
-  bool _isFechaSeleccionada(DateTime fecha) {
-    if (_esFullDay()) {
-      return _fechaInicio != null && 
-             _fechaInicio!.year == fecha.year &&
-             _fechaInicio!.month == fecha.month &&
-             _fechaInicio!.day == fecha.day;
-    } else {
-      if (_fechaInicio == null) return false;
-      if (_fechaFin == null) {
-        return _fechaInicio!.year == fecha.year &&
-               _fechaInicio!.month == fecha.month &&
-               _fechaInicio!.day == fecha.day;
-      }
-      return fecha.isAfter(_fechaInicio!.subtract(const Duration(days: 1))) &&
-             fecha.isBefore(_fechaFin!.add(const Duration(days: 1)));
-    }
-  }
-
-  bool _isFechaEnRango(DateTime fecha) {
-    if (_esFullDay()) return false;
-    if (_fechaInicio == null || _fechaFin == null) return false;
-    return fecha.isAfter(_fechaInicio!) && fecha.isBefore(_fechaFin!);
+  bool _isBloqueSeleccionado(Map<String, dynamic> bloque) {
+    if (_fechaInicio == null) return false;
+    final inicio = bloque['fechaInicio'] as DateTime;
+    final fin = bloque['fechaFin'] as DateTime;
+    return _fechaInicio!.year == inicio.year &&
+        _fechaInicio!.month == inicio.month &&
+        _fechaInicio!.day == inicio.day &&
+        _fechaFin!.year == fin.year &&
+        _fechaFin!.month == fin.month &&
+        _fechaFin!.day == fin.day;
   }
 
   void _cambiarMes(int delta) {
@@ -339,13 +304,48 @@ class _CheckoutViewState extends State<CheckoutView> {
     }
   }
 
+  Future<bool> _verificarReservaEnMismaFecha(DateTime inicio, DateTime fin) async {
+    final auth = Provider.of<AuthController>(context, listen: false);
+    final userId = auth.usuarioActual?.id;
+    if (userId == null) return false;
+
+    try {
+      final reservas = await FirebaseFirestore.instance
+          .collection('reservas')
+          .where('estudianteId', isEqualTo: userId)
+          .where('estadoActual', whereIn: ['solicitado', 'aceptado', 'pagado'])
+          .get();
+
+      for (final doc in reservas.docs) {
+        final data = doc.data();
+        final reservaInicio = (data['fechaInicio'] as Timestamp).toDate();
+        final reservaFin = (data['fechaFin'] as Timestamp).toDate();
+        
+        // Verificar si las fechas se traslapan
+        if (!(fin.isBefore(reservaInicio) || inicio.isAfter(reservaFin))) {
+          final destinoDoc = await FirebaseFirestore.instance
+              .collection('destinos')
+              .doc(data['paqueteId'])
+              .get();
+          final nombreDestino = destinoDoc.data()?['nombre'] ?? 'otro viaje';
+          _mostrarMensaje('Ya tienes una reserva para el período seleccionado: "$nombreDestino". No puedes tener dos viajes en las mismas fechas.');
+          return true;
+        }
+      }
+      return false;
+    } catch (e) {
+      print('Error verificando reservas: $e');
+      return false;
+    }
+  }
+
   Future<void> _enviarSolicitud() async {
     if (_yaSolicitado) {
       _mostrarMensaje('Ya tienes una solicitud activa para este destino');
       return;
     }
     
-    if (_fechaInicio == null) {
+    if (_fechaInicio == null || _fechaFin == null) {
       _mostrarMensaje('Selecciona una fecha para tu viaje');
       return;
     }
@@ -353,6 +353,10 @@ class _CheckoutViewState extends State<CheckoutView> {
       _mostrarMensaje('Completa los datos de tus acompañantes');
       return;
     }
+
+    // Verificar si ya tiene una reserva en la misma fecha
+    final yaTieneReserva = await _verificarReservaEnMismaFecha(_fechaInicio!, _fechaFin!);
+    if (yaTieneReserva) return;
 
     setState(() {
       _enviando = true;
@@ -368,8 +372,7 @@ class _CheckoutViewState extends State<CheckoutView> {
       return;
     }
 
-    final fechaFinCalculada = _fechaFin ?? _fechaInicio!;
-    final fechaFinReal = fechaFinCalculada.add(const Duration(days: 1));
+    final fechaFinReal = _fechaFin!.add(const Duration(days: 1));
 
     final acompanantesFinales = _acompanantes.map((a) => {
       'nombre': a['nombre'],
@@ -928,7 +931,7 @@ class _CheckoutViewState extends State<CheckoutView> {
                       const SizedBox(height: 12),
                       SizedBox(
                         width: calendarWidth,
-                        child: _buildCalendario(),
+                        child: _buildSelectorBloques(),
                       ),
                     ],
                   ),
@@ -1108,7 +1111,7 @@ class _CheckoutViewState extends State<CheckoutView> {
                 const SizedBox(height: 12),
                 SizedBox(
                   width: calendarWidth,
-                  child: _buildCalendario(),
+                  child: _buildSelectorBloques(),
                 ),
               ],
             ),
@@ -1194,212 +1197,146 @@ class _CheckoutViewState extends State<CheckoutView> {
     );
   }
 
-  Widget _buildCalendario() {
-    final monthNames = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
-    final screenWidth = MediaQuery.of(context).size.width;
-    final isLargeScreen = screenWidth > 1400;
+  // NUEVO: Selector de bloques de días
+  Widget _buildSelectorBloques() {
+    final isLargeScreen = MediaQuery.of(context).size.width > 1400;
     
-    final firstDayOfMonth = DateTime(_mesActual.year, _mesActual.month, 1);
-    final daysInMonth = DateTime(_mesActual.year, _mesActual.month + 1, 0).day;
-    final firstWeekday = firstDayOfMonth.weekday;
-    int startOffset = firstWeekday == 7 ? 0 : firstWeekday;
-    
-    return Column(
-      children: [
-        // Mensaje de progreso
-        if (_maxDiasSeleccionables > 1 || _fechaInicio != null)
+    if (_bloquesDisponibles.isEmpty) {
+      return Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          border: Border.all(color: _primaryColor, width: 1),
+          borderRadius: BorderRadius.circular(16),
+        ),
+        child: const Center(
+          child: Text(
+            'No hay fechas disponibles en este momento',
+            textAlign: TextAlign.center,
+          ),
+        ),
+      );
+    }
+
+    return Container(
+      decoration: BoxDecoration(
+        border: Border.all(color: _primaryColor, width: 1),
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          // Header del mes
           Container(
-            padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 12),
-            margin: const EdgeInsets.only(bottom: 8),
+            padding: const EdgeInsets.symmetric(vertical: 8),
             decoration: BoxDecoration(
-              color: _diasSeleccionados == _maxDiasSeleccionables && !_esFullDay()
-                  ? const Color(0xFFE8F5E9)
-                  : const Color(0xFFFFF3E0),
-              borderRadius: BorderRadius.circular(20),
+              color: _primaryColor,
+              borderRadius: const BorderRadius.only(
+                topLeft: Radius.circular(15),
+                topRight: Radius.circular(15),
+              ),
             ),
             child: Row(
-              mainAxisSize: MainAxisSize.min,
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Icon(
-                  _diasSeleccionados == _maxDiasSeleccionables && !_esFullDay()
-                      ? Icons.check_circle
-                      : Icons.info_outline,
-                  size: 14,
-                  color: _diasSeleccionados == _maxDiasSeleccionables && !_esFullDay()
-                      ? const Color(0xFF4CAF50)
-                      : _primaryColor,
+                const SizedBox(width: 40),
+                Expanded(
+                  child: Center(
+                    child: Text(
+                      'Fechas disponibles',
+                      style: GoogleFonts.outfit(
+                        fontSize: isLargeScreen ? 14 : 12,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white,
+                      ),
+                    ),
+                  ),
                 ),
-                const SizedBox(width: 6),
+                const SizedBox(width: 40),
+              ],
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.all(12),
+            child: Column(
+              children: [
+                ..._bloquesDisponibles.map((bloque) {
+                  final isSeleccionado = _isBloqueSeleccionado(bloque);
+                  final dias = bloque['dias'] as int;
+                  final label = bloque['label'] as String;
+                  
+                  return GestureDetector(
+                    onTap: () => _seleccionarBloque(bloque),
+                    child: Container(
+                      margin: const EdgeInsets.only(bottom: 8),
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                      decoration: BoxDecoration(
+                        color: isSeleccionado ? _primaryColor : const Color(0xFFF5F5F5),
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(
+                          color: isSeleccionado ? _primaryColor : const Color(0xFFE0E0E0),
+                          width: 1.5,
+                        ),
+                      ),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Row(
+                            children: [
+                              Icon(
+                                Icons.calendar_today,
+                                color: isSeleccionado ? Colors.white : _primaryColor,
+                                size: 16,
+                              ),
+                              const SizedBox(width: 12),
+                              Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    label,
+                                    style: GoogleFonts.outfit(
+                                      fontSize: isLargeScreen ? 14 : 12,
+                                      fontWeight: FontWeight.w600,
+                                      color: isSeleccionado ? Colors.white : const Color(0xFF333333),
+                                    ),
+                                  ),
+                                  Text(
+                                    '$dias día${dias > 1 ? 's' : ''}',
+                                    style: GoogleFonts.outfit(
+                                      fontSize: 10,
+                                      color: isSeleccionado ? Colors.white.withOpacity(0.8) : const Color(0xFF888888),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ),
+                          if (isSeleccionado)
+                            const Icon(
+                              Icons.check_circle,
+                              color: Colors.white,
+                              size: 20,
+                            ),
+                        ],
+                      ),
+                    ),
+                  );
+                }).toList(),
+                const SizedBox(height: 8),
                 Text(
-                  _mensajeProgreso,
+                  _esFullDay() 
+                      ? 'Los sábados disponibles dentro de los próximos 60 días.'
+                      : 'Bloques de ${_bloquesDisponibles.isNotEmpty ? _bloquesDisponibles[0]['dias'] : 0} días disponibles.',
+                  textAlign: TextAlign.center,
                   style: GoogleFonts.outfit(
-                    fontSize: 11,
-                    fontWeight: FontWeight.w500,
-                    color: _diasSeleccionados == _maxDiasSeleccionables && !_esFullDay()
-                        ? const Color(0xFF2E7D32)
-                        : _primaryColor,
+                    fontSize: 10,
+                    color: const Color(0xFF888888),
                   ),
                 ),
               ],
             ),
           ),
-        
-        Container(
-          width: double.infinity,
-          decoration: BoxDecoration(
-            border: Border.all(color: _primaryColor, width: 1),
-            borderRadius: BorderRadius.circular(16),
-          ),
-          child: Column(
-            children: [
-              Container(
-                padding: const EdgeInsets.symmetric(vertical: 8),
-                decoration: BoxDecoration(
-                  color: _primaryColor,
-                  borderRadius: const BorderRadius.only(
-                    topLeft: Radius.circular(15),
-                    topRight: Radius.circular(15),
-                  ),
-                ),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    const SizedBox(width: 40),
-                    Expanded(
-                      child: Center(
-                        child: Text(
-                          '${monthNames[_mesActual.month - 1]} ${_mesActual.year}',
-                          style: GoogleFonts.outfit(
-                            fontSize: isLargeScreen ? 14 : 12,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.white,
-                          ),
-                        ),
-                      ),
-                    ),
-                    Row(
-                      children: [
-                        MouseRegion(
-                          cursor: SystemMouseCursors.click,
-                          child: GestureDetector(
-                            onTap: () => _cambiarMes(-1),
-                            child: Container(
-                              padding: const EdgeInsets.all(8),
-                              child: Icon(Icons.chevron_left, color: Colors.white, size: isLargeScreen ? 20 : 16),
-                            ),
-                          ),
-                        ),
-                        MouseRegion(
-                          cursor: SystemMouseCursors.click,
-                          child: GestureDetector(
-                            onTap: () => _cambiarMes(1),
-                            child: Container(
-                              padding: const EdgeInsets.all(8),
-                              child: Icon(Icons.chevron_right, color: Colors.white, size: isLargeScreen ? 20 : 16),
-                            ),
-                          ),
-                        ),
-                        const SizedBox(width: 16),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-              Padding(
-                padding: const EdgeInsets.all(12),
-                child: Column(
-                  children: [
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceAround,
-                      children: ['D', 'L', 'M', 'M', 'J', 'V', 'S'].map((dia) {
-                        return Expanded(
-                          child: Text(
-                            dia,
-                            textAlign: TextAlign.center,
-                            style: GoogleFonts.outfit(
-                              fontSize: isLargeScreen ? 11 : 10,
-                              fontWeight: FontWeight.w600,
-                              color: const Color(0xFF888888),
-                            ),
-                          ),
-                        );
-                      }).toList(),
-                    ),
-                    const SizedBox(height: 6),
-                    GridView.builder(
-                      shrinkWrap: true,
-                      physics: const NeverScrollableScrollPhysics(),
-                      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                        crossAxisCount: 7,
-                        childAspectRatio: isLargeScreen ? 1.6 : 1.4,
-                        mainAxisSpacing: 4,
-                        crossAxisSpacing: 4,
-                      ),
-                      itemCount: 42,
-                      itemBuilder: (context, index) {
-                        final dayNumber = index - startOffset + 1;
-                        if (dayNumber < 1 || dayNumber > daysInMonth) return Container();
-                        
-                        final fecha = DateTime(_mesActual.year, _mesActual.month, dayNumber);
-                        final esDisponible = _esFechaDisponible(fecha);
-                        final esSeleccionada = _isFechaSeleccionada(fecha);
-                        final esEnRango = _isFechaEnRango(fecha);
-                        
-                        Color? bgColor;
-                        Color textColor = const Color(0xFF333333);
-                        
-                        if (esSeleccionada) {
-                          bgColor = _primaryColor;
-                          textColor = Colors.white;
-                        } else if (esEnRango) {
-                          bgColor = _primaryColor.withOpacity(0.2);
-                        } else if (esDisponible) {
-                          bgColor = const Color(0xFFE8F5E9);
-                          textColor = const Color(0xFF2E7D32);
-                        } else {
-                          textColor = const Color(0xFFCCCCCC);
-                        }
-                        
-                        return GestureDetector(
-                          onTap: esDisponible ? () => _seleccionarFecha(fecha) : null,
-                          child: Container(
-                            margin: const EdgeInsets.all(2),
-                            decoration: BoxDecoration(
-                              color: bgColor,
-                              shape: BoxShape.circle,
-                            ),
-                            child: Center(
-                              child: Text(
-                                '$dayNumber',
-                                style: GoogleFonts.outfit(
-                                  fontSize: isLargeScreen ? 13 : 11,
-                                  fontWeight: FontWeight.w500,
-                                  color: textColor,
-                                ),
-                              ),
-                            ),
-                          ),
-                        );
-                      },
-                    ),
-                    const SizedBox(height: 10),
-                    Text(
-                      _esFullDay() 
-                          ? 'Las fechas en verde están disponibles dentro de los próximos 30 días.'
-                          : 'Selecciona tu rango de viaje (máximo $_maxDiasSeleccionables días).\nLas fechas en verde están disponibles.',
-                      textAlign: TextAlign.center,
-                      style: GoogleFonts.outfit(
-                        fontSize: isLargeScreen ? 10 : 9,
-                        color: const Color(0xFF888888),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 

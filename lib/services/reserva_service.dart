@@ -63,4 +63,40 @@ class ReservaService {
             .map((doc) => Reserva.fromMap(doc.id, doc.data()))
             .toList());
   }
+  
+  // Verificar si el estudiante ya tiene una reserva en las mismas fechas
+  Future<bool> verificarReservaEnMismaFecha(String estudianteId, DateTime inicio, DateTime fin) async {
+    try {
+      final reservas = await _firestore
+          .collection('reservas')
+          .where('estudianteId', isEqualTo: estudianteId)
+          .where('estadoActual', whereIn: ['solicitado', 'aceptado', 'pagado'])
+          .get();
+
+      for (final doc in reservas.docs) {
+        final data = doc.data();
+        final reservaInicio = (data['fechaInicio'] as Timestamp).toDate();
+        final reservaFin = (data['fechaFin'] as Timestamp).toDate();
+        
+        // Verificar si las fechas se traslapan
+        if (!(fin.isBefore(reservaInicio) || inicio.isAfter(reservaFin))) {
+          return true;
+        }
+      }
+      return false;
+    } catch (e) {
+      print('Error verificando reservas: $e');
+      return false;
+    }
+  }
+
+  // Obtener el nombre del destino por ID
+  Future<String> obtenerNombreDestino(String destinoId) async {
+    try {
+      final doc = await _firestore.collection('destinos').doc(destinoId).get();
+      return doc.data()?['nombre'] ?? 'otro viaje';
+    } catch (e) {
+      return 'otro viaje';
+    }
+  }
 }

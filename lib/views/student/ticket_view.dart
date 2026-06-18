@@ -46,10 +46,17 @@ class _TicketViewState extends State<TicketView> {
   }
 
   String get _formattedFecha {
-    final fecha = widget.reserva.fechaInicio;
-    if (fecha == null) return 'Fecha no seleccionada';
+    final inicio = widget.reserva.fechaInicio;
+    final fin = widget.reserva.fechaFin;
+    if (inicio == null) return 'Fecha no seleccionada';
+    
     final meses = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
-    return '${fecha.day} de ${meses[fecha.month - 1]}, ${fecha.year}';
+    
+    if (fin == null || inicio.year == fin.year && inicio.month == fin.month && inicio.day == fin.day) {
+      return '${inicio.day} de ${meses[inicio.month - 1]}, ${inicio.year}';
+    }
+    
+    return '${inicio.day} - ${fin.day} de ${meses[inicio.month - 1]}, ${inicio.year}';
   }
 
   String get _horaSalida => '06:30 AM';

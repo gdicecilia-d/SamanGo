@@ -217,6 +217,7 @@ class ReviewView extends StatefulWidget {
 class _ReviewViewState extends State<ReviewView> {
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
   bool _enviando = false;
+  bool _yaResenado = false;
   
   // Variables de estado
   int _rating = 0;
@@ -229,10 +230,33 @@ class _ReviewViewState extends State<ReviewView> {
       _isOffer ? const Color(0xFF9C27B0) : const Color(0xFFFC6707);
 
   @override
+  void initState() {
+    super.initState();
+    _verificarSiYaResenado();
+  }
+
+  @override
   void dispose() {
     _comentariosController.dispose();
     _detalleProblemaController.dispose();
     super.dispose();
+  }
+
+  Future<void> _verificarSiYaResenado() async {
+    try {
+      final resenas = await FirebaseFirestore.instance
+          .collection('resenas')
+          .where('reservaId', isEqualTo: widget.reserva.id)
+          .get();
+      
+      if (mounted) {
+        setState(() {
+          _yaResenado = resenas.docs.isNotEmpty;
+        });
+      }
+    } catch (e) {
+      print('Error verificando reseña: $e');
+    }
   }
 
   void _mostrarMensaje(String mensaje, {bool isError = false}) {
@@ -298,12 +322,18 @@ class _ReviewViewState extends State<ReviewView> {
       
       await db.collection('resenas').add(resenaData);
 
+      // Actualizar la puntuación del paquete 
+      await _actualizarCalificacionDestino(widget.reserva.paqueteId);
+
       // Actualizar calificacion del operador si existe
       if (operadorId.isNotEmpty) {
         await _actualizarCalificacionOperador(operadorId);
       }
 
       if (mounted) {
+        setState(() {
+          _yaResenado = true;
+        });
         _mostrarMensaje('¡Reseña publicada con exito!');
         await Future.delayed(const Duration(seconds: 1));
         Navigator.pop(context);
@@ -314,6 +344,37 @@ class _ReviewViewState extends State<ReviewView> {
         _mostrarMensaje('Error al publicar la reseña: ${e.toString()}', isError: true);
         setState(() => _enviando = false);
       }
+    }
+  }
+
+  Future<void> _actualizarCalificacionDestino(String paqueteId) async {
+    try {
+      final db = FirebaseFirestore.instance;
+      
+      // Obtener todas las resenas de este paquete
+      final resenas = await db
+          .collection('resenas')
+          .where('paqueteId', isEqualTo: paqueteId)
+          .get();
+
+      if (resenas.docs.isEmpty) return;
+
+      // Calcular promedio
+      int total = 0;
+      for (final doc in resenas.docs) {
+        total += (doc['calificacion'] as num?)?.toInt() ?? 0;
+      }
+      final promedio = total / resenas.docs.length;
+
+      // Actualizar el destino
+      await db.collection('destinos').doc(paqueteId).update({
+        'calificacionPromedio': double.parse(promedio.toStringAsFixed(1)),
+        'totalResenas': resenas.docs.length,
+      });
+      
+      print('Calificacion actualizada para destino $paqueteId: ${promedio.toStringAsFixed(1)}');
+    } catch (e) {
+      print('Error al actualizar calificacion del destino: $e');
     }
   }
 
@@ -508,107 +569,167 @@ class _ReviewViewState extends State<ReviewView> {
                                   ),
                                 ),
                                 const SizedBox(height: 8),
-                                Text(
-                                  '¡Esperamos que hayas disfrutado tu viaje!',
-                                  style: GoogleFonts.outfit(
-                                    fontSize: isMobile ? 13 : 15,
-                                    color: const Color(0xFF666666),
+                                if (_yaResenado)
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                                    decoration: BoxDecoration(
+                                      color: _primaryColor.withOpacity(0.1),
+                                      borderRadius: BorderRadius.circular(20),
+                                    ),
+                                    child: Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        Icon(
+                                          Icons.check_circle,
+                                          size: 16,
+                                          color: _primaryColor,
+                                        ),
+                                        const SizedBox(width: 6),
+                                        Text(
+                                          'Ya has reseñado este viaje',
+                                          style: GoogleFonts.outfit(
+                                            fontSize: 13,
+                                            fontWeight: FontWeight.w500,
+                                            color: _primaryColor,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
                                   ),
-                                ),
+                                if (!_yaResenado)
+                                  Text(
+                                    '¡Esperamos que hayas disfrutado tu viaje!',
+                                    style: GoogleFonts.outfit(
+                                      fontSize: isMobile ? 13 : 15,
+                                      color: const Color(0xFF666666),
+                                    ),
+                                  ),
                               ],
                             ),
                           ),
                           
                           const Divider(height: 1, thickness: 1, color: Color(0xFFE0E0E0)),
                           
-                          // Formulario
-                          Padding(
-                            padding: EdgeInsets.all(paddingSize),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                // Seccion de estrellas
-                                Text(
-                                  'Tu calificacion',
-                                  style: GoogleFonts.outfit(
-                                    fontSize: sectionFontSize,
-                                    fontWeight: FontWeight.w600,
-                                    color: const Color(0xFF333333),
-                                  ),
-                                ),
-                                const SizedBox(height: 12),
-                                StarRatingWidget(
-                                  initialRating: _rating,
-                                  onRatingChanged: (newRating) {
-                                    _rating = newRating;
-                                  },
-                                  starSize: starSize,
-                                  primaryColor: _primaryColor,
-                                ),
-                                const SizedBox(height: 24),
-
-                                // ¿El servicio coincidio con lo prometido?
-                                Text(
-                                  '¿El servicio coincidio con lo prometido?',
-                                  style: GoogleFonts.outfit(
-                                    fontSize: sectionFontSize,
-                                    fontWeight: FontWeight.w600,
-                                    color: const Color(0xFF333333),
-                                  ),
-                                ),
-                                const SizedBox(height: 12),
-                                Row(
+                          if (_yaResenado)
+                            Padding(
+                              padding: EdgeInsets.all(paddingSize),
+                              child: Center(
+                                child: Column(
                                   children: [
-                                    ServiceCheckboxWidget(
-                                      label: 'Si',
-                                      initialValue: _coincidioServicio == true,
-                                      onChanged: (value) {
-                                        setState(() {
-                                          _coincidioServicio = true;
-                                        });
-                                      },
-                                      isMobile: isMobile,
-                                      primaryColor: _primaryColor,
+                                    Icon(
+                                      Icons.check_circle, 
+                                      size: 64, 
+                                      color: _primaryColor,
                                     ),
-                                    const SizedBox(width: 24),
-                                    ServiceCheckboxWidget(
-                                      label: 'No',
-                                      initialValue: _coincidioServicio == false,
-                                      onChanged: (value) {
-                                        setState(() {
-                                          _coincidioServicio = false;
-                                        });
-                                      },
-                                      isMobile: isMobile,
-                                      primaryColor: _primaryColor,
+                                    const SizedBox(height: 16),
+                                    Text(
+                                      'Ya has publicado tu reseña para este viaje',
+                                      style: GoogleFonts.outfit(
+                                        fontSize: 16,
+                                        fontWeight: FontWeight.w500,
+                                        color: const Color(0xFF333333),
+                                      ),
+                                    ),
+                                    const SizedBox(height: 8),
+                                    Text(
+                                      'Gracias por compartir tu experiencia con la comunidad',
+                                      style: GoogleFonts.outfit(
+                                        fontSize: 14,
+                                        color: const Color(0xFF666666),
+                                      ),
+                                    ),
+                                    const SizedBox(height: 24),
+                                    ElevatedButton(
+                                      onPressed: _volver,
+                                      style: ElevatedButton.styleFrom(
+                                        backgroundColor: _primaryColor,
+                                        foregroundColor: Colors.white,
+                                        padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 12),
+                                        shape: RoundedRectangleBorder(
+                                          borderRadius: BorderRadius.circular(30),
+                                        ),
+                                      ),
+                                      child: Text(
+                                        'Volver',
+                                        style: GoogleFonts.outfit(
+                                          fontSize: 14,
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      ),
                                     ),
                                   ],
                                 ),
-                                const SizedBox(height: 24),
-
-                                // Comentarios libres
-                                Text(
-                                  'Comentarios (opcional)',
-                                  style: GoogleFonts.outfit(
-                                    fontSize: sectionFontSize,
-                                    fontWeight: FontWeight.w600,
-                                    color: const Color(0xFF333333),
-                                  ),
-                                ),
-                                const SizedBox(height: 12),
-                                CustomTextArea(
-                                  controller: _comentariosController,
-                                  hint: '¿Que fue lo que mas te gusto? ¿Algun consejo para otros Unimetanos?',
-                                  maxLines: 4,
-                                  isMobile: isMobile,
-                                  primaryColor: _primaryColor,
-                                ),
-
-                                // Campo extra para detallar el problema si hubo alguno
-                                if (!_coincidioServicio) ...[
-                                  const SizedBox(height: 16),
+                              ),
+                            )
+                          else if (!_yaResenado)
+                            // Formulario
+                            Padding(
+                              padding: EdgeInsets.all(paddingSize),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  // Seccion de estrellas
                                   Text(
-                                    'Detalla el inconveniente',
+                                    'Tu calificacion',
+                                    style: GoogleFonts.outfit(
+                                      fontSize: sectionFontSize,
+                                      fontWeight: FontWeight.w600,
+                                      color: const Color(0xFF333333),
+                                    ),
+                                  ),
+                                  const SizedBox(height: 12),
+                                  StarRatingWidget(
+                                    initialRating: _rating,
+                                    onRatingChanged: (newRating) {
+                                      _rating = newRating;
+                                    },
+                                    starSize: starSize,
+                                    primaryColor: _primaryColor,
+                                  ),
+                                  const SizedBox(height: 24),
+
+                                  // ¿El servicio coincidio con lo prometido?
+                                  Text(
+                                    '¿El servicio coincidio con lo prometido?',
+                                    style: GoogleFonts.outfit(
+                                      fontSize: sectionFontSize,
+                                      fontWeight: FontWeight.w600,
+                                      color: const Color(0xFF333333),
+                                    ),
+                                  ),
+                                  const SizedBox(height: 12),
+                                  Row(
+                                    children: [
+                                      ServiceCheckboxWidget(
+                                        label: 'Si',
+                                        initialValue: _coincidioServicio == true,
+                                        onChanged: (value) {
+                                          setState(() {
+                                            _coincidioServicio = true;
+                                          });
+                                        },
+                                        isMobile: isMobile,
+                                        primaryColor: _primaryColor,
+                                      ),
+                                      const SizedBox(width: 24),
+                                      ServiceCheckboxWidget(
+                                        label: 'No',
+                                        initialValue: _coincidioServicio == false,
+                                        onChanged: (value) {
+                                          setState(() {
+                                            _coincidioServicio = false;
+                                          });
+                                        },
+                                        isMobile: isMobile,
+                                        primaryColor: _primaryColor,
+                                      ),
+                                    ],
+                                  ),
+                                  const SizedBox(height: 24),
+
+                                  // Comentarios libres
+                                  Text(
+                                    'Comentarios (opcional)',
                                     style: GoogleFonts.outfit(
                                       fontSize: sectionFontSize,
                                       fontWeight: FontWeight.w600,
@@ -617,52 +738,72 @@ class _ReviewViewState extends State<ReviewView> {
                                   ),
                                   const SizedBox(height: 12),
                                   CustomTextArea(
-                                    controller: _detalleProblemaController,
-                                    hint: 'Por favor, describe que no coincidio...',
-                                    maxLines: 3,
+                                    controller: _comentariosController,
+                                    hint: '¿Que fue lo que mas te gusto? ¿Algun consejo para otros Unimetanos?',
+                                    maxLines: 4,
                                     isMobile: isMobile,
                                     primaryColor: _primaryColor,
                                   ),
-                                ],
 
-                                const SizedBox(height: 32),
-
-                                // Boton publicar
-                                Center(
-                                  child: SizedBox(
-                                    width: buttonWidth,
-                                    child: ElevatedButton(
-                                      onPressed: _enviando ? null : _publicarResena,
-                                      style: ElevatedButton.styleFrom(
-                                        backgroundColor: _primaryColor,
-                                        foregroundColor: Colors.white,
-                                        padding: EdgeInsets.symmetric(vertical: buttonPaddingVertical),
-                                        shape: RoundedRectangleBorder(
-                                          borderRadius: BorderRadius.circular(40),
-                                        ),
-                                        elevation: 2,
+                                  // Campo extra para detallar el problema si hubo alguno
+                                  if (!_coincidioServicio) ...[
+                                    const SizedBox(height: 16),
+                                    Text(
+                                      'Detalla el inconveniente',
+                                      style: GoogleFonts.outfit(
+                                        fontSize: sectionFontSize,
+                                        fontWeight: FontWeight.w600,
+                                        color: const Color(0xFF333333),
                                       ),
-                                      child: _enviando
-                                          ? SizedBox(
-                                              height: 20,
-                                              width: 20,
-                                              child: CircularProgressIndicator(
-                                                  strokeWidth: 2,
-                                                  color: Colors.white),
-                                            )
-                                          : Text(
-                                              'Publicar',
-                                              style: GoogleFonts.outfit(
-                                                fontSize: buttonFontSize,
-                                                fontWeight: FontWeight.bold,
+                                    ),
+                                    const SizedBox(height: 12),
+                                    CustomTextArea(
+                                      controller: _detalleProblemaController,
+                                      hint: 'Por favor, describe que no coincidio...',
+                                      maxLines: 3,
+                                      isMobile: isMobile,
+                                      primaryColor: _primaryColor,
+                                    ),
+                                  ],
+
+                                  const SizedBox(height: 32),
+
+                                  // Boton publicar
+                                  Center(
+                                    child: SizedBox(
+                                      width: buttonWidth,
+                                      child: ElevatedButton(
+                                        onPressed: _enviando ? null : _publicarResena,
+                                        style: ElevatedButton.styleFrom(
+                                          backgroundColor: _primaryColor,
+                                          foregroundColor: Colors.white,
+                                          padding: EdgeInsets.symmetric(vertical: buttonPaddingVertical),
+                                          shape: RoundedRectangleBorder(
+                                            borderRadius: BorderRadius.circular(40),
+                                          ),
+                                          elevation: 2,
+                                        ),
+                                        child: _enviando
+                                            ? SizedBox(
+                                                height: 20,
+                                                width: 20,
+                                                child: CircularProgressIndicator(
+                                                    strokeWidth: 2,
+                                                    color: Colors.white),
+                                              )
+                                            : Text(
+                                                'Publicar',
+                                                style: GoogleFonts.outfit(
+                                                  fontSize: buttonFontSize,
+                                                  fontWeight: FontWeight.bold,
+                                                ),
                                               ),
-                                            ),
+                                      ),
                                     ),
                                   ),
-                                ),
-                              ],
+                                ],
+                              ),
                             ),
-                          ),
                         ],
                       ),
                     ),

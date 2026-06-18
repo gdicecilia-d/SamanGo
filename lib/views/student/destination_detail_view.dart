@@ -1,4 +1,3 @@
-// Pantalla de detalle del destino
 import 'dart:convert';
 import 'dart:typed_data';
 import 'package:flutter/material.dart';
@@ -64,7 +63,7 @@ class _DestinationDetailViewState extends State<DestinationDetailView> {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text('Error al actualizar favoritos'),
-            backgroundColor: Colors.red,
+            backgroundColor: Color(0xFFFC6707),
           ),
         );
       }
@@ -116,7 +115,6 @@ class _DestinationDetailViewState extends State<DestinationDetailView> {
     final isMobile = screenWidth < 850;
     final isLargeScreen = screenWidth > 1400;
     
-    // Tamaños responsivos
     final double titleFontSize = isMobile ? 24 : (isLargeScreen ? 44 : 32);
     final double subtitleFontSize = isMobile ? 14 : (isLargeScreen ? 20 : 16);
     final double sectionFontSize = isMobile ? 18 : (isLargeScreen ? 26 : 20);
@@ -161,12 +159,13 @@ class _DestinationDetailViewState extends State<DestinationDetailView> {
           final isOffer = data['isOffer'] ?? false;
           final operadorNombre = data['operadorNombre'] ?? 'Operador';
           final operadorEmpresa = data['operadorEmpresa'] ?? '';
+          final calificacionPromedio = (data['calificacionPromedio'] as num?)?.toDouble() ?? 0.0;
+          final totalResenas = (data['totalResenas'] as num?)?.toInt() ?? 0;
 
           final primaryColor = isOffer ? const Color(0xFF9C27B0) : const Color(0xFFFC6707);
 
           return Stack(
             children: [
-              // Fondo con la imagen de portada
               Container(
                 decoration: BoxDecoration(
                   image: imagenPortada.isNotEmpty
@@ -239,6 +238,8 @@ class _DestinationDetailViewState extends State<DestinationDetailView> {
                             cardPadding,
                             iconSize,
                             data,
+                            calificacionPromedio,
+                            totalResenas,
                           )
                         : _buildDesktopLayout(
                             widget.destinoId,
@@ -268,11 +269,12 @@ class _DestinationDetailViewState extends State<DestinationDetailView> {
                             iconSize,
                             isLargeScreen,
                             data,
+                            calificacionPromedio,
+                            totalResenas,
                           ),
                   ),
                 ],
               ),
-              // Botón volver flotante 
               Positioned(
                 top: backButtonTop,
                 right: 24,
@@ -474,38 +476,51 @@ class _DestinationDetailViewState extends State<DestinationDetailView> {
     double cardPadding,
     double iconSize,
     Map<String, dynamic> destinoData,
+    double calificacionPromedio,
+    int totalResenas,
   ) {
     return SingleChildScrollView(
       padding: EdgeInsets.all(paddingHorizontal),
       child: Column(
         children: [
           _buildContentCard(
-            destinoId,
-            nombre,
-            ubicacion,
-            precio,
-            duracion,
-            descripcion,
-            requisitos,
-            incluye,
-            noIncluye,
-            transporte,
-            alojamiento,
-            imagenesReferencia,
-            imagenPortada,
-            operadorNombre,
-            operadorEmpresa,
-            primaryColor,
-            titleFontSize,
-            subtitleFontSize,
-            sectionFontSize,
-            priceFontSize,
-            cardPadding,
-            iconSize,
+            destinoId: destinoId,
+            nombre: nombre,
+            ubicacion: ubicacion,
+            precio: precio,
+            duracion: duracion,
+            descripcion: descripcion,
+            requisitos: requisitos,
+            incluye: incluye,
+            noIncluye: noIncluye,
+            transporte: transporte,
+            alojamiento: alojamiento,
+            imagenesReferencia: imagenesReferencia,
+            imagenPortada: imagenPortada,
+            operadorNombre: operadorNombre,
+            operadorEmpresa: operadorEmpresa,
+            primaryColor: primaryColor,
+            titleFontSize: titleFontSize,
+            subtitleFontSize: subtitleFontSize,
+            sectionFontSize: sectionFontSize,
+            priceFontSize: priceFontSize,
+            cardPadding: cardPadding,
+            iconSize: iconSize,
             isMobile: true,
+            calificacionPromedio: calificacionPromedio,
+            totalResenas: totalResenas,
           ),
           const SizedBox(height: 16),
-          _buildActionButton(primaryColor, buttonFontSize, buttonPaddingVertical, destinoData),
+          _buildConversionCard(
+            primaryColor, 
+            precio, 
+            priceFontSize, 
+            sectionFontSize, 
+            buttonFontSize, 
+            buttonPaddingVertical,
+            false,
+            destinoData,
+          ),
           const SizedBox(height: 80),
         ],
       ),
@@ -540,6 +555,8 @@ class _DestinationDetailViewState extends State<DestinationDetailView> {
     double iconSize,
     bool isLargeScreen,
     Map<String, dynamic> destinoData,
+    double calificacionPromedio,
+    int totalResenas,
   ) {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -549,29 +566,31 @@ class _DestinationDetailViewState extends State<DestinationDetailView> {
           child: SingleChildScrollView(
             padding: EdgeInsets.all(paddingHorizontal),
             child: _buildContentCard(
-              destinoId,
-              nombre,
-              ubicacion,
-              precio,
-              duracion,
-              descripcion,
-              requisitos,
-              incluye,
-              noIncluye,
-              transporte,
-              alojamiento,
-              imagenesReferencia,
-              imagenPortada,
-              operadorNombre,
-              operadorEmpresa,
-              primaryColor,
-              titleFontSize,
-              subtitleFontSize,
-              sectionFontSize,
-              priceFontSize,
-              cardPadding,
-              iconSize,
+              destinoId: destinoId,
+              nombre: nombre,
+              ubicacion: ubicacion,
+              precio: precio,
+              duracion: duracion,
+              descripcion: descripcion,
+              requisitos: requisitos,
+              incluye: incluye,
+              noIncluye: noIncluye,
+              transporte: transporte,
+              alojamiento: alojamiento,
+              imagenesReferencia: imagenesReferencia,
+              imagenPortada: imagenPortada,
+              operadorNombre: operadorNombre,
+              operadorEmpresa: operadorEmpresa,
+              primaryColor: primaryColor,
+              titleFontSize: titleFontSize,
+              subtitleFontSize: subtitleFontSize,
+              sectionFontSize: sectionFontSize,
+              priceFontSize: priceFontSize,
+              cardPadding: cardPadding,
+              iconSize: iconSize,
               isMobile: false,
+              calificacionPromedio: calificacionPromedio,
+              totalResenas: totalResenas,
             ),
           ),
         ),
@@ -579,17 +598,15 @@ class _DestinationDetailViewState extends State<DestinationDetailView> {
           flex: 3,
           child: Padding(
             padding: EdgeInsets.only(top: paddingHorizontal, right: paddingHorizontal, bottom: paddingHorizontal),
-            child: SingleChildScrollView(
-              child: _buildConversionCard(
-                primaryColor, 
-                precio, 
-                priceFontSize, 
-                sectionFontSize, 
-                buttonFontSize, 
-                buttonPaddingVertical,
-                isLargeScreen,
-                destinoData,
-              ),
+            child: _buildConversionCard(
+              primaryColor, 
+              precio, 
+              priceFontSize, 
+              sectionFontSize, 
+              buttonFontSize, 
+              buttonPaddingVertical,
+              isLargeScreen,
+              destinoData,
             ),
           ),
         ),
@@ -597,30 +614,32 @@ class _DestinationDetailViewState extends State<DestinationDetailView> {
     );
   }
 
-  Widget _buildContentCard(
-    String destinoId,
-    String nombre,
-    String ubicacion,
-    double precio,
-    String duracion,
-    String descripcion,
-    String requisitos,
-    String incluye,
-    String noIncluye,
-    String transporte,
-    String alojamiento,
-    List<String> imagenesReferencia,
-    String imagenPortada,
-    String operadorNombre,
-    String operadorEmpresa,
-    Color primaryColor,
-    double titleFontSize,
-    double subtitleFontSize,
-    double sectionFontSize,
-    double priceFontSize,
-    double cardPadding,
-    double iconSize, {
+  Widget _buildContentCard({
+    required String destinoId,
+    required String nombre,
+    required String ubicacion,
+    required double precio,
+    required String duracion,
+    required String descripcion,
+    required String requisitos,
+    required String incluye,
+    required String noIncluye,
+    required String transporte,
+    required String alojamiento,
+    required List<String> imagenesReferencia,
+    required String imagenPortada,
+    required String operadorNombre,
+    required String operadorEmpresa,
+    required Color primaryColor,
+    required double titleFontSize,
+    required double subtitleFontSize,
+    required double sectionFontSize,
+    required double priceFontSize,
+    required double cardPadding,
+    required double iconSize,
     required bool isMobile,
+    required double calificacionPromedio,
+    required int totalResenas,
   }) {
     return Container(
       decoration: BoxDecoration(
@@ -703,6 +722,37 @@ class _DestinationDetailViewState extends State<DestinationDetailView> {
                     ),
                   ],
                 ),
+                const SizedBox(height: 8),
+                if (totalResenas > 0)
+                  Row(
+                    children: [
+                      Icon(Icons.star, size: 16, color: const Color(0xFFFFC107)),
+                      const SizedBox(width: 6),
+                      Text(
+                        calificacionPromedio.toStringAsFixed(1),
+                        style: GoogleFonts.outfit(
+                          fontSize: subtitleFontSize - 2,
+                          fontWeight: FontWeight.bold,
+                          color: const Color(0xFFFFC107),
+                        ),
+                      ),
+                      Text(
+                        ' ($totalResenas reseñas)',
+                        style: GoogleFonts.outfit(
+                          fontSize: subtitleFontSize - 4,
+                          color: const Color(0xFF888888),
+                        ),
+                      ),
+                    ],
+                  )
+                else
+                  Text(
+                    'Sin reseñas aún',
+                    style: GoogleFonts.outfit(
+                      fontSize: subtitleFontSize - 2,
+                      color: const Color(0xFF888888),
+                    ),
+                  ),
               ],
             ),
           ),
@@ -937,6 +987,9 @@ class _DestinationDetailViewState extends State<DestinationDetailView> {
     Map<String, dynamic> destinoData,
   ) {
     return Container(
+      constraints: BoxConstraints(
+        maxHeight: isLargeScreen ? 800 : 600,
+      ),
       padding: EdgeInsets.all(isLargeScreen ? 32 : 20),
       decoration: BoxDecoration(
         color: Colors.white,
@@ -949,59 +1002,387 @@ class _DestinationDetailViewState extends State<DestinationDetailView> {
           ),
         ],
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.center,
-        children: [
-          Text(
-            '\$${precio.toStringAsFixed(0)}',
-            style: GoogleFonts.outfit(
-              fontSize: priceFontSize,
-              fontWeight: FontWeight.bold,
-              color: primaryColor,
+      child: SingleChildScrollView(
+        physics: const BouncingScrollPhysics(),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            Text(
+              '\$${precio.toStringAsFixed(0)}',
+              style: GoogleFonts.outfit(
+                fontSize: priceFontSize,
+                fontWeight: FontWeight.bold,
+                color: primaryColor,
+              ),
             ),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            'por persona',
-            style: GoogleFonts.outfit(
-              fontSize: sectionFontSize - 6,
-              color: const Color(0xFF888888),
+            const SizedBox(height: 8),
+            Text(
+              'por persona',
+              style: GoogleFonts.outfit(
+                fontSize: sectionFontSize - 6,
+                color: const Color(0xFF888888),
+              ),
             ),
-          ),
-          const SizedBox(height: 24),
-          const Divider(height: 1, thickness: 1, color: Color(0xFFE0E0E0)),
-          const SizedBox(height: 16),
-          Text(
-            'Reseñas',
-            style: GoogleFonts.outfit(
-              fontSize: sectionFontSize - 4,
-              fontWeight: FontWeight.bold,
-              color: primaryColor,
+            const SizedBox(height: 24),
+            const Divider(height: 1, thickness: 1, color: Color(0xFFE0E0E0)),
+            const SizedBox(height: 16),
+            _buildResenasSectionPanel(widget.destinoId, sectionFontSize, primaryColor),
+            const SizedBox(height: 24),
+            const Divider(height: 1, thickness: 1, color: Color(0xFFE0E0E0)),
+            const SizedBox(height: 24),
+            _buildActionButton(primaryColor, buttonFontSize, buttonPaddingVertical, destinoData),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildResenasSectionPanel(String destinoId, double sectionFontSize, Color primaryColor) {
+    return StreamBuilder<QuerySnapshot>(
+      stream: FirebaseFirestore.instance
+          .collection('resenas')
+          .where('paqueteId', isEqualTo: destinoId)
+          .snapshots(),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Center(
+            child: Padding(
+              padding: EdgeInsets.symmetric(vertical: 20),
+              child: CircularProgressIndicator(color: Color(0xFFFC6707)),
             ),
-          ),
-          const SizedBox(height: 16),
-          const Center(
-            child: Column(
-              children: [
-                Icon(Icons.star_border, size: 32, color: Color(0xFFCCCCCC)),
-                SizedBox(height: 8),
-                Text(
-                  'No hay reseñas aún',
-                  style: TextStyle(fontSize: 14, color: Color(0xFF999999)),
+          );
+        }
+
+        if (snapshot.hasError) {
+          print('Error en StreamBuilder de reseñas: ${snapshot.error}');
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Center(
+                child: Text(
+                  'Reseñas',
+                  style: GoogleFonts.outfit(
+                    fontSize: sectionFontSize - 4,
+                    fontWeight: FontWeight.bold,
+                    color: primaryColor,
+                  ),
                 ),
-                SizedBox(height: 8),
-                Text(
-                  'Sé el primero en comentar',
-                  style: TextStyle(fontSize: 12, color: Color(0xFFCCCCCC)),
+              ),
+              const SizedBox(height: 12),
+              Center(
+                child: Column(
+                  children: [
+                    Icon(Icons.wifi_off, size: 32, color: primaryColor),
+                    const SizedBox(height: 8),
+                    Text(
+                      'Error de conexión',
+                      style: TextStyle(fontSize: 14, color: Color(0xFF999999)),
+                    ),
+                    Text(
+                      'Intenta nuevamente más tarde',
+                      style: TextStyle(fontSize: 12, color: Color(0xFFCCCCCC)),
+                    ),
+                  ],
                 ),
-              ],
+              ),
+            ],
+          );
+        }
+
+        if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Center(
+                child: Text(
+                  'Reseñas',
+                  style: GoogleFonts.outfit(
+                    fontSize: sectionFontSize - 4,
+                    fontWeight: FontWeight.bold,
+                    color: primaryColor,
+                  ),
+                ),
+              ),
+              const SizedBox(height: 12),
+              const Center(
+                child: Column(
+                  children: [
+                    Icon(Icons.star_border, size: 32, color: Color(0xFFCCCCCC)),
+                    SizedBox(height: 8),
+                    Text(
+                      'No hay reseñas aún',
+                      style: TextStyle(fontSize: 14, color: Color(0xFF999999)),
+                    ),
+                    SizedBox(height: 8),
+                    Text(
+                      'Sé el primero en comentar',
+                      style: TextStyle(fontSize: 12, color: Color(0xFFCCCCCC)),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          );
+        }
+
+        final resenas = snapshot.data!.docs;
+        
+        final resenasOrdenadas = List<QueryDocumentSnapshot>.from(resenas);
+        resenasOrdenadas.sort((a, b) {
+          final dataA = a.data() as Map<String, dynamic>;
+          final dataB = b.data() as Map<String, dynamic>;
+          final fechaA = dataA['fechaPublicacion'] as Timestamp?;
+          final fechaB = dataB['fechaPublicacion'] as Timestamp?;
+          if (fechaA == null && fechaB == null) return 0;
+          if (fechaA == null) return 1;
+          if (fechaB == null) return -1;
+          return fechaB.toDate().compareTo(fechaA.toDate());
+        });
+
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Center(
+              child: Text(
+                'Reseñas (${resenas.length})',
+                style: GoogleFonts.outfit(
+                  fontSize: sectionFontSize - 4,
+                  fontWeight: FontWeight.bold,
+                  color: primaryColor,
+                ),
+              ),
             ),
+            const SizedBox(height: 12),
+            ...resenasOrdenadas.take(3).map((doc) {
+              final data = doc.data() as Map<String, dynamic>;
+              final calificacion = (data['calificacion'] as num?)?.toDouble() ?? 0.0;
+              final comentarios = data['comentarios'] ?? '';
+              final calificacionRedondeada = calificacion.round();
+              
+              String nombreEstudiante = 'Usuario';
+              String apellidoEstudiante = '';
+              
+              if (data['nombreEstudiante'] != null && data['nombreEstudiante'].toString().isNotEmpty) {
+                nombreEstudiante = data['nombreEstudiante'].toString();
+              }
+              if (data['apellidoEstudiante'] != null && data['apellidoEstudiante'].toString().isNotEmpty) {
+                apellidoEstudiante = data['apellidoEstudiante'].toString();
+              }
+              
+              final nombreCompleto = apellidoEstudiante.isNotEmpty 
+                  ? '$nombreEstudiante $apellidoEstudiante'
+                  : nombreEstudiante;
+              
+              return Container(
+                margin: const EdgeInsets.only(bottom: 10),
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFF8F8F8),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: List.generate(5, (index) {
+                        final bool isFilled = index < calificacionRedondeada;
+                        return Icon(
+                          isFilled ? Icons.star : Icons.star_border,
+                          size: 14,
+                          color: const Color(0xFFFFC107),
+                        );
+                      }),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      nombreCompleto,
+                      style: GoogleFonts.outfit(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w600,
+                        color: primaryColor,
+                      ),
+                    ),
+                    if (comentarios.isNotEmpty) ...[
+                      const SizedBox(height: 4),
+                      Text(
+                        comentarios.length > 80 
+                            ? '${comentarios.substring(0, 80)}...' 
+                            : comentarios,
+                        style: GoogleFonts.outfit(
+                          fontSize: 12,
+                          color: const Color(0xFF555555),
+                        ),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ],
+                  ],
+                ),
+              );
+            }),
+            if (resenas.length > 3) ...[
+              const SizedBox(height: 8),
+              Center(
+                child: TextButton(
+                  onPressed: () => _mostrarTodasLasResenas(resenasOrdenadas, primaryColor),
+                  child: Text(
+                    'Ver más reseñas (${resenas.length - 3})',
+                    style: GoogleFonts.outfit(
+                      fontSize: 13,
+                      color: primaryColor,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ],
+        );
+      },
+    );
+  }
+
+  void _mostrarTodasLasResenas(List<QueryDocumentSnapshot> resenas, Color primaryColor) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => DraggableScrollableSheet(
+        initialChildSize: 0.7,
+        maxChildSize: 0.9,
+        minChildSize: 0.4,
+        builder: (_, scrollController) => Container(
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: const BorderRadius.only(
+              topLeft: Radius.circular(24),
+              topRight: Radius.circular(24),
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.1),
+                blurRadius: 20,
+                offset: const Offset(0, -4),
+              ),
+            ],
           ),
-          const SizedBox(height: 24),
-          const Divider(height: 1, thickness: 1, color: Color(0xFFE0E0E0)),
-          const SizedBox(height: 24),
-          _buildActionButton(primaryColor, buttonFontSize, buttonPaddingVertical, destinoData),
-        ],
+          child: Column(
+            children: [
+              Container(
+                margin: const EdgeInsets.only(top: 12),
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: Colors.grey[300],
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+              const SizedBox(height: 16),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 20),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      'Todas las reseñas (${resenas.length})',
+                      style: GoogleFonts.outfit(
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                        color: const Color(0xFF333333),
+                      ),
+                    ),
+                    IconButton(
+                      onPressed: () => Navigator.pop(context),
+                      icon: Icon(Icons.close, color: Colors.grey[600]),
+                    ),
+                  ],
+                ),
+              ),
+              const Divider(),
+              Expanded(
+                child: ListView.builder(
+                  controller: scrollController,
+                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+                  itemCount: resenas.length,
+                  itemBuilder: (context, index) {
+                    final data = resenas[index].data() as Map<String, dynamic>;
+                    final calificacion = (data['calificacion'] as num?)?.toDouble() ?? 0.0;
+                    final comentarios = data['comentarios'] ?? '';
+                    final fecha = (data['fechaPublicacion'] as Timestamp?)?.toDate();
+                    final calificacionRedondeada = calificacion.round();
+                    
+                    String nombreEstudiante = 'Usuario';
+                    String apellidoEstudiante = '';
+                    
+                    if (data['nombreEstudiante'] != null && data['nombreEstudiante'].toString().isNotEmpty) {
+                      nombreEstudiante = data['nombreEstudiante'].toString();
+                    }
+                    if (data['apellidoEstudiante'] != null && data['apellidoEstudiante'].toString().isNotEmpty) {
+                      apellidoEstudiante = data['apellidoEstudiante'].toString();
+                    }
+                    
+                    final nombreCompleto = apellidoEstudiante.isNotEmpty 
+                        ? '$nombreEstudiante $apellidoEstudiante'
+                        : nombreEstudiante;
+                    
+                    return Container(
+                      margin: const EdgeInsets.only(bottom: 12),
+                      padding: const EdgeInsets.all(14),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFF8F8F8),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              ...List.generate(5, (index) {
+                                final bool isFilled = index < calificacionRedondeada;
+                                return Icon(
+                                  isFilled ? Icons.star : Icons.star_border,
+                                  size: 16,
+                                  color: const Color(0xFFFFC107),
+                                );
+                              }),
+                              const SizedBox(width: 8),
+                              if (fecha != null)
+                                Text(
+                                  '${fecha.day}/${fecha.month}/${fecha.year}',
+                                  style: GoogleFonts.outfit(
+                                    fontSize: 11,
+                                    color: const Color(0xFF888888),
+                                  ),
+                                ),
+                            ],
+                          ),
+                          Text(
+                            nombreCompleto,
+                            style: GoogleFonts.outfit(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w600,
+                              color: primaryColor,
+                            ),
+                          ),
+                          if (comentarios.isNotEmpty) ...[
+                            const SizedBox(height: 6),
+                            Text(
+                              comentarios,
+                              style: GoogleFonts.outfit(
+                                fontSize: 14,
+                                color: const Color(0xFF333333),
+                              ),
+                            ),
+                          ],
+                        ],
+                      ),
+                    );
+                  },
+                ),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }

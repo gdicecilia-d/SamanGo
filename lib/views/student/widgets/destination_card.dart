@@ -12,7 +12,8 @@ class DestinationCard extends StatelessWidget {
   final String duracion;
   final String imagenUrl;
   final bool isOffer;
-  final int cuposDisponibles;
+  final double calificacionPromedio;
+  final int totalResenas;
   final VoidCallback onTap;
 
   const DestinationCard({
@@ -24,7 +25,8 @@ class DestinationCard extends StatelessWidget {
     required this.duracion,
     required this.imagenUrl,
     required this.isOffer,
-    required this.cuposDisponibles,
+    required this.calificacionPromedio,
+    required this.totalResenas,
     required this.onTap,
   });
 
@@ -36,18 +38,6 @@ class DestinationCard extends StatelessWidget {
   }
 
   Color get _primaryColor => isOffer ? const Color(0xFF9C27B0) : const Color(0xFFFC6707);
-  
-  Color get _cuposColor {
-    if (cuposDisponibles <= 0) return const Color(0xFFF44336);
-    if (cuposDisponibles <= 5) return const Color(0xFFFF9800);
-    return const Color(0xFF4CAF50);
-  }
-
-  String get _cuposTexto {
-    if (cuposDisponibles <= 0) return 'Completo';
-    if (cuposDisponibles <= 5) return 'Últimos $cuposDisponibles';
-    return '$cuposDisponibles cupos';
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -57,15 +47,12 @@ class DestinationCard extends StatelessWidget {
     double imageHeight;
     
     if (screenWidth < 600) {
-      // Teléfono móvil
       cardWidth = 210;
       imageHeight = 115;
     } else if (screenWidth < 1200) {
-      // Pantallas medianas
       cardWidth = 250;
       imageHeight = 145;
     } else {
-      // Pantallas grandes 
       cardWidth = 300;
       imageHeight = 175;
     }
@@ -156,7 +143,7 @@ class DestinationCard extends StatelessWidget {
                     ],
                   ),
                   const SizedBox(height: 6),
-                  // Precio y cupos
+                  // Precio y puntuación
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
@@ -168,20 +155,36 @@ class DestinationCard extends StatelessWidget {
                           color: _primaryColor,
                         ),
                       ),
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
-                        decoration: BoxDecoration(
-                          color: _cuposColor.withOpacity(0.15),
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: Text(
-                          _cuposTexto,
-                          style: GoogleFonts.outfit(
-                            fontSize: 11,
-                            fontWeight: FontWeight.w600,
-                            color: _cuposColor,
+                      // Puntuación en lugar de cupos
+                      Row(
+                        children: [
+                          Icon(
+                            Icons.star,
+                            size: 14,
+                            color: const Color(0xFFFFC107),
                           ),
-                        ),
+                          const SizedBox(width: 4),
+                          Text(
+                            calificacionPromedio > 0 
+                                ? calificacionPromedio.toStringAsFixed(1)
+                                : 'Nuevo',
+                            style: GoogleFonts.outfit(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w600,
+                              color: calificacionPromedio > 0 
+                                  ? const Color(0xFFFFC107)
+                                  : const Color(0xFF888888),
+                            ),
+                          ),
+                          if (totalResenas > 0)
+                            Text(
+                              ' ($totalResenas)',
+                              style: GoogleFonts.outfit(
+                                fontSize: 10,
+                                color: const Color(0xFF888888),
+                              ),
+                            ),
+                        ],
                       ),
                     ],
                   ),
