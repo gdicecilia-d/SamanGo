@@ -2,6 +2,7 @@ import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import '../models/usuario.dart';
 import '../services/auth_service.dart';
+import '../services/tips_notificacion_service.dart';
 
 class AuthController extends ChangeNotifier {
   final AuthService _authService = AuthService();
@@ -16,6 +17,9 @@ class AuthController extends ChangeNotifier {
   Future<bool> login(String email, String password) async {
     _setLoading(true);
     _usuarioActual = await _authService.loginWithEmail(email, password);
+    if (_usuarioActual != null && _usuarioActual!.isEstudiante) {
+      TipsNotificacionService.enviarTipSiCorresponde(_usuarioActual!.id);
+    }
     _setLoading(false);
     return _usuarioActual != null;
   }
@@ -27,6 +31,9 @@ class AuthController extends ChangeNotifier {
       final result = await _authService.signInWithGoogle();
       if (result is Usuario) {
         _usuarioActual = result;
+        if (_usuarioActual!.isEstudiante) {
+          TipsNotificacionService.enviarTipSiCorresponde(_usuarioActual!.id);
+        }
         _setLoading(false);
         return true;
       } else if (result is Map) {

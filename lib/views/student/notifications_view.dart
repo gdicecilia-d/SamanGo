@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../controllers/notificacion_controller.dart';
 import '../../controllers/auth_controller.dart';
 import '../shared/app_header.dart';
@@ -124,6 +125,38 @@ class _NotificationsViewState extends State<NotificationsView> {
                           fontWeight: FontWeight.bold,
                           color: const Color(0xFF333333),
                         ),
+                      ),
+                      const SizedBox(height: 4),
+                      TextButton.icon(
+                        style: TextButton.styleFrom(
+                          padding: EdgeInsets.zero,
+                          alignment: Alignment.centerLeft,
+                        ),
+                        onPressed: notificaciones.isNotEmpty ? () {
+                          CustomConfirmDialog.show(
+                            context: context,
+                            title: 'Borrar todo',
+                            message: '¿Estás seguro de que deseas eliminar todas las notificaciones? Esta acción no se puede deshacer.',
+                            confirmText: 'Borrar',
+                            icon: Icons.delete_sweep,
+                          ).then((confirm) {
+                            if (confirm == true) {
+                              notificacionController.eliminarTodasNotificaciones();
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content: Text(
+                                    'Se borraron de forma correcta',
+                                    style: GoogleFonts.outfit(color: Colors.white, fontSize: 14),
+                                  ),
+                                  backgroundColor: const Color(0xFFFC6707),
+                                  duration: const Duration(seconds: 2),
+                                ),
+                              );
+                            }
+                          });
+                        } : null,
+                        icon: Icon(Icons.delete_sweep, color: notificaciones.isNotEmpty ? const Color(0xFFFC6707) : Colors.grey, size: 20),
+                        label: Text('Borrar todo', style: TextStyle(color: notificaciones.isNotEmpty ? const Color(0xFFFC6707) : Colors.grey)),
                       ),
                       const SizedBox(height: 16),
                       Expanded(
@@ -356,14 +389,38 @@ class _NotificationsViewState extends State<NotificationsView> {
                         ),
                       ),
                       const SizedBox(height: 4),
-                      Text(
-                        mensaje,
-                        style: GoogleFonts.outfit(
-                          fontSize: 13,
-                          color: const Color(0xFF666666),
-                        ),
-                        maxLines: 3,
-                        overflow: TextOverflow.ellipsis,
+                      Builder(
+                        builder: (context) {
+                          final match = RegExp(r'"?([a-zA-Z0-9]{20})"?').firstMatch(mensaje);
+                          final extractedId = match?.group(1);
+                          final idToFetch = (idPaquete != null && idPaquete.isNotEmpty)
+                              ? idPaquete
+                              : extractedId;
+
+                          return FutureBuilder<String?>(
+                            future: idToFetch != null && idToFetch.isNotEmpty
+                                ? controller.obtenerNombreRealDestino(idToFetch)
+                                : null,
+                            builder: (context, snapshot) {
+                              String finalMensaje = mensaje;
+                              if (snapshot.hasData && snapshot.data != null) {
+                                final nombre = snapshot.data!;
+                                if (nombre.isNotEmpty && idToFetch != null) {
+                                  finalMensaje = mensaje.replaceAll(idToFetch, nombre);
+                                }
+                              }
+                              return Text(
+                                finalMensaje,
+                                style: GoogleFonts.outfit(
+                                  fontSize: 13,
+                                  color: const Color(0xFF666666),
+                                ),
+                                maxLines: 3,
+                                overflow: TextOverflow.ellipsis,
+                              );
+                            },
+                          );
+                        }
                       ),
                       const SizedBox(height: 6),
                       Text(

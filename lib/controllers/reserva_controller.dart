@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import '../models/reserva.dart';
 import '../models/estado_reserva.dart';
 import '../models/usuario.dart';
@@ -29,6 +30,19 @@ class ReservaController extends ChangeNotifier {
       _setLoading(false);
       return false;
     }
+  }
+
+  // Obtiene el nombre real del paquete para notificaciones
+  Future<String> _obtenerNombrePaquete(String paqueteId) async {
+    try {
+      final doc = await FirebaseFirestore.instance.collection('destinos').doc(paqueteId).get();
+      if (doc.exists && doc.data() != null) {
+        return doc.data()!['nombre'] as String? ?? 'un destino';
+      }
+    } catch (e) {
+      debugPrint('Error obteniendo nombre del paquete: $e');
+    }
+    return 'un destino';
   }
 
   // Avanza el estado de una reserva si la transición es válida para el rol del actor.
@@ -71,18 +85,20 @@ class ReservaController extends ChangeNotifier {
 
       // Notificar al estudiante cuando el operador toma una decisión
       if (actor.isOperador) {
+        final nombrePaquete = await _obtenerNombrePaquete(reserva.paqueteId);
+        
         if (nuevoEstado == EstadoReserva.aceptado) {
           // ya puede proceder al pago
           await _notificacionService.notificarSolicitudAceptada(
             estudianteId: reserva.estudianteId,
-            nombrePaquete: reserva.paqueteId,
+            nombrePaquete: nombrePaquete,
             reservaId: reserva.id,
           );
         } else if (nuevoEstado == EstadoReserva.pagado) {
           // confirmamos que su cupo está asegurado
           await _notificacionService.notificarPagoConfirmado(
             estudianteId: reserva.estudianteId,
-            nombrePaquete: reserva.paqueteId,
+            nombrePaquete: nombrePaquete,
             reservaId: reserva.id,
           );
         }
@@ -109,10 +125,12 @@ class ReservaController extends ChangeNotifier {
     try {
       await _reservaService.actualizarEstado(reserva.id, EstadoReserva.rechazado);
 
+      final nombrePaquete = await _obtenerNombrePaquete(reserva.paqueteId);
+
       // avisa al estudiante para que sepa que no fue aprobado
       await _notificacionService.notificarSolicitudRechazada(
         estudianteId: reserva.estudianteId,
-        nombrePaquete: reserva.paqueteId,
+        nombrePaquete: nombrePaquete,
         motivo: motivo,
       );
 
@@ -138,10 +156,12 @@ class ReservaController extends ChangeNotifier {
       // "aceptado" en lugar de "rechazado" para no perder el cupo
       await _reservaService.actualizarEstado(reserva.id, EstadoReserva.aceptado);
 
+      final nombrePaquete = await _obtenerNombrePaquete(reserva.paqueteId);
+
       // avisar al estudiante que debe subir un comprobante válido
       await _notificacionService.notificarPagoRechazado(
         estudianteId: reserva.estudianteId,
-        nombrePaquete: reserva.paqueteId,
+        nombrePaquete: nombrePaquete,
         motivo: motivo,
       );
 

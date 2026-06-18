@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../../controllers/notificacion_controller.dart';
+import '../../shared/widgets/custom_dialog.dart';
 
 class NotificationsPanel extends StatelessWidget {
   const NotificationsPanel({super.key});
@@ -51,6 +53,43 @@ class NotificationsPanel extends StatelessWidget {
                   ),
                 ),
               ),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                child: TextButton.icon(
+                  style: TextButton.styleFrom(
+                    padding: EdgeInsets.zero,
+                    alignment: Alignment.centerLeft,
+                    minimumSize: Size.zero,
+                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                  ),
+                  onPressed: notificaciones.isNotEmpty ? () {
+                    CustomConfirmDialog.show(
+                      context: context,
+                      title: 'Borrar todo',
+                      message: '¿Estás seguro de que deseas eliminar todas las notificaciones? Esta acción no se puede deshacer.',
+                      confirmText: 'Borrar',
+                      icon: Icons.delete_sweep,
+                    ).then((confirm) {
+                      if (confirm == true) {
+                        notificacionController.eliminarTodasNotificaciones();
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text(
+                              'Se borraron de forma correcta',
+                              style: GoogleFonts.outfit(color: Colors.white, fontSize: 14),
+                            ),
+                            backgroundColor: const Color(0xFFFC6707),
+                            duration: const Duration(seconds: 2),
+                          ),
+                        );
+                      }
+                    });
+                  } : null,
+                  icon: Icon(Icons.delete_sweep, color: notificaciones.isNotEmpty ? const Color(0xFFFC6707) : Colors.grey, size: 16),
+                  label: Text('Borrar todo', style: TextStyle(color: notificaciones.isNotEmpty ? const Color(0xFFFC6707) : Colors.grey, fontSize: 13)),
+                ),
+              ),
+              const Divider(height: 1),
               if (notificaciones.isEmpty)
                 const Padding(
                   padding: EdgeInsets.all(40),
@@ -112,14 +151,38 @@ class NotificationsPanel extends StatelessWidget {
                                       ),
                                     ),
                                     const SizedBox(height: 4),
-                                    Text(
-                                      notificacion.mensaje,
-                                      style: GoogleFonts.outfit(
-                                        fontSize: 11,
-                                        color: const Color(0xFF666666),
-                                      ),
-                                      maxLines: 3,
-                                      overflow: TextOverflow.ellipsis,
+                                    Builder(
+                                      builder: (context) {
+                                        final match = RegExp(r'"?([a-zA-Z0-9]{20})"?').firstMatch(notificacion.mensaje);
+                                        final extractedId = match?.group(1);
+                                        final idToFetch = (notificacion.idPaquete != null && notificacion.idPaquete!.isNotEmpty)
+                                            ? notificacion.idPaquete!
+                                            : extractedId;
+
+                                        return FutureBuilder<String?>(
+                                          future: idToFetch != null && idToFetch.isNotEmpty
+                                              ? notificacionController.obtenerNombreRealDestino(idToFetch)
+                                              : null,
+                                          builder: (context, snapshot) {
+                                            String finalMensaje = notificacion.mensaje;
+                                            if (snapshot.hasData && snapshot.data != null) {
+                                              final nombre = snapshot.data!;
+                                              if (nombre.isNotEmpty && idToFetch != null) {
+                                                finalMensaje = notificacion.mensaje.replaceAll(idToFetch, nombre);
+                                              }
+                                            }
+                                            return Text(
+                                              finalMensaje,
+                                              style: GoogleFonts.outfit(
+                                                fontSize: 12,
+                                                color: const Color(0xFF666666),
+                                              ),
+                                              maxLines: 2,
+                                              overflow: TextOverflow.ellipsis,
+                                            );
+                                          },
+                                        );
+                                      }
                                     ),
                                   ],
                                 ),

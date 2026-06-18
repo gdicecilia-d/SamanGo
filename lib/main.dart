@@ -22,8 +22,7 @@ void main() async {
     options: DefaultFirebaseOptions.currentPlatform,
   );
   
-  // Iniciar el envío automático de tips 
-  await TipsNotificacionService.iniciarTipsAutomaticos();
+  // Los tips ahora se envían al iniciar sesión (ver AuthController)
   
   runApp(
     MultiProvider(
