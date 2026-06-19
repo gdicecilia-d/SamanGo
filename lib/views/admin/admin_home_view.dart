@@ -27,8 +27,15 @@ class _AdminHomeViewState extends State<AdminHomeView> {
     'Reportes'
   ];
 
+  // Categorías válidas de destinos (no inventar otras, "Selva" no existe)
+  static const List<String> _categoriasValidas = [
+    'Playas / Cayos',
+    'Montañas / Trekking',
+    'Aventura / Ríos',
+    'Cultura / Ciudades',
+  ];
+
   // Métricas cargadas desde Firestore
-  int _totalUsuarios = 0;
   int _totalOperadores = 0;
   int _totalEstudiantes = 0;
   int _totalDestinos = 0;
@@ -36,54 +43,99 @@ class _AdminHomeViewState extends State<AdminHomeView> {
   double _totalIngresos = 0;
   bool _cargando = true;
 
+  // Datos para el gráfico de destinos más populares: nombre -> cantidad de reservas
+  List<MapEntry<String, int>> _topDestinos = [];
+
+  // Datos para el gráfico de distribución por categoría: categoría -> cantidad de destinos
+  Map<String, int> _destinosPorCategoria = {
+    for (final cat in _categoriasValidas) cat: 0,
+  };
+
   @override
   void initState() {
     super.initState();
     _cargarMetricas();
   }
 
-  // Trae los conteos reales desde Firestore para mostrar en las tarjetas
+  // Trae los conteos reales desde Firestore para mostrar en las tarjetas y los gráficos
   Future<void> _cargarMetricas() async {
     try {
       final db = FirebaseFirestore.instance;
 
-      // Contamos usuarios por rol en paralelo para ser más rápidos
+      // Consultamos en paralelo para ser más rápidos
       final results = await Future.wait([
-        db.collection('usuarios').get(),
-        db.collection('destinos').where('activo', isEqualTo: true).get(),
+        db.collection('estudiantes').get(),
+        db.collection('operadores').get(),
+        db.collection('destinos').get(),
         db.collection('reservas').get(),
       ]);
 
-      final usuariosSnap = results[0];
-      final destinosSnap = results[1];
-      final reservasSnap = results[2];
+      final estudiantesSnap = results[0];
+      final operadoresSnap = results[1];
+      final destinosSnap = results[2];
+      final reservasSnap = results[3];
 
-      // Separamos operadores y estudiantes del total de usuarios
-      int operadores = 0;
-      int estudiantes = 0;
-      for (final doc in usuariosSnap.docs) {
-        final rol = doc['rol'] as String? ?? '';
-        if (rol == 'operador') operadores++;
-        if (rol == 'estudiante') estudiantes++;
-      }
+      // Armamos un mapa destinoId -> nombre y destinoId -> categoria para usarlo en los gráficos
+      final Map<String, String> nombrePorDestino = {};
+      int destinosActivos = 0;
+      final Map<String, int> conteoCategoria = {
+        for (final cat in _categoriasValidas) cat: 0,
+      };
 
-      // Sumamos el totalGeneral de todas las reservas que están pagadas o disfrutadas
-      double ingresos = 0;
-      for (final doc in reservasSnap.docs) {
-        final estado = doc['estadoActual'] as String? ?? '';
-        if (estado == 'pagado' || estado == 'disfrutado') {
-          ingresos += (doc['totalGeneral'] as num? ?? 0).toDouble();
+      for (final doc in destinosSnap.docs) {
+        final data = doc.data();
+        final activo = data['activo'] as bool? ?? false;
+        final nombre = data['nombre'] as String? ?? 'Sin nombre';
+        final categoria = data['categoria'] as String? ?? '';
+
+        nombrePorDestino[doc.id] = nombre;
+
+        if (activo) destinosActivos++;
+
+        // Solo contamos categorías que conocemos (no inventamos categorías nuevas)
+        if (conteoCategoria.containsKey(categoria)) {
+          conteoCategoria[categoria] = conteoCategoria[categoria]! + 1;
         }
       }
 
+      // Sumamos el totalGeneral de las reservas pagadas/disfrutadas
+      // y contamos cuántas reservas tiene cada destino para el top 5
+      double ingresos = 0;
+      final Map<String, int> reservasPorDestino = {};
+
+      for (final doc in reservasSnap.docs) {
+        final data = doc.data();
+        final estado = data['estadoActual'] as String? ?? '';
+        final paqueteId = data['paqueteId'] as String? ?? '';
+
+        if (estado == 'pagado' || estado == 'disfrutado') {
+          ingresos += (data['totalGeneral'] as num? ?? 0).toDouble();
+        }
+
+        if (paqueteId.isNotEmpty) {
+          reservasPorDestino[paqueteId] =
+              (reservasPorDestino[paqueteId] ?? 0) + 1;
+        }
+      }
+
+      // Ordenamos los destinos por cantidad de reservas y tomamos los 5 primeros
+      final destinosOrdenados = reservasPorDestino.entries.toList()
+        ..sort((a, b) => b.value.compareTo(a.value));
+
+      final top5 = destinosOrdenados.take(5).map((entry) {
+        final nombre = nombrePorDestino[entry.key] ?? 'Destino eliminado';
+        return MapEntry(nombre, entry.value);
+      }).toList();
+
       if (mounted) {
         setState(() {
-          _totalUsuarios = usuariosSnap.docs.length;
-          _totalOperadores = operadores;
-          _totalEstudiantes = estudiantes;
-          _totalDestinos = destinosSnap.docs.length;
+          _totalEstudiantes = estudiantesSnap.docs.length;
+          _totalOperadores = operadoresSnap.docs.length;
+          _totalDestinos = destinosActivos;
           _totalReservas = reservasSnap.docs.length;
           _totalIngresos = ingresos;
+          _topDestinos = top5;
+          _destinosPorCategoria = conteoCategoria;
           _cargando = false;
         });
       }
@@ -93,7 +145,7 @@ class _AdminHomeViewState extends State<AdminHomeView> {
     }
   }
 
-  // Navegar 
+  // Navegar
 
   void _handleMenuSelected(String menu) {
     if (menu == 'Usuarios') {
@@ -138,7 +190,7 @@ class _AdminHomeViewState extends State<AdminHomeView> {
 
   void _openDrawer() => _scaffoldKey.currentState?.openEndDrawer();
 
-  // Build 
+  // Build
 
   @override
   Widget build(BuildContext context) {
@@ -161,8 +213,7 @@ class _AdminHomeViewState extends State<AdminHomeView> {
             onMenuTap: isMobile ? _openDrawer : null,
           ),
           Expanded(
-            child:
-                isMobile ? _buildMobileLayout() : _buildDesktopLayout(),
+            child: isMobile ? _buildMobileLayout() : _buildDesktopLayout(),
           ),
         ],
       ),
@@ -170,8 +221,7 @@ class _AdminHomeViewState extends State<AdminHomeView> {
   }
 
   Widget _buildDrawer() {
-    final user =
-        Provider.of<AuthController>(context).usuarioActual;
+    final user = Provider.of<AuthController>(context).usuarioActual;
 
     return Drawer(
       backgroundColor: Colors.white,
@@ -189,8 +239,8 @@ class _AdminHomeViewState extends State<AdminHomeView> {
                     height: 50,
                     decoration: BoxDecoration(
                       shape: BoxShape.circle,
-                      border: Border.all(
-                          color: const Color(0xFFFC6707), width: 2),
+                      border:
+                          Border.all(color: const Color(0xFFFC6707), width: 2),
                     ),
                     child: const CircleAvatar(
                       backgroundColor: Color(0xFFFDDBB3),
@@ -212,8 +262,7 @@ class _AdminHomeViewState extends State<AdminHomeView> {
                         ),
                         Text('Administrador',
                             style: GoogleFonts.outfit(
-                                fontSize: 12,
-                                color: const Color(0xFF666666))),
+                                fontSize: 12, color: const Color(0xFF666666))),
                       ],
                     ),
                   ),
@@ -250,8 +299,7 @@ class _AdminHomeViewState extends State<AdminHomeView> {
     );
   }
 
-  Widget _buildDrawerItem(
-      String title, IconData icon, VoidCallback onTap) {
+  Widget _buildDrawerItem(String title, IconData icon, VoidCallback onTap) {
     final isActive = title == _activeMenu;
     return ListTile(
       leading: Icon(icon, color: const Color(0xFFFC6707)),
@@ -259,11 +307,8 @@ class _AdminHomeViewState extends State<AdminHomeView> {
         title,
         style: GoogleFonts.outfit(
           fontSize: 16,
-          fontWeight:
-              isActive ? FontWeight.bold : FontWeight.w500,
-          color: isActive
-              ? const Color(0xFFFC6707)
-              : const Color(0xFF333333),
+          fontWeight: isActive ? FontWeight.bold : FontWeight.w500,
+          color: isActive ? const Color(0xFFFC6707) : const Color(0xFF333333),
         ),
       ),
       onTap: onTap,
@@ -303,8 +348,7 @@ class _AdminHomeViewState extends State<AdminHomeView> {
           width: 320,
           decoration: BoxDecoration(
             border: Border(
-              left: BorderSide(
-                  color: Colors.grey.withOpacity(0.3), width: 1.5),
+              left: BorderSide(color: Colors.grey.withOpacity(0.3), width: 1.5),
             ),
           ),
           child: Image.asset(
@@ -332,9 +376,11 @@ class _AdminHomeViewState extends State<AdminHomeView> {
   }
 
   Widget _buildMetricsContent({required bool isMobile}) {
+    // Total de usuarios = estudiantes + operadores
+    final totalUsuarios = _totalEstudiantes + _totalOperadores;
+
     return Padding(
-      padding:
-          EdgeInsets.symmetric(horizontal: isMobile ? 16 : 24),
+      padding: EdgeInsets.symmetric(horizontal: isMobile ? 16 : 24),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -349,7 +395,7 @@ class _AdminHomeViewState extends State<AdminHomeView> {
                   color: const Color(0xFF333333),
                 ),
               ),
-              // Botón para refrescar las métricas manualmente
+              // Botón para refrescar todas las métricas manualmente
               IconButton(
                 onPressed: () {
                   setState(() => _cargando = true);
@@ -363,33 +409,33 @@ class _AdminHomeViewState extends State<AdminHomeView> {
           const SizedBox(height: 8),
           Text(
             'Datos en tiempo real de la plataforma SamanGo',
-            style: GoogleFonts.outfit(
-                fontSize: 14, color: const Color(0xFF888888)),
+            style:
+                GoogleFonts.outfit(fontSize: 14, color: const Color(0xFF888888)),
           ),
           const SizedBox(height: 24),
 
-          // Fila 1: usuarios
+          // Tarjetas de métricas
           if (isMobile) ...[
             _buildMetricCard(
-                'Total Usuarios', '$_totalUsuarios', Icons.people),
+                'Total Usuarios', '$totalUsuarios', Icons.people),
             const SizedBox(height: 12),
             Row(
               children: [
                 Expanded(
-                    child: _buildMetricCard(
-                        'Operadores', '$_totalOperadores', Icons.business)),
+                    child: _buildMetricCard('Operadores',
+                        '$_totalOperadores', Icons.business)),
                 const SizedBox(width: 12),
                 Expanded(
-                    child: _buildMetricCard(
-                        'Estudiantes', '$_totalEstudiantes', Icons.school)),
+                    child: _buildMetricCard('Estudiantes',
+                        '$_totalEstudiantes', Icons.school)),
               ],
             ),
             const SizedBox(height: 12),
             Row(
               children: [
                 Expanded(
-                    child: _buildMetricCard(
-                        'Destinos Activos', '$_totalDestinos', Icons.tour)),
+                    child: _buildMetricCard('Destinos Activos',
+                        '$_totalDestinos', Icons.tour)),
                 const SizedBox(width: 12),
                 Expanded(
                     child: _buildMetricCard(
@@ -405,24 +451,24 @@ class _AdminHomeViewState extends State<AdminHomeView> {
             Row(
               children: [
                 Expanded(
-                    child: _buildMetricCard(
-                        'Total Usuarios', '$_totalUsuarios', Icons.people)),
+                    child: _buildMetricCard('Total Usuarios',
+                        '$totalUsuarios', Icons.people)),
                 const SizedBox(width: 16),
                 Expanded(
-                    child: _buildMetricCard(
-                        'Operadores', '$_totalOperadores', Icons.business)),
+                    child: _buildMetricCard('Operadores',
+                        '$_totalOperadores', Icons.business)),
                 const SizedBox(width: 16),
                 Expanded(
-                    child: _buildMetricCard(
-                        'Estudiantes', '$_totalEstudiantes', Icons.school)),
+                    child: _buildMetricCard('Estudiantes',
+                        '$_totalEstudiantes', Icons.school)),
               ],
             ),
             const SizedBox(height: 16),
             Row(
               children: [
                 Expanded(
-                    child: _buildMetricCard(
-                        'Destinos Activos', '$_totalDestinos', Icons.tour)),
+                    child: _buildMetricCard('Destinos Activos',
+                        '$_totalDestinos', Icons.tour)),
                 const SizedBox(width: 16),
                 Expanded(
                     child: _buildMetricCard(
@@ -439,29 +485,21 @@ class _AdminHomeViewState extends State<AdminHomeView> {
 
           const SizedBox(height: 32),
 
-          // Sección de gráficos (pendiente de implementar con librería fl_chart)
-          Container(
-            width: double.infinity,
-            padding: const EdgeInsets.all(32),
-            decoration: BoxDecoration(
-              color: const Color(0xFFF8F8F8),
-              borderRadius: BorderRadius.circular(16),
+          // Sección de gráficos: destinos populares y distribución por categoría
+          if (isMobile) ...[
+            _buildTopDestinosChart(),
+            const SizedBox(height: 24),
+            _buildCategoriaChart(),
+          ] else ...[
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Expanded(child: _buildTopDestinosChart()),
+                const SizedBox(width: 16),
+                Expanded(child: _buildCategoriaChart()),
+              ],
             ),
-            child: const Center(
-              child: Column(
-                children: [
-                  Icon(Icons.show_chart,
-                      size: 48, color: Color(0xFFCCCCCC)),
-                  SizedBox(height: 12),
-                  Text(
-                    'Gráficos de tendencias - Próximamente',
-                    style: TextStyle(
-                        fontSize: 14, color: Color(0xFF999999)),
-                  ),
-                ],
-              ),
-            ),
-          ),
+          ],
         ],
       ),
     );
@@ -514,9 +552,210 @@ class _AdminHomeViewState extends State<AdminHomeView> {
           const SizedBox(height: 4),
           Text(
             title,
-            style: GoogleFonts.outfit(
-                fontSize: 14, color: const Color(0xFF888888)),
+            style:
+                GoogleFonts.outfit(fontSize: 14, color: const Color(0xFF888888)),
           ),
+        ],
+      ),
+    );
+  }
+
+  // Gráfico de barras horizontales: top 5 destinos con más reservas
+  Widget _buildTopDestinosChart() {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF8F8F8),
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Destinos más populares',
+            style: GoogleFonts.outfit(
+              fontSize: 16,
+              fontWeight: FontWeight.bold,
+              color: const Color(0xFF333333),
+            ),
+          ),
+          const SizedBox(height: 16),
+          if (_cargando)
+            const Center(
+              child: Padding(
+                padding: EdgeInsets.symmetric(vertical: 24),
+                child: CircularProgressIndicator(color: Color(0xFFFC6707)),
+              ),
+            )
+          else if (_topDestinos.isEmpty)
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 24),
+              child: Text(
+                'Aún no hay reservas registradas',
+                style: GoogleFonts.outfit(
+                    fontSize: 13, color: const Color(0xFF999999)),
+              ),
+            )
+          else
+            // El máximo nos sirve para escalar las barras de forma proporcional
+            ..._buildBarrasDestinos(),
+        ],
+      ),
+    );
+  }
+
+  List<Widget> _buildBarrasDestinos() {
+    final maxCantidad = _topDestinos.first.value;
+
+    return _topDestinos.map((entry) {
+      final proporcion = maxCantidad == 0 ? 0.0 : entry.value / maxCantidad;
+      return Padding(
+        padding: const EdgeInsets.only(bottom: 14),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Expanded(
+                  child: Text(
+                    entry.key,
+                    overflow: TextOverflow.ellipsis,
+                    style: GoogleFonts.outfit(
+                        fontSize: 13, color: const Color(0xFF333333)),
+                  ),
+                ),
+                Text(
+                  '${entry.value}',
+                  style: GoogleFonts.outfit(
+                    fontSize: 13,
+                    fontWeight: FontWeight.bold,
+                    color: const Color(0xFFFC6707),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 6),
+            ClipRRect(
+              borderRadius: BorderRadius.circular(8),
+              child: LinearProgressIndicator(
+                value: proporcion,
+                minHeight: 10,
+                backgroundColor: const Color(0xFFE0E0E0),
+                color: const Color(0xFFFC6707),
+              ),
+            ),
+          ],
+        ),
+      );
+    }).toList();
+  }
+
+  // Colores fijos para cada categoría en el gráfico de torta (mismo orden que _categoriasValidas)
+  static const List<Color> _coloresCategorias = [
+    Color(0xFFFC6707), // Playas / Cayos
+    Color(0xFFFDDBB3), // Montañas / Trekking
+    Color(0xFF4CAF50), // Aventura / Ríos
+    Color(0xFF2196F3), // Cultura / Ciudades
+  ];
+
+  // Gráfico de distribución de destinos por categoría (tipo rueda / torta)
+  Widget _buildCategoriaChart() {
+    final total = _destinosPorCategoria.values.fold<int>(0, (a, b) => a + b);
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF8F8F8),
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Destinos por categoría',
+            style: GoogleFonts.outfit(
+              fontSize: 16,
+              fontWeight: FontWeight.bold,
+              color: const Color(0xFF333333),
+            ),
+          ),
+          const SizedBox(height: 16),
+          if (_cargando)
+            const Center(
+              child: Padding(
+                padding: EdgeInsets.symmetric(vertical: 24),
+                child: CircularProgressIndicator(color: Color(0xFFFC6707)),
+              ),
+            )
+          else if (total == 0)
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 24),
+              child: Text(
+                'Aún no hay destinos registrados',
+                style: GoogleFonts.outfit(
+                    fontSize: 13, color: const Color(0xFF999999)),
+              ),
+            )
+          else
+            Column(
+              children: [
+                // La rueda con los porcentajes calculados a partir de Firestore
+                SizedBox(
+                  height: 160,
+                  width: 160,
+                  child: CustomPaint(
+                    painter: _PieChartPainter(
+                      valores: _destinosPorCategoria.values.toList(),
+                      colores: _coloresCategorias,
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 20),
+                // Leyenda con el nombre, cantidad y color de cada categoría
+                ..._destinosPorCategoria.entries.toList().asMap().entries.map(
+                  (item) {
+                    final index = item.key;
+                    final entry = item.value;
+                    return Padding(
+                      padding: const EdgeInsets.only(bottom: 10),
+                      child: Row(
+                        children: [
+                          Container(
+                            width: 12,
+                            height: 12,
+                            decoration: BoxDecoration(
+                              color: _coloresCategorias[index],
+                              shape: BoxShape.circle,
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              entry.key,
+                              overflow: TextOverflow.ellipsis,
+                              style: GoogleFonts.outfit(
+                                  fontSize: 13,
+                                  color: const Color(0xFF333333)),
+                            ),
+                          ),
+                          Text(
+                            '${entry.value}',
+                            style: GoogleFonts.outfit(
+                              fontSize: 13,
+                              fontWeight: FontWeight.bold,
+                              color: const Color(0xFFFC6707),
+                            ),
+                          ),
+                        ],
+                      ),
+                    );
+                  },
+                ),
+              ],
+            ),
         ],
       ),
     );
@@ -525,8 +764,7 @@ class _AdminHomeViewState extends State<AdminHomeView> {
   Widget _buildFooter(bool isMobile) {
     return Container(
       width: double.infinity,
-      padding:
-          EdgeInsets.symmetric(vertical: isMobile ? 16 : 20),
+      padding: EdgeInsets.symmetric(vertical: isMobile ? 16 : 20),
       margin: EdgeInsets.only(top: isMobile ? 16 : 32),
       decoration: const BoxDecoration(
         color: Color(0xFFFC6707),
@@ -547,5 +785,48 @@ class _AdminHomeViewState extends State<AdminHomeView> {
         ),
       ),
     );
+  }
+}
+
+// Dibuja el gráfico de torta (rueda) a partir de los valores reales de Firestore.
+// No usa ninguna librería externa, solo CustomPainter nativo de Flutter.
+class _PieChartPainter extends CustomPainter {
+  final List<int> valores;
+  final List<Color> colores;
+
+  _PieChartPainter({required this.valores, required this.colores});
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final total = valores.fold<int>(0, (a, b) => a + b);
+    if (total == 0) return;
+
+    final rect = Rect.fromLTWH(0, 0, size.width, size.height);
+    double anguloInicial = -90 * (3.141592653589793 / 180); // empieza arriba
+
+    for (int i = 0; i < valores.length; i++) {
+      final valor = valores[i];
+      if (valor == 0) continue;
+
+      final porcentaje = valor / total;
+      final anguloBarrido = porcentaje * 2 * 3.141592653589793;
+
+      final paint = Paint()
+        ..color = colores[i % colores.length]
+        ..style = PaintingStyle.fill;
+
+      canvas.drawArc(rect, anguloInicial, anguloBarrido, true, paint);
+      anguloInicial += anguloBarrido;
+    }
+
+    // Círculo blanco en el centro para dar el efecto de "donut"
+    final centro = Offset(size.width / 2, size.height / 2);
+    final radioInterno = size.width * 0.28;
+    canvas.drawCircle(centro, radioInterno, Paint()..color = Colors.white);
+  }
+
+  @override
+  bool shouldRepaint(covariant _PieChartPainter oldDelegate) {
+    return oldDelegate.valores != valores || oldDelegate.colores != colores;
   }
 }
