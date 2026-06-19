@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import '../models/reserva.dart';
 import '../models/estado_reserva.dart';
 import '../models/usuario.dart';
@@ -17,7 +18,6 @@ class ReservaController extends ChangeNotifier {
     notifyListeners();
   }
 
-  // Crea una nueva reserva con estado inicial "solicitado"
   Future<bool> crearReserva(Reserva reserva) async {
     _setLoading(true);
     try {
@@ -31,31 +31,38 @@ class ReservaController extends ChangeNotifier {
     }
   }
 
-  // Avanza el estado de una reserva si la transición es válida para el rol del actor.
-  //   solicitado → aceptado          (operador acepta la solicitud)
-  //   aceptado → verificandoPago     (estudiante sube el comprobante)
-  //   verificandoPago → pagado       (operador confirma el pago)
-  //   pagado → disfrutado            (operador marca el viaje como realizado)
+  Future<String> _obtenerNombrePaquete(String paqueteId) async {
+    try {
+      final doc = await FirebaseFirestore.instance.collection('destinos').doc(paqueteId).get();
+      if (doc.exists && doc.data() != null) {
+        return doc.data()!['nombre'] as String? ?? 'un destino';
+      }
+    } catch (e) {
+      debugPrint('Error obteniendo nombre del paquete: $e');
+    }
+    return 'un destino';
+  }
+
+  // Verificar si hay cupos disponibles
+  Future<bool> _verificarCuposDisponibles(String paqueteId) async {
+    final cupos = await _reservaService.obtenerCuposDisponibles(paqueteId);
+    return cupos > 0;
+  }
+
   Future<bool> cambiarEstadoReserva(Reserva reserva, EstadoReserva nuevoEstado, Usuario actor) async {
     final EstadoReserva estadoActual = reserva.estadoActual;
     bool esTransicionValida = false;
 
     if (actor.isEstudiante) {
-      // El estudiante solo puede enviar su comprobante una vez aceptada la solicitud
       if (estadoActual == EstadoReserva.aceptado && nuevoEstado == EstadoReserva.verificandoPago) {
         esTransicionValida = true;
       }
     } else if (actor.isOperador) {
-      // El operador acepta la solicitud inicial
       if (estadoActual == EstadoReserva.solicitado && nuevoEstado == EstadoReserva.aceptado) {
         esTransicionValida = true;
-      }
-      // El operador confirma que el comprobante de pago es válido
-      else if (estadoActual == EstadoReserva.verificandoPago && nuevoEstado == EstadoReserva.pagado) {
+      } else if (estadoActual == EstadoReserva.verificandoPago && nuevoEstado == EstadoReserva.pagado) {
         esTransicionValida = true;
-      }
-      // El operador marca el viaje como completado
-      else if (estadoActual == EstadoReserva.pagado && nuevoEstado == EstadoReserva.disfrutado) {
+      } else if (estadoActual == EstadoReserva.pagado && nuevoEstado == EstadoReserva.disfrutado) {
         esTransicionValida = true;
       }
     }
@@ -65,24 +72,41 @@ class ReservaController extends ChangeNotifier {
       return false;
     }
 
+    // Si el operador va a aceptar la solicitud, verificar cupos
+    if (actor.isOperador && nuevoEstado == EstadoReserva.aceptado) {
+      final hayCupos = await _verificarCuposDisponibles(reserva.paqueteId);
+      if (!hayCupos) {
+        debugPrint('No hay cupos disponibles para el paquete ${reserva.paqueteId}');
+        return false;
+      }
+    }
+
     _setLoading(true);
     try {
+      // Si el operador acepta, descontar cupo ANTES de actualizar el estado
+      if (actor.isOperador && nuevoEstado == EstadoReserva.aceptado) {
+        final cupoDescontado = await _reservaService.descontarCupo(reserva.paqueteId);
+        if (!cupoDescontado) {
+          _setLoading(false);
+          return false;
+        }
+      }
+
       await _reservaService.actualizarEstado(reserva.id, nuevoEstado);
 
-      // Notificar al estudiante cuando el operador toma una decisión
       if (actor.isOperador) {
+        final nombrePaquete = await _obtenerNombrePaquete(reserva.paqueteId);
+        
         if (nuevoEstado == EstadoReserva.aceptado) {
-          // ya puede proceder al pago
           await _notificacionService.notificarSolicitudAceptada(
             estudianteId: reserva.estudianteId,
-            nombrePaquete: reserva.paqueteId,
+            nombrePaquete: nombrePaquete,
             reservaId: reserva.id,
           );
         } else if (nuevoEstado == EstadoReserva.pagado) {
-          // confirmamos que su cupo está asegurado
           await _notificacionService.notificarPagoConfirmado(
             estudianteId: reserva.estudianteId,
-            nombrePaquete: reserva.paqueteId,
+            nombrePaquete: nombrePaquete,
             reservaId: reserva.id,
           );
         }
@@ -97,8 +121,6 @@ class ReservaController extends ChangeNotifier {
     }
   }
 
-  // El operador rechaza la solicitud de cupo
-  // Guarda el estado "rechazado" y notifica al estudiante con el motivo si lo hay.
   Future<bool> rechazarSolicitud(Reserva reserva, Usuario operador, {String? motivo}) async {
     if (!operador.isOperador || reserva.estadoActual != EstadoReserva.solicitado) {
       debugPrint('Rechazo no permitido: rol=${operador.rol}, estado=${reserva.estadoActual}');
@@ -109,10 +131,11 @@ class ReservaController extends ChangeNotifier {
     try {
       await _reservaService.actualizarEstado(reserva.id, EstadoReserva.rechazado);
 
-      // avisa al estudiante para que sepa que no fue aprobado
+      final nombrePaquete = await _obtenerNombrePaquete(reserva.paqueteId);
+
       await _notificacionService.notificarSolicitudRechazada(
         estudianteId: reserva.estudianteId,
-        nombrePaquete: reserva.paqueteId,
+        nombrePaquete: nombrePaquete,
         motivo: motivo,
       );
 
@@ -125,8 +148,6 @@ class ReservaController extends ChangeNotifier {
     }
   }
 
-  // El operador rechaza el comprobante de pago
-  // La reserva vuelve a "aceptado" para que el estudiante pueda subir uno nuevo sin perder el cupo
   Future<bool> rechazarPago(Reserva reserva, Usuario operador, {String? motivo}) async {
     if (!operador.isOperador || reserva.estadoActual != EstadoReserva.verificandoPago) {
       debugPrint('Rechazo de pago no permitido: rol=${operador.rol}, estado=${reserva.estadoActual}');
@@ -135,13 +156,13 @@ class ReservaController extends ChangeNotifier {
 
     _setLoading(true);
     try {
-      // "aceptado" en lugar de "rechazado" para no perder el cupo
       await _reservaService.actualizarEstado(reserva.id, EstadoReserva.aceptado);
 
-      // avisar al estudiante que debe subir un comprobante válido
+      final nombrePaquete = await _obtenerNombrePaquete(reserva.paqueteId);
+
       await _notificacionService.notificarPagoRechazado(
         estudianteId: reserva.estudianteId,
-        nombrePaquete: reserva.paqueteId,
+        nombrePaquete: nombrePaquete,
         motivo: motivo,
       );
 
@@ -154,7 +175,6 @@ class ReservaController extends ChangeNotifier {
     }
   }
 
-  // estudiante sube el comprobante y la reserva pasa a "verificandoPago"
   Future<bool> subirComprobanteYVerificar(Reserva reserva, String comprobanteUrl, Usuario actor) async {
     if (!actor.isEstudiante || reserva.estadoActual != EstadoReserva.aceptado) {
       return false;
@@ -172,12 +192,15 @@ class ReservaController extends ChangeNotifier {
     }
   }
 
-  // Escucha en tiempo real las reservas del estudiante autenticado
+  // Obtener cupos disponibles de un paquete (para mostrar en UI)
+  Future<int> obtenerCuposDisponibles(String paqueteId) async {
+    return await _reservaService.obtenerCuposDisponibles(paqueteId);
+  }
+
   Stream<List<Reserva>> obtenerMisReservasEstudiante(String estudianteId) {
     return _reservaService.obtenerReservasEstudiante(estudianteId);
   }
 
-  // Escucha en tiempo real las reservas de los paquetes del operador autenticado
   Stream<List<Reserva>> obtenerReservasDeMisPaquetes(List<String> misPaquetesIds) {
     return _reservaService.obtenerReservasPorPaquetes(misPaquetesIds);
   }

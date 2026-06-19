@@ -1,7 +1,7 @@
-import 'dart:async';
+import 'dart:math';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'notificacion_service.dart';
+import '../models/notificacion.dart';
 
 class TipsNotificacionService {
   static final List<Map<String, String>> _tips = [
@@ -27,93 +27,75 @@ class TipsNotificacionService {
     {'titulo': '💡 Tip de viaje', 'mensaje': 'Toma fotos, pero también disfruta el momento sin pantallas.'},
   ];
 
-  static Timer? _timer;
-  static int _tipIndex = 0;
-  static const String _keyLastWeek = 'tips_last_week';
-  static const String _keyTipIndex = 'tips_index';
-
-  static Future<void> iniciarTipsAutomaticos() async {
-    _timer?.cancel();
-    
-    await _cargarEstado();
-    
+  static Future<void> enviarTipSiCorresponde(String uid) async {
+    final prefs = await SharedPreferences.getInstance();
     final now = DateTime.now();
     final currentWeek = _getWeekNumber(now);
-    final int? lastWeek = await _getLastWeek();
-    
-    print('=== TIPS SERVICE ===');
-    print('Semana actual: $currentWeek');
-    print('Última semana enviada: $lastWeek');
-    
-    if (lastWeek == null || currentWeek != lastWeek) {
-      print('Enviando nuevo tip de la semana...');
-      await _enviarTip();
-      await _guardarLastWeek(currentWeek);
-    } else {
-      print('Ya se envió un tip esta semana. No se enviará otro hasta la semana que viene.');
+
+    final String keyLastWeek = 'tips_last_week_$uid';
+    final String keySentCount = 'tips_sent_count_$uid';
+    final String keySentIds = 'tips_sent_ids_$uid';
+
+    int lastWeek = prefs.getInt(keyLastWeek) ?? -1;
+    int sentCount = prefs.getInt(keySentCount) ?? 0;
+    List<String> sentIds = prefs.getStringList(keySentIds) ?? [];
+
+    if (lastWeek != currentWeek) {
+      lastWeek = currentWeek;
+      sentCount = 0;
+      await prefs.setInt(keyLastWeek, lastWeek);
     }
-    
-    // Revisar cada hora si cambió de semana
-    _timer = Timer.periodic(const Duration(hours: 1), (timer) async {
-      final now = DateTime.now();
-      final currentWeek = _getWeekNumber(now);
-      final int? lastWeek = await _getLastWeek();
-      
-      if (lastWeek == null || currentWeek != lastWeek) {
-        print('Nueva semana detectada. Enviando tip...');
-        await _enviarTip();
-        await _guardarLastWeek(currentWeek);
-      }
-    });
-  }
 
-  static Future<void> _cargarEstado() async {
-    final prefs = await SharedPreferences.getInstance();
-    _tipIndex = prefs.getInt(_keyTipIndex) ?? 0;
-    print('Tip index cargado: $_tipIndex');
-  }
+    if (sentCount >= 2) {
+      print('Ya se enviaron 2 tips esta semana al usuario $uid');
+      return;
+    }
 
-  static Future<void> _guardarEstado() async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setInt(_keyTipIndex, _tipIndex);
-  }
+    // Seleccionamos un tip que no se haya enviado antes
+    final availableTips = List<int>.generate(_tips.length, (i) => i)
+        .where((i) => !sentIds.contains(i.toString()))
+        .toList();
 
-  static Future<int?> _getLastWeek() async {
-    final prefs = await SharedPreferences.getInstance();
-    return prefs.getInt(_keyLastWeek);
-  }
+    if (availableTips.isEmpty) {
+      // Si ya se enviaron todos, reiniciamos el historial
+      sentIds.clear();
+      availableTips.addAll(List<int>.generate(_tips.length, (i) => i));
+    }
 
-  static Future<void> _guardarLastWeek(int week) async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setInt(_keyLastWeek, week);
-    print('Guardada semana: $week');
+    final random = Random();
+    final selectedTipIndex = availableTips[random.nextInt(availableTips.length)];
+    final tip = _tips[selectedTipIndex];
+
+    // Notificar solo a este estudiante
+    final notifRef = FirebaseFirestore.instance.collection('estudiantes').doc(uid).collection('notificaciones').doc();
+    final notificacion = Notificacion(
+      id: notifRef.id,
+      titulo: tip['titulo']!,
+      mensaje: tip['mensaje']!,
+      fechaCreacion: DateTime.now(),
+      leida: false,
+      tipo: 'tip',
+    );
+
+    await notifRef.set(notificacion.toMap());
+
+    sentCount++;
+    sentIds.add(selectedTipIndex.toString());
+
+    await prefs.setInt(keySentCount, sentCount);
+    await prefs.setStringList(keySentIds, sentIds);
+
+    print('Tip enviado al usuario $uid: ${tip['mensaje']}');
   }
 
   static int _getWeekNumber(DateTime date) {
-    // Semana 1 = primera semana del año 
     final firstDayOfYear = DateTime(date.year, 1, 1);
     final daysDifference = date.difference(firstDayOfYear).inDays;
     return ((daysDifference + firstDayOfYear.weekday - 1) / 7).ceil();
   }
 
-  static Future<void> _enviarTip() async {
-    final tip = _tips[_tipIndex % _tips.length];
-    _tipIndex++;
-    await _guardarEstado();
-    
-    final notificacionService = NotificacionService();
-    
-    await notificacionService.notificarAEstudiantes(
-      titulo: tip['titulo']!,
-      mensaje: tip['mensaje']!,
-      tipo: 'tip',
-    );
-    
-    print('Tip enviado: ${tip['mensaje']} (Índice: ${_tipIndex - 1})');
-  }
-
-  static void detenerTips() {
-    _timer?.cancel();
-    _timer = null;
-  }
+  // Se mantiene vacío por si algún código lo sigue llamando. 
+  // La lógica real ahora se dispara en AuthController.login
+  static Future<void> iniciarTipsAutomaticos() async {}
+  static void detenerTips() {}
 }

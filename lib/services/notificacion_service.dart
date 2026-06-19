@@ -37,6 +37,50 @@ class NotificacionService {
         .delete();
   }
 
+  // Elimina todas las notificaciones de un usuario
+  Future<void> eliminarTodasNotificaciones(String userId, {String collection = 'estudiantes'}) async {
+    try {
+      final snapshot = await _db
+          .collection(collection)
+          .doc(userId)
+          .collection('notificaciones')
+          .get();
+          
+      final batch = _db.batch();
+      for (var doc in snapshot.docs) {
+        batch.delete(doc.reference);
+      }
+      await batch.commit();
+    } catch (e) {
+      print('Error al eliminar todas las notificaciones: $e');
+    }
+  }
+
+  // Elimina los tips que tengan más de 24 horas de antigüedad
+  Future<void> limpiarTipsAntiguos(String userId, {String collection = 'estudiantes'}) async {
+    final hace24Horas = DateTime.now().subtract(const Duration(hours: 24));
+    
+    try {
+      final snapshot = await _db
+          .collection(collection)
+          .doc(userId)
+          .collection('notificaciones')
+          .where('tipo', isEqualTo: 'tip')
+          .get();
+          
+      final batch = _db.batch();
+      for (var doc in snapshot.docs) {
+        final fecha = (doc.data()['fechaCreacion'] as Timestamp?)?.toDate();
+        if (fecha != null && fecha.isBefore(hace24Horas)) {
+          batch.delete(doc.reference);
+        }
+      }
+      await batch.commit();
+    } catch (e) {
+      print('Error al limpiar tips antiguos: $e');
+    }
+  }
+
   // Notificaciones del operador
 
   Future<void> notificarNuevaSolicitud({

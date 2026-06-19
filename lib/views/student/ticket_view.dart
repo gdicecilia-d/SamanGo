@@ -1,7 +1,8 @@
 import 'dart:convert';
 import 'dart:typed_data';
 import 'dart:ui' as ui;
-import 'dart:io';
+import 'dart:io' show File;
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -9,6 +10,9 @@ import 'package:provider/provider.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart';
+import 'package:pdf/pdf.dart';
+import 'package:pdf/widgets.dart' as pw;
+import 'package:printing/printing.dart';
 import '../../models/reserva.dart';
 import '../../controllers/auth_controller.dart';
 import '../shared/app_header.dart';
@@ -59,8 +63,9 @@ class _TicketViewState extends State<TicketView> {
     return '${inicio.day} - ${fin.day} de ${meses[inicio.month - 1]}, ${inicio.year}';
   }
 
-  String get _horaSalida => '06:30 AM';
-  String get _puntoEncuentro => 'Universidad Metropolitana';
+  // Obtener datos del destino 
+  String get _horaSalida => widget.destinoData['horaSalida'] ?? '06:30 AM';
+  String get _puntoEncuentro => widget.destinoData['puntoEncuentro'] ?? 'Universidad Metropolitana';
 
   String _getNombreCompleto() {
     final auth = Provider.of<AuthController>(context, listen: false);
@@ -97,34 +102,179 @@ class _TicketViewState extends State<TicketView> {
     setState(() => _isDownloading = true);
 
     try {
-      final RenderRepaintBoundary boundary = _ticketKey.currentContext!
-          .findRenderObject() as RenderRepaintBoundary;
-      final ui.Image image = await boundary.toImage(pixelRatio: 2.5);
-      final ByteData? byteData = await image.toByteData(format: ui.ImageByteFormat.png);
-      
-      if (byteData == null) {
-        _mostrarMensaje('Error al generar la imagen del ticket');
-        setState(() => _isDownloading = false);
-        return;
+      pw.ImageProvider? destinationImage;
+      final String imagenUrl = widget.destinoData['imagen'] ?? '';
+      if (imagenUrl.isNotEmpty) {
+        try {
+          if (imagenUrl.startsWith('data:image')) {
+            final base64String = imagenUrl.split(',').last;
+            final bytes = base64Decode(base64String);
+            destinationImage = pw.MemoryImage(bytes);
+          } else {
+            destinationImage = await networkImage(imagenUrl);
+          }
+        } catch (e) {
+          print('Error loading image for PDF: $e');
+        }
       }
+
+      pw.Font? iconFont;
+      try {
+        iconFont = await PdfGoogleFonts.materialIcons();
+      } catch (e) {
+        print('Error loading icon font: $e');
+      }
+
+      final pdf = pw.Document();
       
-      final Uint8List pngBytes = byteData.buffer.asUint8List();
+      pdf.addPage(
+        pw.Page(
+          pageFormat: PdfPageFormat.a4,
+          margin: const pw.EdgeInsets.all(40),
+          build: (pw.Context context) {
+            pw.Widget buildInfoRow(String label, String value) {
+              return pw.Padding(
+                padding: const pw.EdgeInsets.only(bottom: 15),
+                child: pw.Row(
+                  crossAxisAlignment: pw.CrossAxisAlignment.start,
+                  children: [
+                    pw.Container(
+                      width: 140,
+                      child: pw.Text(
+                        label,
+                        style: pw.TextStyle(
+                          fontWeight: pw.FontWeight.bold,
+                          fontSize: 14,
+                          color: const PdfColor.fromInt(0xFFE65C00),
+                        ),
+                      ),
+                    ),
+                    pw.Expanded(
+                      child: pw.Text(
+                        value,
+                        style: pw.TextStyle(
+                          fontSize: 14,
+                          color: const PdfColor.fromInt(0xFF333333),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              );
+            }
 
-      final directory = await getTemporaryDirectory();
-      final String fileName = 'ticket_${widget.reserva.id}_${DateTime.now().millisecondsSinceEpoch}.png';
-      final String filePath = '${directory.path}/$fileName';
-      final File file = File(filePath);
-      await file.writeAsBytes(pngBytes);
-
-      await Share.shareXFiles(
-        [XFile(filePath, mimeType: 'image/png')],
-        text: '🎫 Ticket de viaje - ${widget.destinoData['nombre'] ?? 'SamanGo'}',
+            return pw.Column(
+              crossAxisAlignment: pw.CrossAxisAlignment.start,
+              children: [
+                pw.Text(
+                  widget.destinoData['nombre'] ?? 'SamanGo',
+                  style: pw.TextStyle(
+                    fontWeight: pw.FontWeight.bold,
+                    fontSize: 32,
+                    color: const PdfColor.fromInt(0xFF333333),
+                  ),
+                ),
+                pw.SizedBox(height: 10),
+                pw.Row(
+                  children: [
+                    if (iconFont != null) ...[
+                      pw.Icon(const pw.IconData(0xe192), font: iconFont, color: const PdfColor.fromInt(0xFF888888), size: 14),
+                      pw.SizedBox(width: 4),
+                    ],
+                    pw.Text(
+                      'Full Day',
+                      style: pw.TextStyle(fontSize: 12, color: const PdfColor.fromInt(0xFF888888)),
+                    ),
+                    pw.SizedBox(width: 20),
+                    if (iconFont != null) ...[
+                      pw.Icon(const pw.IconData(0xe0c8), font: iconFont, color: const PdfColor.fromInt(0xFF888888), size: 14),
+                      pw.SizedBox(width: 4),
+                    ],
+                    pw.Text(
+                      widget.destinoData['ubicacion'] ?? 'No disponible',
+                      style: pw.TextStyle(fontSize: 12, color: const PdfColor.fromInt(0xFF888888)),
+                    ),
+                  ],
+                ),
+                pw.SizedBox(height: 20),
+                pw.Divider(color: const PdfColor.fromInt(0xFFE0E0E0)),
+                pw.SizedBox(height: 30),
+                
+                pw.Row(
+                  crossAxisAlignment: pw.CrossAxisAlignment.start,
+                  children: [
+                    if (destinationImage != null)
+                      pw.Container(
+                        width: 250,
+                        height: 300,
+                        decoration: pw.BoxDecoration(
+                          borderRadius: const pw.BorderRadius.all(pw.Radius.circular(16)),
+                          image: pw.DecorationImage(
+                            image: destinationImage!,
+                            fit: pw.BoxFit.cover,
+                          ),
+                        ),
+                      )
+                    else
+                      pw.Container(
+                        width: 250,
+                        height: 300,
+                        decoration: pw.BoxDecoration(
+                          color: const PdfColor.fromInt(0xFFEEEEEE),
+                          borderRadius: const pw.BorderRadius.all(pw.Radius.circular(16)),
+                        ),
+                        child: pw.Center(
+                          child: pw.Text('Sin imagen', style: pw.TextStyle(color: const PdfColor.fromInt(0xFF888888))),
+                        ),
+                      ),
+                      
+                    pw.SizedBox(width: 40),
+                    
+                    pw.Expanded(
+                      child: pw.Column(
+                        crossAxisAlignment: pw.CrossAxisAlignment.start,
+                        children: [
+                          buildInfoRow('N° Transacción:', _transactionId.isEmpty ? 'N/A' : _transactionId),
+                          buildInfoRow('Pasajero:', _getNombreCompleto()),
+                          buildInfoRow('Carnet:', _getCarnet()),
+                          buildInfoRow('Fecha:', _formattedFecha),
+                          buildInfoRow('Hora salida:', _horaSalida),
+                          buildInfoRow('Punto encuentro:', _puntoEncuentro),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            );
+          },
+        ),
       );
 
-      _mostrarMensaje('Ticket listo para compartir');
+      final bytes = await pdf.save();
+      final String fileName = 'ticket_${widget.reserva.id}_${DateTime.now().millisecondsSinceEpoch}.pdf';
+
+      if (kIsWeb) {
+        await Share.shareXFiles(
+          [XFile.fromData(bytes, mimeType: 'application/pdf', name: fileName)],
+          text: '🎫 Ticket de viaje - ${widget.destinoData['nombre'] ?? 'SamanGo'}',
+        );
+      } else {
+        final directory = await getTemporaryDirectory();
+        final String filePath = '${directory.path}/$fileName';
+        final File file = File(filePath);
+        await file.writeAsBytes(bytes);
+
+        await Share.shareXFiles(
+          [XFile(filePath, mimeType: 'application/pdf')],
+          text: '🎫 Ticket de viaje - ${widget.destinoData['nombre'] ?? 'SamanGo'}',
+        );
+      }
+
+      _mostrarMensaje('Ticket descargado exitosamente');
     } catch (e) {
       print('Error al generar ticket: $e');
-      _mostrarMensaje('Error al generar el ticket');
+      _mostrarMensaje('Error al generar el ticket en PDF');
     } finally {
       setState(() => _isDownloading = false);
     }
@@ -188,7 +338,6 @@ class _TicketViewState extends State<TicketView> {
     final double backButtonTop = isMobile ? 80 : 100;
     final double backButtonSize = isLargeScreen ? 20 : 16;
     
-    // Calcular tamaño del cuadro 
     double cardWidth;
     double imageWidth;
     double imageHeight;
@@ -204,7 +353,6 @@ class _TicketViewState extends State<TicketView> {
       infoFontSize = 13;
       paddingSize = 20;
     } else if (isLargeScreen) {
-      // Pantallas muy grandes 
       cardWidth = 1100.0;
       imageWidth = 280;
       imageHeight = 350;
@@ -212,7 +360,6 @@ class _TicketViewState extends State<TicketView> {
       infoFontSize = 16;
       paddingSize = 32;
     } else {
-      // Desktop normal
       cardWidth = 900.0;
       imageWidth = 220;
       imageHeight = 280;
@@ -227,7 +374,6 @@ class _TicketViewState extends State<TicketView> {
       endDrawer: isMobile ? _buildDrawer() : null,
       body: Stack(
         children: [
-          // Fondo con imagen del destino semitransparente
           Container(
             decoration: BoxDecoration(
               image: _getBackgroundImage(),
@@ -270,7 +416,6 @@ class _TicketViewState extends State<TicketView> {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            // Header con título, ubicación y duración
                             Padding(
                               padding: EdgeInsets.all(paddingSize),
                               child: Column(
@@ -325,13 +470,11 @@ class _TicketViewState extends State<TicketView> {
                             
                             Divider(height: 1, thickness: 1, color: const Color(0xFFE0E0E0)),
                             
-                            // Contenido con foto e información
                             Padding(
                               padding: EdgeInsets.all(paddingSize),
                               child: isMobile
                                   ? Column(
                                       children: [
-                                        // Foto horizontal en móvil
                                         ClipRRect(
                                           borderRadius: BorderRadius.circular(20),
                                           child: _buildImageDestino(
@@ -340,7 +483,6 @@ class _TicketViewState extends State<TicketView> {
                                           ),
                                         ),
                                         const SizedBox(height: 24),
-                                        // Información
                                         _buildInfoRow('N° Transacción:', _transactionId, isMobile, infoFontSize),
                                         const SizedBox(height: 14),
                                         _buildInfoRow('Pasajero:', _getNombreCompleto(), isMobile, infoFontSize),
@@ -357,7 +499,6 @@ class _TicketViewState extends State<TicketView> {
                                   : Row(
                                       crossAxisAlignment: CrossAxisAlignment.start,
                                       children: [
-                                        // Foto vertical en desktop
                                         ClipRRect(
                                           borderRadius: BorderRadius.circular(20),
                                           child: _buildImageDestino(
@@ -366,7 +507,6 @@ class _TicketViewState extends State<TicketView> {
                                           ),
                                         ),
                                         const SizedBox(width: 32),
-                                        // Información
                                         Expanded(
                                           child: Column(
                                             crossAxisAlignment: CrossAxisAlignment.start,
@@ -391,7 +531,6 @@ class _TicketViewState extends State<TicketView> {
                             
                             Divider(height: 1, thickness: 1, color: const Color(0xFFE0E0E0)),
                             
-                            // Footer con botón de descarga dentro del cuadro
                             Padding(
                               padding: EdgeInsets.all(paddingSize),
                               child: Column(
@@ -454,7 +593,6 @@ class _TicketViewState extends State<TicketView> {
               ),
             ],
           ),
-          // Botón volver flotante
           Positioned(
             top: backButtonTop,
             right: 24,

@@ -1144,7 +1144,7 @@ class _DestinationDetailViewState extends State<DestinationDetailView> {
           children: [
             Center(
               child: Text(
-                'Reseñas (${resenas.length})',
+                'Reseñas',
                 style: GoogleFonts.outfit(
                   fontSize: sectionFontSize - 4,
                   fontWeight: FontWeight.bold,
@@ -1173,51 +1173,75 @@ class _DestinationDetailViewState extends State<DestinationDetailView> {
                   ? '$nombreEstudiante $apellidoEstudiante'
                   : nombreEstudiante;
               
-              return Container(
-                margin: const EdgeInsets.only(bottom: 10),
-                padding: const EdgeInsets.all(10),
-                decoration: BoxDecoration(
-                  color: const Color(0xFFF8F8F8),
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: List.generate(5, (index) {
-                        final bool isFilled = index < calificacionRedondeada;
-                        return Icon(
-                          isFilled ? Icons.star : Icons.star_border,
-                          size: 14,
-                          color: const Color(0xFFFFC107),
-                        );
-                      }),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      nombreCompleto,
-                      style: GoogleFonts.outfit(
-                        fontSize: 11,
-                        fontWeight: FontWeight.w600,
-                        color: primaryColor,
+              final estudianteId = data['estudianteId']?.toString() ?? '';
+              
+              Widget buildReviewCard(String finalName) {
+                return Container(
+                  margin: const EdgeInsets.only(bottom: 10),
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFF8F8F8),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: List.generate(5, (index) {
+                          final bool isFilled = index < calificacionRedondeada;
+                          return Icon(
+                            isFilled ? Icons.star : Icons.star_border,
+                            size: 14,
+                            color: const Color(0xFFFFC107),
+                          );
+                        }),
                       ),
-                    ),
-                    if (comentarios.isNotEmpty) ...[
                       const SizedBox(height: 4),
                       Text(
-                        comentarios.length > 80 
-                            ? '${comentarios.substring(0, 80)}...' 
-                            : comentarios,
+                        finalName,
                         style: GoogleFonts.outfit(
-                          fontSize: 12,
-                          color: const Color(0xFF555555),
+                          fontSize: 11,
+                          fontWeight: FontWeight.w600,
+                          color: primaryColor,
                         ),
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
                       ),
+                      if (comentarios.isNotEmpty) ...[
+                        const SizedBox(height: 4),
+                        Text(
+                          comentarios.length > 80 
+                              ? '${comentarios.substring(0, 80)}...' 
+                              : comentarios,
+                          style: GoogleFonts.outfit(
+                            fontSize: 12,
+                            color: const Color(0xFF555555),
+                          ),
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ],
                     ],
-                  ],
-                ),
+                  ),
+                );
+              }
+
+              if (nombreCompleto != 'Usuario' || estudianteId.isEmpty) {
+                return buildReviewCard(nombreCompleto);
+              }
+
+              return FutureBuilder<DocumentSnapshot>(
+                future: FirebaseFirestore.instance.collection('estudiantes').doc(estudianteId).get(),
+                builder: (context, studentSnap) {
+                  String asyncName = 'Usuario';
+                  if (studentSnap.hasData && studentSnap.data!.exists) {
+                    final studentData = studentSnap.data!.data() as Map<String, dynamic>;
+                    final nom = studentData['nombre']?.toString() ?? '';
+                    final ape = studentData['apellido']?.toString() ?? '';
+                    if (nom.isNotEmpty) {
+                      asyncName = ape.isNotEmpty ? '$nom $ape' : nom;
+                    }
+                  }
+                  return buildReviewCard(asyncName);
+                },
               );
             }),
             if (resenas.length > 3) ...[
@@ -1284,7 +1308,7 @@ class _DestinationDetailViewState extends State<DestinationDetailView> {
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     Text(
-                      'Todas las reseñas (${resenas.length})',
+                      'Todas las reseñas',
                       style: GoogleFonts.outfit(
                         fontSize: 20,
                         fontWeight: FontWeight.bold,
@@ -1325,57 +1349,81 @@ class _DestinationDetailViewState extends State<DestinationDetailView> {
                         ? '$nombreEstudiante $apellidoEstudiante'
                         : nombreEstudiante;
                     
-                    return Container(
-                      margin: const EdgeInsets.only(bottom: 12),
-                      padding: const EdgeInsets.all(14),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFF8F8F8),
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Row(
-                            children: [
-                              ...List.generate(5, (index) {
-                                final bool isFilled = index < calificacionRedondeada;
-                                return Icon(
-                                  isFilled ? Icons.star : Icons.star_border,
-                                  size: 16,
-                                  color: const Color(0xFFFFC107),
-                                );
-                              }),
-                              const SizedBox(width: 8),
-                              if (fecha != null)
-                                Text(
-                                  '${fecha.day}/${fecha.month}/${fecha.year}',
-                                  style: GoogleFonts.outfit(
-                                    fontSize: 11,
-                                    color: const Color(0xFF888888),
+                    final estudianteId = data['estudianteId']?.toString() ?? '';
+                    
+                    Widget buildModalReviewCard(String finalName) {
+                      return Container(
+                        margin: const EdgeInsets.only(bottom: 12),
+                        padding: const EdgeInsets.all(14),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFF8F8F8),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              children: [
+                                ...List.generate(5, (index) {
+                                  final bool isFilled = index < calificacionRedondeada;
+                                  return Icon(
+                                    isFilled ? Icons.star : Icons.star_border,
+                                    size: 16,
+                                    color: const Color(0xFFFFC107),
+                                  );
+                                }),
+                                const SizedBox(width: 8),
+                                if (fecha != null)
+                                  Text(
+                                    '${fecha.day}/${fecha.month}/${fecha.year}',
+                                    style: GoogleFonts.outfit(
+                                      fontSize: 11,
+                                      color: const Color(0xFF888888),
+                                    ),
                                   ),
-                                ),
-                            ],
-                          ),
-                          Text(
-                            nombreCompleto,
-                            style: GoogleFonts.outfit(
-                              fontSize: 12,
-                              fontWeight: FontWeight.w600,
-                              color: primaryColor,
+                              ],
                             ),
-                          ),
-                          if (comentarios.isNotEmpty) ...[
-                            const SizedBox(height: 6),
                             Text(
-                              comentarios,
+                              finalName,
                               style: GoogleFonts.outfit(
-                                fontSize: 14,
-                                color: const Color(0xFF333333),
+                                fontSize: 12,
+                                fontWeight: FontWeight.w600,
+                                color: primaryColor,
                               ),
                             ),
+                            if (comentarios.isNotEmpty) ...[
+                              const SizedBox(height: 6),
+                              Text(
+                                comentarios,
+                                style: GoogleFonts.outfit(
+                                  fontSize: 14,
+                                  color: const Color(0xFF333333),
+                                ),
+                              ),
+                            ],
                           ],
-                        ],
-                      ),
+                        ),
+                      );
+                    }
+
+                    if (nombreCompleto != 'Usuario' || estudianteId.isEmpty) {
+                      return buildModalReviewCard(nombreCompleto);
+                    }
+
+                    return FutureBuilder<DocumentSnapshot>(
+                      future: FirebaseFirestore.instance.collection('estudiantes').doc(estudianteId).get(),
+                      builder: (context, studentSnap) {
+                        String asyncName = 'Usuario';
+                        if (studentSnap.hasData && studentSnap.data!.exists) {
+                          final studentData = studentSnap.data!.data() as Map<String, dynamic>;
+                          final nom = studentData['nombre']?.toString() ?? '';
+                          final ape = studentData['apellido']?.toString() ?? '';
+                          if (nom.isNotEmpty) {
+                            asyncName = ape.isNotEmpty ? '$nom $ape' : nom;
+                          }
+                        }
+                        return buildModalReviewCard(asyncName);
+                      },
                     );
                   },
                 ),

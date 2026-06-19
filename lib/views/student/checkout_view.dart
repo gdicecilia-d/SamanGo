@@ -16,6 +16,7 @@ import '../../views/shared/widgets/custom_dialog.dart';
 import '../auth/login_view.dart';
 import '../../services/notificacion_service.dart';
 import 'notifications_view.dart';
+import 'package:flutter/services.dart';
 
 class CheckoutView extends StatefulWidget {
   final String destinoId;
@@ -50,6 +51,10 @@ class _CheckoutViewState extends State<CheckoutView> {
   
   late ImageProvider? _backgroundImage;
   late ImageProvider? _paqueteImagen;
+
+  // Estados de error para validación de acompañantes
+  final List<String> _nombreErrores = [];
+  final List<String> _carnetErrores = [];
 
   final List<Map<String, dynamic>> _extrasDisponibles = [
     {'nombre': 'Seguro de Viaje', 'precio': 15.0},
@@ -88,11 +93,10 @@ class _CheckoutViewState extends State<CheckoutView> {
     final fechaInicio = hoy.add(const Duration(days: 7));
     
     if (duracion == 'Full Day') {
-      // Full Day: solo sábados (3 sábados)
       int sabadosEncontrados = 0;
       DateTime fecha = fechaInicio;
       while (sabadosEncontrados < 3 && fecha.difference(hoy).inDays <= 60) {
-        if (fecha.weekday == 6) { // Sábado
+        if (fecha.weekday == 6) {
           _bloquesDisponibles.add({
             'fechaInicio': DateTime(fecha.year, fecha.month, fecha.day),
             'fechaFin': DateTime(fecha.year, fecha.month, fecha.day),
@@ -104,22 +108,20 @@ class _CheckoutViewState extends State<CheckoutView> {
         fecha = fecha.add(const Duration(days: 1));
       }
     } else {
-      // Viaje de varias noches: extraer días de la semana
       final match = RegExp(r'(\d+)').firstMatch(duracion);
       if (match != null) {
         final noches = int.parse(match.group(1)!);
         final diasViaje = noches + 1;
         
-        // Definir días de salida según la duración
         List<int> diasSalida;
         if (duracion.contains('2 noches')) {
-          diasSalida = [5, 6]; // Viernes o Sábado
+          diasSalida = [5, 6];
         } else if (duracion.contains('3 noches')) {
-          diasSalida = [4, 5]; // Jueves o Viernes
+          diasSalida = [4, 5];
         } else if (duracion.contains('4 noches')) {
-          diasSalida = [3, 4]; // Miércoles o Jueves
+          diasSalida = [3, 4];
         } else {
-          diasSalida = [5, 6]; // Por defecto Viernes o Sábado
+          diasSalida = [5, 6];
         }
         
         int bloquesGenerados = 0;
@@ -200,13 +202,57 @@ class _CheckoutViewState extends State<CheckoutView> {
     while (_acompanantes.length > cantidadNecesaria) {
       _acompanantes.removeLast();
     }
+    // Actualizar listas de errores
+    while (_nombreErrores.length < _acompanantes.length) {
+      _nombreErrores.add('');
+    }
+    while (_nombreErrores.length > _acompanantes.length) {
+      _nombreErrores.removeLast();
+    }
+    while (_carnetErrores.length < _acompanantes.length) {
+      _carnetErrores.add('');
+    }
+    while (_carnetErrores.length > _acompanantes.length) {
+      _carnetErrores.removeLast();
+    }
+  }
+
+  // VALIDACIONES PARA ACOMPAÑANTES
+  String? _validarNombreAcompanante(String value) {
+    if (value.trim().isEmpty) {
+      return 'El nombre es obligatorio';
+    }
+    if (value.trim().length < 3) {
+      return 'Mínimo 3 caracteres';
+    }
+    if (RegExp(r'[0-9]').hasMatch(value)) {
+      return 'No puede contener números';
+    }
+    return null;
+  }
+
+  String? _validarCarnetAcompanante(String value) {
+    if (value.trim().isEmpty) {
+      return 'El carnet es obligatorio';
+    }
+    final regex = RegExp(r'^\d{10,11}$');
+    if (!regex.hasMatch(value.trim())) {
+      return 'Debe tener entre 10 y 11 dígitos (solo números)';
+    }
+    return null;
   }
 
   bool get _acompanantesValidos {
     if (_numeroPersonas <= 1) return true;
-    for (var a in _acompanantes) {
-      if (a['nombre']?.trim().isEmpty ?? true) return false;
-      if (a['carnet']?.trim().isEmpty ?? true) return false;
+    for (int i = 0; i < _acompanantes.length; i++) {
+      final nombre = _acompanantes[i]['nombre']?.trim() ?? '';
+      final carnet = _acompanantes[i]['carnet']?.trim() ?? '';
+      if (nombre.isEmpty || nombre.length < 3 || RegExp(r'[0-9]').hasMatch(nombre)) {
+        return false;
+      }
+      if (carnet.isEmpty || !RegExp(r'^\d{10,11}$').hasMatch(carnet)) {
+        return false;
+      }
     }
     return true;
   }
@@ -321,7 +367,6 @@ class _CheckoutViewState extends State<CheckoutView> {
         final reservaInicio = (data['fechaInicio'] as Timestamp).toDate();
         final reservaFin = (data['fechaFin'] as Timestamp).toDate();
         
-        // Verificar si las fechas se traslapan
         if (!(fin.isBefore(reservaInicio) || inicio.isAfter(reservaFin))) {
           final destinoDoc = await FirebaseFirestore.instance
               .collection('destinos')
@@ -350,11 +395,10 @@ class _CheckoutViewState extends State<CheckoutView> {
       return;
     }
     if (_numeroPersonas > 1 && !_acompanantesValidos) {
-      _mostrarMensaje('Completa los datos de tus acompañantes');
+      _mostrarMensaje('Completa correctamente los datos de tus acompañantes');
       return;
     }
 
-    // Verificar si ya tiene una reserva en la misma fecha
     final yaTieneReserva = await _verificarReservaEnMismaFecha(_fechaInicio!, _fechaFin!);
     if (yaTieneReserva) return;
 
@@ -375,8 +419,8 @@ class _CheckoutViewState extends State<CheckoutView> {
     final fechaFinReal = _fechaFin!.add(const Duration(days: 1));
 
     final acompanantesFinales = _acompanantes.map((a) => {
-      'nombre': a['nombre'],
-      'carnet': a['carnet'],
+      'nombre': a['nombre']?.trim() ?? '',
+      'carnet': a['carnet']?.trim() ?? '',
     }).toList();
 
     try {
@@ -1197,7 +1241,6 @@ class _CheckoutViewState extends State<CheckoutView> {
     );
   }
 
-  // NUEVO: Selector de bloques de días
   Widget _buildSelectorBloques() {
     final isLargeScreen = MediaQuery.of(context).size.width > 1400;
     
@@ -1225,7 +1268,6 @@ class _CheckoutViewState extends State<CheckoutView> {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          // Header del mes
           Container(
             padding: const EdgeInsets.symmetric(vertical: 8),
             decoration: BoxDecoration(
@@ -1404,6 +1446,9 @@ class _CheckoutViewState extends State<CheckoutView> {
   List<Widget> _buildFormularioAcompanantes() {
     final widgets = <Widget>[];
     for (int i = 0; i < _acompanantes.length; i++) {
+      final nombreError = _nombreErrores[i];
+      final carnetError = _carnetErrores[i];
+      
       widgets.add(
         Container(
           margin: const EdgeInsets.only(bottom: 16),
@@ -1464,19 +1509,23 @@ class _CheckoutViewState extends State<CheckoutView> {
                     borderRadius: BorderRadius.all(Radius.circular(12)),
                     borderSide: BorderSide(color: _primaryColor, width: 1.5),
                   ),
+                  errorText: nombreError.isNotEmpty ? nombreError : null,
+                  errorStyle: TextStyle(color: _primaryColor, fontSize: 12),
                   contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                 ),
                 style: const TextStyle(fontSize: 14),
                 onChanged: (value) {
                   setState(() {
                     _acompanantes[i]['nombre'] = value;
+                    final error = _validarNombreAcompanante(value);
+                    _nombreErrores[i] = error ?? '';
                   });
                 },
               ),
               const SizedBox(height: 12),
               TextField(
                 decoration: InputDecoration(
-                  hintText: 'Cédula / Carnet',
+                  hintText: 'Carnet UNIMET',
                   hintStyle: const TextStyle(fontSize: 14, color: Color(0xFF999999)),
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.all(Radius.circular(12)),
@@ -1490,12 +1539,18 @@ class _CheckoutViewState extends State<CheckoutView> {
                     borderRadius: BorderRadius.all(Radius.circular(12)),
                     borderSide: BorderSide(color: _primaryColor, width: 1.5),
                   ),
+                  errorText: carnetError.isNotEmpty ? carnetError : null,
+                  errorStyle: TextStyle(color: _primaryColor, fontSize: 12),
                   contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                 ),
                 style: const TextStyle(fontSize: 14),
+                keyboardType: TextInputType.number,
+                inputFormatters: [FilteringTextInputFormatter.digitsOnly],
                 onChanged: (value) {
                   setState(() {
                     _acompanantes[i]['carnet'] = value;
+                    final error = _validarCarnetAcompanante(value);
+                    _carnetErrores[i] = error ?? '';
                   });
                 },
               ),

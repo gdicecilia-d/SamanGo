@@ -305,10 +305,15 @@ class _ReviewViewState extends State<ReviewView> {
         }
       }
 
+      final authController = Provider.of<AuthController>(context, listen: false);
+      final usuario = authController.usuarioActual;
+
       // Crear la resena
       final Map<String, dynamic> resenaData = {
         'reservaId': widget.reserva.id,
         'estudianteId': widget.reserva.estudianteId,
+        'nombreEstudiante': widget.reserva.nombreEstudiante.isNotEmpty ? widget.reserva.nombreEstudiante : (usuario?.nombre ?? 'Usuario'),
+        'apellidoEstudiante': widget.reserva.apellidoEstudiante.isNotEmpty ? widget.reserva.apellidoEstudiante : (usuario?.apellido ?? ''),
         'paqueteId': widget.reserva.paqueteId,
         'operadorId': operadorId,
         'calificacion': _rating,

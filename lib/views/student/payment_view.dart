@@ -2,12 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import '../../models/reserva.dart';
 import '../../controllers/reserva_controller.dart';
 import '../../controllers/auth_controller.dart';
 import '../../services/notificacion_service.dart';
+import '../../services/paypal_service.dart';
 import '../shared/app_header.dart';
-import 'student_home_view.dart';
 import 'my_trips_view.dart';
 import 'favorites_view.dart';
 import 'edit_profile_view.dart';
@@ -15,6 +16,7 @@ import 'notifications_view.dart';
 import '../../views/shared/widgets/custom_dialog.dart';
 import '../auth/login_view.dart';
 import 'dart:convert';
+import 'dart:html' as html;
 
 class PaymentView extends StatefulWidget {
   final Reserva reserva;
@@ -30,6 +32,8 @@ class _PaymentViewState extends State<PaymentView> {
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
   bool _procesando = false;
   bool _pagoExitoso = false;
+  
+  final PayPalService _payPalService = PayPalService();
 
   bool get _isOffer => widget.destinoData['isOffer'] ?? false;
   Color get _primaryColor => _isOffer ? const Color(0xFF9C27B0) : const Color(0xFFFC6707);
@@ -42,13 +46,115 @@ class _PaymentViewState extends State<PaymentView> {
     
     final meses = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
     
-    // Si es Full Day (misma fecha) o solo tiene inicio
     if (fin == null || inicio.year == fin.year && inicio.month == fin.month && inicio.day == fin.day) {
       return '${inicio.day} de ${meses[inicio.month - 1]}, ${inicio.year}';
     }
     
-    // Si tiene rango de fechas
     return '${inicio.day} - ${fin.day} de ${meses[inicio.month - 1]}, ${inicio.year}';
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    _verificarRetornoPayPalWeb();
+  }
+
+  void _verificarRetornoPayPalWeb() {
+    if (!kIsWeb) return;
+    
+    try {
+      final url = html.window.location.href;
+      
+      if (url.contains('cancel') || url.contains('cancelled')) {
+        html.window.localStorage.remove('paypal_pending');
+        _mostrarMensaje('Pago cancelado. Puedes intentar nuevamente.');
+        return;
+      }
+      
+      if (url.contains('token=') && url.contains('PayerID=')) {
+        _procesarPagoExitosoWeb();
+      }
+    } catch (e) {
+      print('Error verificando retorno PayPal: $e');
+    }
+  }
+
+  void _procesarPagoExitosoWeb() async {
+    setState(() {
+      _procesando = true;
+    });
+
+    final auth = Provider.of<AuthController>(context, listen: false);
+    final reservaCtrl = Provider.of<ReservaController>(context, listen: false);
+
+    try {
+      final pendingData = html.window.localStorage['paypal_pending'];
+      html.window.localStorage.remove('paypal_pending');
+      
+      if (pendingData == null) {
+        setState(() {
+          _procesando = false;
+        });
+        return;
+      }
+
+      await auth.reloadUser();
+      final usuarioActual = auth.usuarioActual;
+      
+      if (usuarioActual == null) {
+        setState(() {
+          _procesando = false;
+        });
+        _mostrarMensaje('Error: Usuario no autenticado');
+        return;
+      }
+
+      final comprobanteUrl = 'paypal_${DateTime.now().millisecondsSinceEpoch}_${widget.reserva.id}';
+
+      final subio = await reservaCtrl.subirComprobanteYVerificar(
+        widget.reserva,
+        comprobanteUrl,
+        usuarioActual,
+      );
+
+      if (subio && mounted) {
+        final destinoDoc = await FirebaseFirestore.instance
+            .collection('destinos')
+            .doc(widget.reserva.paqueteId)
+            .get();
+        final destino = destinoDoc.data() as Map<String, dynamic>?;
+        final operadorId = destino?['operadorId'];
+
+        if (operadorId != null && usuarioActual != null) {
+          await NotificacionService().notificarPagoRecibido(
+            operadorId: operadorId,
+            estudianteNombre: usuarioActual.nombre,
+            estudianteApellido: usuarioActual.apellido ?? '',
+            estudianteCarnet: usuarioActual.carnet ?? '',
+            nombrePaquete: widget.destinoData['nombre'] ?? 'destino',
+          );
+        }
+        
+        html.window.history.replaceState(null, '', '/#/payment');
+
+        setState(() {
+          _pagoExitoso = true;
+          _procesando = false;
+        });
+
+        _mostrarExitoYRedirigir();
+      } else {
+        setState(() {
+          _procesando = false;
+        });
+        _mostrarMensaje('Error al verificar el pago');
+      }
+    } catch (e) {
+      setState(() {
+        _procesando = false;
+      });
+      _mostrarMensaje('Error al procesar el pago: ${e.toString()}');
+    }
   }
 
   Future<void> _realizarPago() async {
@@ -57,47 +163,113 @@ class _PaymentViewState extends State<PaymentView> {
     });
 
     final auth = Provider.of<AuthController>(context, listen: false);
-    final reservaCtrl = Provider.of<ReservaController>(context, listen: false);
-    final usuario = auth.usuarioActual;
 
-    await Future.delayed(const Duration(seconds: 2));
+    try {
+      String currentUrl = 'http://localhost:5000/#/payment';
+      
+      if (kIsWeb) {
+        final fullUrl = html.window.location.href;
+        final uri = Uri.parse(fullUrl);
+        currentUrl = '${uri.scheme}://${uri.host}:${uri.port}/#/payment';
+      }
 
-    const String comprobanteMockUrl = 'https://ejemplo.com/comprobante/12345.pdf';
+      final exito = await _payPalService.processPayment(
+        context: context,
+        amount: widget.reserva.totalGeneral,
+        currency: 'USD',
+        description: 'Reserva: ${widget.destinoData['nombre']}',
+        returnUrl: currentUrl,
+        cancelUrl: currentUrl,
+        reservaId: widget.reserva.id,
+        destinoId: widget.reserva.paqueteId,
+        estudianteId: widget.reserva.estudianteId,
+      );
 
-    final exito = await reservaCtrl.subirComprobanteYVerificar(
-      widget.reserva,
-      comprobanteMockUrl,
-      auth.usuarioActual!,
+      if (kIsWeb) {
+        return;
+      }
+
+      if (!mounted) return;
+
+      setState(() {
+        _procesando = false;
+      });
+
+      if (exito == true) {
+        final comprobanteUrl = 'paypal_${DateTime.now().millisecondsSinceEpoch}_${widget.reserva.id}';
+
+        final usuario = auth.usuarioActual;
+        final reservaCtrl = Provider.of<ReservaController>(context, listen: false);
+
+        if (usuario == null) {
+          _mostrarMensaje('Error: Usuario no autenticado');
+          return;
+        }
+
+        final subio = await reservaCtrl.subirComprobanteYVerificar(
+          widget.reserva,
+          comprobanteUrl,
+          usuario,
+        );
+
+        if (subio && mounted) {
+          final destinoDoc = await FirebaseFirestore.instance
+              .collection('destinos')
+              .doc(widget.reserva.paqueteId)
+              .get();
+          final destino = destinoDoc.data() as Map<String, dynamic>?;
+          final operadorId = destino?['operadorId'];
+
+          if (operadorId != null && usuario != null) {
+            await NotificacionService().notificarPagoRecibido(
+              operadorId: operadorId,
+              estudianteNombre: usuario.nombre,
+              estudianteApellido: usuario.apellido ?? '',
+              estudianteCarnet: usuario.carnet ?? '',
+              nombrePaquete: widget.destinoData['nombre'] ?? 'destino',
+            );
+          }
+
+          setState(() {
+            _pagoExitoso = true;
+          });
+
+          _mostrarExitoYRedirigir();
+        } else {
+          _mostrarMensaje('Error al verificar el pago');
+        }
+      } else if (exito == false) {
+        _mostrarMensaje('Pago cancelado. Puedes intentar nuevamente.');
+      } else {
+        _mostrarMensaje('Error al procesar el pago');
+      }
+    } catch (e) {
+      setState(() {
+        _procesando = false;
+      });
+      _mostrarMensaje('Error al procesar el pago: ${e.toString()}');
+    }
+  }
+
+  void _mostrarExitoYRedirigir() {
+    ScaffoldMessenger.of(context).clearSnackBars();
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Pago exitoso. Tu reserva esta confirmada.'),
+        backgroundColor: Color(0xFFFC6707),
+        duration: Duration(seconds: 2),
+      ),
     );
 
-    if (exito && mounted) {
-      final destinoDoc = await FirebaseFirestore.instance
-          .collection('destinos')
-          .doc(widget.reserva.paqueteId)
-          .get();
-      final destino = destinoDoc.data() as Map<String, dynamic>?;
-      final operadorId = destino?['operadorId'];
-      
-      if (operadorId != null && usuario != null) {
-        await NotificacionService().notificarPagoRecibido(
-          operadorId: operadorId,
-          estudianteNombre: usuario.nombre,
-          estudianteApellido: usuario.apellido ?? '',
-          estudianteCarnet: usuario.carnet ?? '',
-          nombrePaquete: widget.destinoData['nombre'] ?? 'destino',
+    Future.delayed(const Duration(milliseconds: 500), () {
+      if (mounted) {
+        Navigator.pushAndRemoveUntil(
+          context,
+          MaterialPageRoute(builder: (_) => const MyTripsView()),
+          (route) => false,
         );
       }
-      
-      setState(() {
-        _pagoExitoso = true;
-        _procesando = false;
-      });
-    } else if (mounted) {
-      setState(() {
-        _procesando = false;
-      });
-      _mostrarMensaje('Error al procesar el pago. Intenta nuevamente.');
-    }
+    });
   }
 
   void _mostrarMensaje(String mensaje) {
@@ -106,7 +278,7 @@ class _PaymentViewState extends State<PaymentView> {
       SnackBar(
         content: Text(mensaje),
         backgroundColor: _primaryColor,
-        duration: const Duration(seconds: 2),
+        duration: const Duration(seconds: 3),
       ),
     );
   }
@@ -115,13 +287,8 @@ class _PaymentViewState extends State<PaymentView> {
     if (menu == 'Inicio') {
       Navigator.pushAndRemoveUntil(
         context,
-        MaterialPageRoute(builder: (_) => const StudentHomeView()),
-        (route) => false,
-      );
-    } else if (menu == 'Mis Viajes') {
-      Navigator.push(
-        context,
         MaterialPageRoute(builder: (_) => const MyTripsView()),
+        (route) => false,
       );
     } else if (menu == 'Favoritos') {
       Navigator.push(
@@ -132,6 +299,11 @@ class _PaymentViewState extends State<PaymentView> {
       Navigator.push(
         context,
         MaterialPageRoute(builder: (_) => const NotificationsView()),
+      );
+    } else if (menu == 'Mis Viajes') {
+      Navigator.push(
+        context,
+        MaterialPageRoute(builder: (_) => const MyTripsView()),
       );
     }
   }

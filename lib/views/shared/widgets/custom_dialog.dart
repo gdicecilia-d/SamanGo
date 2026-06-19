@@ -12,15 +12,22 @@ class CustomConfirmDialog {
   }) {
     return showDialog<bool>(
       context: context,
+      barrierDismissible: true,
       builder: (context) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(20),
+        ),
         elevation: 4,
         backgroundColor: Colors.white,
         contentPadding: const EdgeInsets.all(20),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(icon, color: const Color(0xFFFC6707), size: 45),
+            Icon(
+              icon,
+              color: const Color(0xFFFC6707),
+              size: 45,
+            ),
             const SizedBox(height: 12),
             Text(
               title,
@@ -31,13 +38,18 @@ class CustomConfirmDialog {
               ),
             ),
             const SizedBox(height: 8),
-            Text(
-              message,
-              textAlign: TextAlign.center,
-              style: GoogleFonts.outfit(
-                fontSize: 14,
-                fontWeight: FontWeight.w400,
-                color: const Color(0xFF666666),
+            ConstrainedBox(
+              constraints: const BoxConstraints(
+                maxWidth: 300,
+              ),
+              child: Text(
+                message,
+                textAlign: TextAlign.center,
+                style: GoogleFonts.outfit(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w400,
+                  color: const Color(0xFF666666),
+                ),
               ),
             ),
             const SizedBox(height: 20),
