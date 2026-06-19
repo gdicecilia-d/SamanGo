@@ -63,8 +63,9 @@ class _TicketViewState extends State<TicketView> {
     return '${inicio.day} - ${fin.day} de ${meses[inicio.month - 1]}, ${inicio.year}';
   }
 
-  String get _horaSalida => '06:30 AM';
-  String get _puntoEncuentro => 'Universidad Metropolitana';
+  // Obtener datos del destino 
+  String get _horaSalida => widget.destinoData['horaSalida'] ?? '06:30 AM';
+  String get _puntoEncuentro => widget.destinoData['puntoEncuentro'] ?? 'Universidad Metropolitana';
 
   String _getNombreCompleto() {
     final auth = Provider.of<AuthController>(context, listen: false);
@@ -144,7 +145,7 @@ class _TicketViewState extends State<TicketView> {
                         style: pw.TextStyle(
                           fontWeight: pw.FontWeight.bold,
                           fontSize: 14,
-                          color: const PdfColor.fromInt(0xFFE65C00), // Orange
+                          color: const PdfColor.fromInt(0xFFE65C00),
                         ),
                       ),
                     ),
@@ -237,8 +238,8 @@ class _TicketViewState extends State<TicketView> {
                           buildInfoRow('Pasajero:', _getNombreCompleto()),
                           buildInfoRow('Carnet:', _getCarnet()),
                           buildInfoRow('Fecha:', _formattedFecha),
-                          buildInfoRow('Hora salida:', widget.destinoData['horaSalida'] ?? 'Por definir'),
-                          buildInfoRow('Punto encuentro:', widget.destinoData['puntoEncuentro'] ?? 'Por definir'),
+                          buildInfoRow('Hora salida:', _horaSalida),
+                          buildInfoRow('Punto encuentro:', _puntoEncuentro),
                         ],
                       ),
                     ),
@@ -254,7 +255,6 @@ class _TicketViewState extends State<TicketView> {
       final String fileName = 'ticket_${widget.reserva.id}_${DateTime.now().millisecondsSinceEpoch}.pdf';
 
       if (kIsWeb) {
-        // En web, path_provider y dart:io File lanzan error. Usamos XFile.fromData directamente.
         await Share.shareXFiles(
           [XFile.fromData(bytes, mimeType: 'application/pdf', name: fileName)],
           text: '🎫 Ticket de viaje - ${widget.destinoData['nombre'] ?? 'SamanGo'}',
@@ -338,7 +338,6 @@ class _TicketViewState extends State<TicketView> {
     final double backButtonTop = isMobile ? 80 : 100;
     final double backButtonSize = isLargeScreen ? 20 : 16;
     
-    // Calcular tamaño del cuadro 
     double cardWidth;
     double imageWidth;
     double imageHeight;
@@ -354,7 +353,6 @@ class _TicketViewState extends State<TicketView> {
       infoFontSize = 13;
       paddingSize = 20;
     } else if (isLargeScreen) {
-      // Pantallas muy grandes 
       cardWidth = 1100.0;
       imageWidth = 280;
       imageHeight = 350;
@@ -362,7 +360,6 @@ class _TicketViewState extends State<TicketView> {
       infoFontSize = 16;
       paddingSize = 32;
     } else {
-      // Desktop normal
       cardWidth = 900.0;
       imageWidth = 220;
       imageHeight = 280;
@@ -377,7 +374,6 @@ class _TicketViewState extends State<TicketView> {
       endDrawer: isMobile ? _buildDrawer() : null,
       body: Stack(
         children: [
-          // Fondo con imagen del destino semitransparente
           Container(
             decoration: BoxDecoration(
               image: _getBackgroundImage(),
@@ -420,7 +416,6 @@ class _TicketViewState extends State<TicketView> {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            // Header con título, ubicación y duración
                             Padding(
                               padding: EdgeInsets.all(paddingSize),
                               child: Column(
@@ -475,13 +470,11 @@ class _TicketViewState extends State<TicketView> {
                             
                             Divider(height: 1, thickness: 1, color: const Color(0xFFE0E0E0)),
                             
-                            // Contenido con foto e información
                             Padding(
                               padding: EdgeInsets.all(paddingSize),
                               child: isMobile
                                   ? Column(
                                       children: [
-                                        // Foto horizontal en móvil
                                         ClipRRect(
                                           borderRadius: BorderRadius.circular(20),
                                           child: _buildImageDestino(
@@ -490,7 +483,6 @@ class _TicketViewState extends State<TicketView> {
                                           ),
                                         ),
                                         const SizedBox(height: 24),
-                                        // Información
                                         _buildInfoRow('N° Transacción:', _transactionId, isMobile, infoFontSize),
                                         const SizedBox(height: 14),
                                         _buildInfoRow('Pasajero:', _getNombreCompleto(), isMobile, infoFontSize),
@@ -507,7 +499,6 @@ class _TicketViewState extends State<TicketView> {
                                   : Row(
                                       crossAxisAlignment: CrossAxisAlignment.start,
                                       children: [
-                                        // Foto vertical en desktop
                                         ClipRRect(
                                           borderRadius: BorderRadius.circular(20),
                                           child: _buildImageDestino(
@@ -516,7 +507,6 @@ class _TicketViewState extends State<TicketView> {
                                           ),
                                         ),
                                         const SizedBox(width: 32),
-                                        // Información
                                         Expanded(
                                           child: Column(
                                             crossAxisAlignment: CrossAxisAlignment.start,
@@ -541,7 +531,6 @@ class _TicketViewState extends State<TicketView> {
                             
                             Divider(height: 1, thickness: 1, color: const Color(0xFFE0E0E0)),
                             
-                            // Footer con botón de descarga dentro del cuadro
                             Padding(
                               padding: EdgeInsets.all(paddingSize),
                               child: Column(
@@ -604,7 +593,6 @@ class _TicketViewState extends State<TicketView> {
               ),
             ],
           ),
-          // Botón volver flotante
           Positioned(
             top: backButtonTop,
             right: 24,

@@ -8,7 +8,6 @@ class ReservaService {
   Future<Reserva> crearReserva(Reserva reserva) async {
     final docRef = _firestore.collection('reservas').doc();
     
-    // Configurar historial inicial
     final Map<String, dynamic> historialInicial = {
       EstadoReserva.solicitado.toMap(): FieldValue.serverTimestamp(),
     };
@@ -28,6 +27,50 @@ class ReservaService {
       'historial.${nuevoEstado.toMap()}': FieldValue.serverTimestamp(),
     });
   }
+
+  // Descontar cupo del paquete cuando se acepta una reserva
+  Future<bool> descontarCupo(String paqueteId) async {
+    try {
+      final destinoRef = _firestore.collection('destinos').doc(paqueteId);
+      
+      // Obtener el paquete actual para verificar cupos disponibles
+      final doc = await destinoRef.get();
+      if (!doc.exists) {
+        return false;
+      }
+      
+      final data = doc.data() as Map<String, dynamic>?;
+      final cuposDisponibles = data?['cuposDisponibles'] as int? ?? 0;
+      
+      // Verificar si hay cupos disponibles
+      if (cuposDisponibles <= 0) {
+        return false;
+      }
+      
+      // Descontar 1 cupo
+      await destinoRef.update({
+        'cuposDisponibles': FieldValue.increment(-1),
+      });
+      
+      return true;
+    } catch (e) {
+      print('Error descontando cupo: $e');
+      return false;
+    }
+  }
+
+  // Obtener cupos disponibles de un paquete
+  Future<int> obtenerCuposDisponibles(String paqueteId) async {
+    try {
+      final doc = await _firestore.collection('destinos').doc(paqueteId).get();
+      if (!doc.exists) return 0;
+      final data = doc.data() as Map<String, dynamic>?;
+      return data?['cuposDisponibles'] as int? ?? 0;
+    } catch (e) {
+      print('Error obteniendo cupos: $e');
+      return 0;
+    }
+  }
   
   Future<void> subirComprobante(String reservaId, String comprobanteUrl) async {
     await _firestore.collection('reservas').doc(reservaId).update({
@@ -37,7 +80,6 @@ class ReservaService {
     });
   }
 
-  // Streams para obtener reservas de un estudiante
   Stream<List<Reserva>> obtenerReservasEstudiante(String estudianteId) {
     if (estudianteId.isEmpty) return const Stream.empty();
     return _firestore
@@ -49,12 +91,9 @@ class ReservaService {
             .toList());
   }
 
-  // Stream para obtener reservas de los paquetes de un operador
   Stream<List<Reserva>> obtenerReservasPorPaquetes(List<String> paquetesIds) {
     if (paquetesIds.isEmpty) return const Stream.empty();
     
-    // Nota: Firestore limita el in (whereIn) a 10 elementos.
-    // Para escalar, en un entorno real, se agruparía en chunks.
     return _firestore
         .collection('reservas')
         .where('paqueteId', whereIn: paquetesIds.take(10).toList())
@@ -64,7 +103,6 @@ class ReservaService {
             .toList());
   }
   
-  // Verificar si el estudiante ya tiene una reserva en las mismas fechas
   Future<bool> verificarReservaEnMismaFecha(String estudianteId, DateTime inicio, DateTime fin) async {
     try {
       final reservas = await _firestore
@@ -78,7 +116,6 @@ class ReservaService {
         final reservaInicio = (data['fechaInicio'] as Timestamp).toDate();
         final reservaFin = (data['fechaFin'] as Timestamp).toDate();
         
-        // Verificar si las fechas se traslapan
         if (!(fin.isBefore(reservaInicio) || inicio.isAfter(reservaFin))) {
           return true;
         }
@@ -90,7 +127,6 @@ class ReservaService {
     }
   }
 
-  // Obtener el nombre del destino por ID
   Future<String> obtenerNombreDestino(String destinoId) async {
     try {
       final doc = await _firestore.collection('destinos').doc(destinoId).get();

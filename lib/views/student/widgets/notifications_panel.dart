@@ -55,41 +55,52 @@ class NotificationsPanel extends StatelessWidget {
               ),
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-                child: TextButton.icon(
-                  style: TextButton.styleFrom(
-                    padding: EdgeInsets.zero,
-                    alignment: Alignment.centerLeft,
-                    minimumSize: Size.zero,
-                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                  ),
-                  onPressed: notificaciones.isNotEmpty ? () {
-                    CustomConfirmDialog.show(
-                      context: context,
-                      title: 'Borrar todo',
-                      message: '¿Estás seguro de que deseas eliminar todas las notificaciones? Esta acción no se puede deshacer.',
-                      confirmText: 'Borrar',
-                      icon: Icons.delete_sweep,
-                    ).then((confirm) {
-                      if (confirm == true) {
-                        notificacionController.eliminarTodasNotificaciones();
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(
-                            content: Text(
-                              'Se borraron de forma correcta',
-                              style: GoogleFonts.outfit(color: Colors.white, fontSize: 14),
-                            ),
-                            backgroundColor: const Color(0xFFFC6707),
-                            duration: const Duration(seconds: 2),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.end, 
+                  children: [
+                    if (notificaciones.isNotEmpty)
+                      TextButton(
+                        style: TextButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                          minimumSize: Size.zero,
+                          tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                        ),
+                        onPressed: () {
+                          CustomConfirmDialog.show(
+                            context: context,
+                            title: 'Borrar todo',
+                            message: '¿Estás seguro de que deseas eliminar todas las notificaciones? Esta acción no se puede deshacer.',
+                            confirmText: 'Borrar',
+                            icon: Icons.delete_sweep,
+                          ).then((confirm) {
+                            if (confirm == true) {
+                              notificacionController.eliminarTodasNotificaciones();
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content: Text(
+                                    'Se borraron de forma correcta',
+                                    style: GoogleFonts.outfit(color: Colors.white, fontSize: 14),
+                                  ),
+                                  backgroundColor: const Color(0xFFFC6707),
+                                  duration: const Duration(seconds: 2),
+                                ),
+                              );
+                            }
+                          });
+                        },
+                        child: Text(
+                          'Borrar todo',
+                          style: GoogleFonts.outfit(
+                            fontSize: 13,
+                            fontWeight: FontWeight.bold, // <-- NEGRITA
+                            color: const Color(0xFFFC6707),
                           ),
-                        );
-                      }
-                    });
-                  } : null,
-                  icon: Icon(Icons.delete_sweep, color: notificaciones.isNotEmpty ? const Color(0xFFFC6707) : Colors.grey, size: 16),
-                  label: Text('Borrar todo', style: TextStyle(color: notificaciones.isNotEmpty ? const Color(0xFFFC6707) : Colors.grey, fontSize: 13)),
+                        ),
+                      ),
+                  ],
                 ),
               ),
-              const Divider(height: 1),
+              const Divider(height: 1, color: Color(0xFFE0E0E0)),
               if (notificaciones.isEmpty)
                 const Padding(
                   padding: EdgeInsets.all(40),
@@ -128,7 +139,6 @@ class NotificationsPanel extends StatelessWidget {
                       ),
                       child: InkWell(
                         onTap: () {
-                          // OPERADOR: SOLO marcar como leída, NO navegar
                           if (!notificacion.leida) {
                             notificacionController.marcarComoLeida(notificacion.id);
                           }

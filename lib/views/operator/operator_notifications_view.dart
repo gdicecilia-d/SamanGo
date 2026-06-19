@@ -1,3 +1,4 @@
+// Pantalla de notificaciones para el operador
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -6,24 +7,23 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../controllers/notificacion_controller.dart';
 import '../../controllers/auth_controller.dart';
 import '../shared/app_header.dart';
-import 'destination_detail_view.dart';
-import 'my_trips_view.dart';
-import 'favorites_view.dart';
-import 'student_home_view.dart';
-import 'edit_profile_view.dart';
+import 'operator_home_view.dart';
+import 'operator_edit_profile_view.dart';
+import 'operator_publish_view.dart';
+import 'requests_view.dart';
 import '../../views/shared/widgets/custom_dialog.dart';
 import '../auth/login_view.dart';
 
-class NotificationsView extends StatefulWidget {
-  const NotificationsView({super.key});
+class OperatorNotificationsView extends StatefulWidget {
+  const OperatorNotificationsView({super.key});
 
   @override
-  State<NotificationsView> createState() => _NotificationsViewState();
+  State<OperatorNotificationsView> createState() => _OperatorNotificationsViewState();
 }
 
-class _NotificationsViewState extends State<NotificationsView> {
+class _OperatorNotificationsViewState extends State<OperatorNotificationsView> {
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
-  final List<String> _menuItems = ['Inicio', 'Mis Viajes', 'Favoritos'];
+  final List<String> _menuItems = ['Inicio', 'Publicar', 'Solicitudes'];
 
   @override
   void initState() {
@@ -32,7 +32,10 @@ class _NotificationsViewState extends State<NotificationsView> {
       final auth = Provider.of<AuthController>(context, listen: false);
       final notifCtrl = Provider.of<NotificacionController>(context, listen: false);
       if (auth.usuarioActual != null) {
-        notifCtrl.listenToNotificaciones(auth.usuarioActual!.id);
+        notifCtrl.listenToNotificaciones(
+          auth.usuarioActual!.id,
+          collectionName: 'operadores',
+        );
       }
     });
   }
@@ -41,18 +44,18 @@ class _NotificationsViewState extends State<NotificationsView> {
     if (menu == 'Inicio') {
       Navigator.pushAndRemoveUntil(
         context,
-        MaterialPageRoute(builder: (_) => const StudentHomeView()),
+        MaterialPageRoute(builder: (_) => const OperatorHomeView()),
         (route) => false,
       );
-    } else if (menu == 'Mis Viajes') {
+    } else if (menu == 'Publicar') {
       Navigator.push(
         context,
-        MaterialPageRoute(builder: (_) => const MyTripsView()),
+        MaterialPageRoute(builder: (_) => const OperatorPublishView()),
       );
-    } else if (menu == 'Favoritos') {
+    } else if (menu == 'Solicitudes') {
       Navigator.push(
         context,
-        MaterialPageRoute(builder: (_) => const FavoritesView()),
+        MaterialPageRoute(builder: (_) => const OperatorRequestsView()),
       );
     }
   }
@@ -60,7 +63,7 @@ class _NotificationsViewState extends State<NotificationsView> {
   void _handleEditProfile() {
     Navigator.push(
       context,
-      MaterialPageRoute(builder: (_) => const EditProfileView()),
+      MaterialPageRoute(builder: (_) => const OperatorEditProfileView()),
     );
   }
 
@@ -204,7 +207,6 @@ class _NotificationsViewState extends State<NotificationsView> {
                                     notificacion.mensaje,
                                     notificacion.fechaCreacion,
                                     notificacion.leida,
-                                    notificacion.idPaquete,
                                     notificacion.id,
                                     notificacionController,
                                   );
@@ -267,11 +269,11 @@ class _NotificationsViewState extends State<NotificationsView> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          user?.nombre ?? 'Estudiante',
+                          user?.nombre ?? 'Operador',
                           style: GoogleFonts.outfit(fontSize: 16, fontWeight: FontWeight.bold, color: const Color(0xFF333333)),
                         ),
                         Text(
-                          user?.apellido ?? '',
+                          user?.empresa ?? '',
                           style: GoogleFonts.outfit(fontSize: 14, color: const Color(0xFF666666)),
                         ),
                       ],
@@ -290,13 +292,13 @@ class _NotificationsViewState extends State<NotificationsView> {
                       Navigator.pop(context);
                       _handleMenuSelected('Inicio');
                     }),
-                    _buildDrawerItem('Mis Viajes', Icons.airplane_ticket_outlined, () {
+                    _buildDrawerItem('Publicar', Icons.add_box_outlined, () {
                       Navigator.pop(context);
-                      _handleMenuSelected('Mis Viajes');
+                      _handleMenuSelected('Publicar');
                     }),
-                    _buildDrawerItem('Favoritos', Icons.favorite_border, () {
+                    _buildDrawerItem('Solicitudes', Icons.receipt_outlined, () {
                       Navigator.pop(context);
-                      _handleMenuSelected('Favoritos');
+                      _handleMenuSelected('Solicitudes');
                     }),
                     const SizedBox(height: 16),
                   ],
@@ -323,7 +325,11 @@ class _NotificationsViewState extends State<NotificationsView> {
       leading: Icon(icon, color: const Color(0xFFFC6707)),
       title: Text(
         title,
-        style: GoogleFonts.outfit(fontSize: 16, fontWeight: FontWeight.w500, color: const Color(0xFF333333)),
+        style: GoogleFonts.outfit(
+          fontSize: 16,
+          fontWeight: FontWeight.w500,
+          color: const Color(0xFF333333),
+        ),
       ),
       onTap: onTap,
     );
@@ -334,7 +340,6 @@ class _NotificationsViewState extends State<NotificationsView> {
     String mensaje,
     DateTime fecha,
     bool leida,
-    String? idPaquete,
     String notificacionId,
     NotificacionController controller,
   ) {
@@ -358,14 +363,6 @@ class _NotificationsViewState extends State<NotificationsView> {
           onTap: () {
             if (!leida) {
               controller.marcarComoLeida(notificacionId);
-            }
-            if (idPaquete != null && idPaquete.isNotEmpty) {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (_) => DestinationDetailView(destinoId: idPaquete),
-                ),
-              );
             }
           },
           borderRadius: BorderRadius.circular(16),
@@ -401,38 +398,14 @@ class _NotificationsViewState extends State<NotificationsView> {
                         ),
                       ),
                       const SizedBox(height: 4),
-                      Builder(
-                        builder: (context) {
-                          final match = RegExp(r'"?([a-zA-Z0-9]{20})"?').firstMatch(mensaje);
-                          final extractedId = match?.group(1);
-                          final idToFetch = (idPaquete != null && idPaquete.isNotEmpty)
-                              ? idPaquete
-                              : extractedId;
-
-                          return FutureBuilder<String?>(
-                            future: idToFetch != null && idToFetch.isNotEmpty
-                                ? controller.obtenerNombreRealDestino(idToFetch)
-                                : null,
-                            builder: (context, snapshot) {
-                              String finalMensaje = mensaje;
-                              if (snapshot.hasData && snapshot.data != null) {
-                                final nombre = snapshot.data!;
-                                if (nombre.isNotEmpty && idToFetch != null) {
-                                  finalMensaje = mensaje.replaceAll(idToFetch, nombre);
-                                }
-                              }
-                              return Text(
-                                finalMensaje,
-                                style: GoogleFonts.outfit(
-                                  fontSize: 13,
-                                  color: const Color(0xFF666666),
-                                ),
-                                maxLines: 3,
-                                overflow: TextOverflow.ellipsis,
-                              );
-                            },
-                          );
-                        }
+                      Text(
+                        mensaje,
+                        style: GoogleFonts.outfit(
+                          fontSize: 13,
+                          color: const Color(0xFF666666),
+                        ),
+                        maxLines: 3,
+                        overflow: TextOverflow.ellipsis,
                       ),
                       const SizedBox(height: 6),
                       Text(

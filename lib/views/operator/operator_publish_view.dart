@@ -1,5 +1,6 @@
-// Pantalla para publicar un nuevo tour 
+// Pantalla para publicar un nuevo tour
 import 'dart:typed_data';
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -12,6 +13,8 @@ import '../../controllers/auth_controller.dart';
 import '../../services/notificacion_service.dart';
 import 'operator_home_view.dart';
 import 'operator_edit_profile_view.dart';
+import 'requests_view.dart';
+import 'operator_notifications_view.dart';
 import '../../views/shared/widgets/custom_dialog.dart';
 import '../auth/login_view.dart';
 
@@ -25,7 +28,7 @@ class OperatorPublishView extends StatefulWidget {
 class _OperatorPublishViewState extends State<OperatorPublishView> {
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
   final StorageService _storageService = StorageService();
-  
+
   final TextEditingController _tituloController = TextEditingController();
   final TextEditingController _ubicacionController = TextEditingController();
   final TextEditingController _precioController = TextEditingController();
@@ -34,13 +37,13 @@ class _OperatorPublishViewState extends State<OperatorPublishView> {
   final TextEditingController _noIncluyeController = TextEditingController();
   final TextEditingController _descripcionController = TextEditingController();
   final TextEditingController _nochesController = TextEditingController();
-  
+
   String _transporteSeleccionado = 'Bus';
   String _alojamientoSeleccionado = 'Hotel';
   String _duracionSeleccionada = 'Full Day';
   String _selectedCategoria = 'Playas / Cayos';
   bool _isOffer = false;
-  
+
   final List<String> _transportes = ['Bus', 'Avión', 'Barco', '4x4', 'Todos'];
   final List<String> _alojamientos = ['Hotel', 'Posada', 'Camping', 'Eco lodge', 'No incluye'];
   final List<String> _categorias = [
@@ -49,20 +52,31 @@ class _OperatorPublishViewState extends State<OperatorPublishView> {
     'Aventura / Ríos',
     'Cultura / Ciudades',
   ];
-  
+
+  // Estados de Venezuela para validación
+  final List<String> _estadosVenezuela = [
+    'Amazonas', 'Anzoátegui', 'Apure', 'Aragua', 'Barinas', 'Bolívar',
+    'Carabobo', 'Cojedes', 'Delta Amacuro', 'Distrito Capital', 'Falcón',
+    'Guárico', 'La Guaira', 'Lara', 'Mérida', 'Miranda', 'Monagas',
+    'Nueva Esparta', 'Portuguesa', 'Sucre', 'Táchira', 'Trujillo',
+    'Yaracuy', 'Zulia'
+  ];
+
   bool _incluyeVuelos = false;
   bool _incluyeTraslados = false;
   bool _incluyeHospedaje = false;
   bool _incluyeComidas = false;
-  
+
   Uint8List? _portadaImagenBytes;
   final List<Uint8List?> _referenciasImagenesBytes = [null, null, null];
   bool _isLoading = false;
   bool _isUploadingImages = false;
-  
+
   bool _isHoveringPublicar = false;
   bool _isHoveringDescartar = false;
   bool _isHoveringPortada = false;
+
+  String? _ubicacionError;
 
   @override
   void dispose() {
@@ -81,19 +95,50 @@ class _OperatorPublishViewState extends State<OperatorPublishView> {
     final cuposValidos = _cuposController.text.isNotEmpty &&
         int.tryParse(_cuposController.text) != null &&
         int.parse(_cuposController.text) > 0;
-    
+
+    final ubicacionValida = _ubicacionController.text.trim().isNotEmpty &&
+        _estadosVenezuela.any((estado) =>
+            _ubicacionController.text.toLowerCase().contains(estado.toLowerCase()));
+
     return _tituloController.text.trim().isNotEmpty &&
         _ubicacionController.text.trim().isNotEmpty &&
+        ubicacionValida &&
         _precioController.text.trim().isNotEmpty &&
         cuposValidos &&
         _portadaImagenBytes != null &&
         (_duracionSeleccionada != 'Varias Noches' || _nochesController.text.trim().isNotEmpty);
   }
 
+  void _validarUbicacion() {
+    setState(() {
+      final texto = _ubicacionController.text.trim();
+      if (texto.isEmpty) {
+        _ubicacionError = null;
+        return;
+      }
+      final tieneEstado = _estadosVenezuela.any((estado) =>
+          texto.toLowerCase().contains(estado.toLowerCase()));
+      if (!tieneEstado) {
+        _ubicacionError = 'Debe incluir un estado de Venezuela (ej: Miranda, Carabobo)';
+      } else {
+        _ubicacionError = null;
+      }
+    });
+  }
+
+  bool _esImagenValida(String fileName) {
+    final extension = fileName.split('.').last.toLowerCase();
+    return extension == 'jpg' || extension == 'jpeg' || extension == 'png';
+  }
+
   Future<void> _seleccionarPortada() async {
     final ImagePicker picker = ImagePicker();
     final XFile? image = await picker.pickImage(source: ImageSource.gallery);
     if (image != null) {
+      if (!_esImagenValida(image.name)) {
+        _mostrarMensaje('Solo se permiten imágenes PNG, JPG o JPEG');
+        return;
+      }
       final bytes = await image.readAsBytes();
       setState(() {
         _portadaImagenBytes = bytes;
@@ -105,6 +150,10 @@ class _OperatorPublishViewState extends State<OperatorPublishView> {
     final ImagePicker picker = ImagePicker();
     final XFile? image = await picker.pickImage(source: ImageSource.gallery);
     if (image != null) {
+      if (!_esImagenValida(image.name)) {
+        _mostrarMensaje('Solo se permiten imágenes PNG, JPG o JPEG');
+        return;
+      }
       final bytes = await image.readAsBytes();
       setState(() {
         _referenciasImagenesBytes[index] = bytes;
@@ -128,6 +177,12 @@ class _OperatorPublishViewState extends State<OperatorPublishView> {
     }
     if (_ubicacionController.text.trim().isEmpty) {
       _mostrarMensaje('Por favor ingresa la ubicación');
+      return;
+    }
+    final ubicacionValida = _estadosVenezuela.any((estado) =>
+        _ubicacionController.text.toLowerCase().contains(estado.toLowerCase()));
+    if (!ubicacionValida) {
+      _mostrarMensaje('La ubicación debe incluir un estado de Venezuela válido');
       return;
     }
     if (_precioController.text.trim().isEmpty) {
@@ -192,8 +247,8 @@ class _OperatorPublishViewState extends State<OperatorPublishView> {
         'imagenesReferencia': referenciasUrls,
         'isOffer': _isOffer,
         'descripcion': _descripcionController.text.trim(),
-        'duracion': _duracionSeleccionada == 'Full Day' 
-            ? 'Full Day' 
+        'duracion': _duracionSeleccionada == 'Full Day'
+            ? 'Full Day'
             : '${_nochesController.text.trim()} noches',
         'requisitos': _requisitosController.text.trim(),
         'incluye': _getIncluyeTexto(),
@@ -217,7 +272,7 @@ class _OperatorPublishViewState extends State<OperatorPublishView> {
 
       setState(() => _isUploadingImages = false);
       _mostrarMensaje('¡Tour publicado exitosamente!');
-      
+
       if (!mounted) return;
       Navigator.pop(context, true);
     } catch (e) {
@@ -228,11 +283,12 @@ class _OperatorPublishViewState extends State<OperatorPublishView> {
     }
   }
 
-  void _mostrarMensaje(String mensaje) {
+  void _mostrarMensaje(String mensaje, {Color? color}) {
+    ScaffoldMessenger.of(context).clearSnackBars();
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(mensaje),
-        backgroundColor: const Color(0xFFFC6707),
+        backgroundColor: color ?? const Color(0xFFFC6707),
         duration: const Duration(seconds: 2),
       ),
     );
@@ -240,13 +296,27 @@ class _OperatorPublishViewState extends State<OperatorPublishView> {
 
   void _handleMenuSelected(String menu, BuildContext context) {
     if (menu == 'Inicio') {
-      Navigator.pop(context, true);
+      Navigator.pushAndRemoveUntil(
+        context,
+        MaterialPageRoute(builder: (_) => const OperatorHomeView()),
+        (route) => false,
+      );
     } else if (menu == 'Solicitudes') {
-      _mostrarMensaje('Solicitudes - Próximamente');
+      Navigator.push(
+        context,
+        MaterialPageRoute(builder: (_) => const OperatorRequestsView()),
+      );
     }
   }
 
-  void _mostrarDialogoCerrarSesion(BuildContext context) {
+  void _handleEditProfile() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (_) => const OperatorEditProfileView()),
+    );
+  }
+
+  void _handleLogout() {
     CustomConfirmDialog.show(
       context: context,
       title: 'Cerrar Sesión',
@@ -269,54 +339,104 @@ class _OperatorPublishViewState extends State<OperatorPublishView> {
     _scaffoldKey.currentState?.openEndDrawer();
   }
 
+  void _volver() {
+    Navigator.pop(context, true);
+  }
+
   @override
   Widget build(BuildContext context) {
     final screenWidth = MediaQuery.of(context).size.width;
     final isMobile = screenWidth < 850;
+    final isLargeScreen = screenWidth > 1400;
+    final double backButtonSize = isLargeScreen ? 20 : 16;
+    final double backButtonTop = isMobile ? 80 : (isLargeScreen ? 100 : 80);
 
     return Scaffold(
       key: _scaffoldKey,
       backgroundColor: Colors.white,
-      endDrawer: isMobile ? _buildDrawer(context) : null,
-      body: Column(
+      endDrawer: isMobile ? _buildDrawer() : null,
+      body: Stack(
         children: [
-          AppHeader(
-            activeMenu: 'Publicar',
-            onMenuSelected: (menu) => _handleMenuSelected(menu, context),
-            onEditProfile: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (_) => const OperatorEditProfileView()),
-              );
-            },
-            onLogout: () => _mostrarDialogoCerrarSesion(context),
-            menuItems: const ['Inicio', 'Publicar', 'Solicitudes'],
-            isMobile: isMobile,
-            onMenuTap: isMobile ? _openDrawer : null,
+          Column(
+            children: [
+              AppHeader(
+                activeMenu: 'Publicar',
+                onMenuSelected: (menu) => _handleMenuSelected(menu, context),
+                onEditProfile: _handleEditProfile,
+                onLogout: _handleLogout,
+                menuItems: const ['Inicio', 'Publicar', 'Solicitudes'],
+                isMobile: isMobile,
+                onMenuTap: isMobile ? _openDrawer : null,
+              ),
+              Expanded(
+                child: _isLoading
+                    ? const Center(
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            CircularProgressIndicator(color: Color(0xFFFC6707)),
+                            SizedBox(height: 16),
+                            Text('Publicando tour...'),
+                          ],
+                        ),
+                      )
+                    : (isMobile ? _buildMobileLayout() : _buildDesktopLayout(isLargeScreen)),
+              ),
+            ],
           ),
-          Expanded(
-            child: _isLoading
-                ? const Center(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        CircularProgressIndicator(color: Color(0xFFFC6707)),
-                        SizedBox(height: 16),
-                        Text('Publicando tour...'),
-                      ],
-                    ),
-                  )
-                : (isMobile ? _buildMobileLayout() : _buildDesktopLayout()),
+          // Botón volver flotante 
+          Positioned(
+            top: backButtonTop,
+            right: 24,
+            child: MouseRegion(
+              cursor: SystemMouseCursors.click,
+              child: GestureDetector(
+                onTap: _volver,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(30),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.1),
+                        blurRadius: 8,
+                        offset: const Offset(0, 2),
+                      ),
+                    ],
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        Icons.arrow_back,
+                        color: const Color(0xFFFC6707),
+                        size: backButtonSize,
+                      ),
+                      const SizedBox(width: 4),
+                      Text(
+                        'Volver',
+                        style: GoogleFonts.outfit(
+                          fontSize: backButtonSize,
+                          color: const Color(0xFFFC6707),
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
           ),
         ],
       ),
     );
   }
 
-  Widget _buildDrawer(BuildContext context) {
+  Widget _buildDrawer() {
     final auth = Provider.of<AuthController>(context);
     final user = auth.usuarioActual;
-    
+
     return Drawer(
       backgroundColor: Colors.white,
       width: 280,
@@ -328,16 +448,28 @@ class _OperatorPublishViewState extends State<OperatorPublishView> {
               padding: const EdgeInsets.symmetric(horizontal: 24),
               child: Row(
                 children: [
-                  Container(
-                    width: 50,
-                    height: 50,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      border: Border.all(color: const Color(0xFFFC6707), width: 2),
-                    ),
-                    child: const CircleAvatar(
-                      backgroundColor: Color(0xFFFDDBB3),
-                      child: Icon(Icons.person, color: Color(0xFFFC6707), size: 28),
+                  GestureDetector(
+                    onTap: _handleEditProfile,
+                    child: Container(
+                      width: 50,
+                      height: 50,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        border: Border.all(color: const Color(0xFFFC6707), width: 2),
+                      ),
+                      child: ClipOval(
+                        child: user?.fotoBase64 != null && user!.fotoBase64!.isNotEmpty
+                            ? Image.memory(
+                                base64Decode(user.fotoBase64!),
+                                width: 50,
+                                height: 50,
+                                fit: BoxFit.cover,
+                              )
+                            : const CircleAvatar(
+                                backgroundColor: Color(0xFFFDDBB3),
+                                child: Icon(Icons.person, color: Color(0xFFFC6707), size: 28),
+                              ),
+                      ),
                     ),
                   ),
                   const SizedBox(width: 12),
@@ -351,7 +483,7 @@ class _OperatorPublishViewState extends State<OperatorPublishView> {
                         ),
                         Text(
                           user?.empresa ?? '',
-                          style: GoogleFonts.outfit(fontSize: 12, color: const Color(0xFF666666)),
+                          style: GoogleFonts.outfit(fontSize: 14, color: const Color(0xFF666666)),
                         ),
                       ],
                     ),
@@ -361,24 +493,42 @@ class _OperatorPublishViewState extends State<OperatorPublishView> {
             ),
             const SizedBox(height: 16),
             const Divider(height: 1, thickness: 1, color: Color(0xFFE0E0E0)),
-            _buildDrawerItem('Inicio', Icons.home_outlined, () {
-              Navigator.pop(context);
-              _handleMenuSelected('Inicio', context);
-            }),
-            _buildDrawerItem('Publicar', Icons.add_box_outlined, () {
-              Navigator.pop(context);
-            }),
-            _buildDrawerItem('Solicitudes', Icons.receipt_outlined, () {
-              Navigator.pop(context);
-              _handleMenuSelected('Solicitudes', context);
-            }),
-            const Spacer(),
-            const Divider(height: 1, thickness: 1, color: Color(0xFFE0E0E0)),
-            _buildDrawerItem('Cerrar Sesión', Icons.logout_outlined, () {
-              Navigator.pop(context);
-              _mostrarDialogoCerrarSesion(context);
-            }),
-            const SizedBox(height: 24),
+            Expanded(
+              child: SingleChildScrollView(
+                child: Column(
+                  children: [
+                    _buildDrawerItem('Inicio', Icons.home_outlined, () {
+                      Navigator.pop(context);
+                      _handleMenuSelected('Inicio', context);
+                    }),
+                    _buildDrawerItem('Publicar', Icons.add_box_outlined, () {
+                      Navigator.pop(context);
+                    }),
+                    _buildDrawerItem('Solicitudes', Icons.receipt_outlined, () {
+                      Navigator.pop(context);
+                      _handleMenuSelected('Solicitudes', context);
+                    }),
+                    _buildDrawerItem('Notificaciones', Icons.notifications_outlined, () {
+                      Navigator.pop(context);
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (_) => const OperatorNotificationsView()),
+                      );
+                    }),
+                    const SizedBox(height: 16),
+                  ],
+                ),
+              ),
+            ),
+            Column(
+              children: [
+                const Divider(height: 1, thickness: 1, color: Color(0xFFE0E0E0)),
+                _buildDrawerItem('Cerrar Sesión', Icons.logout_outlined, () {
+                  Navigator.pop(context);
+                  _handleLogout();
+                }),
+              ],
+            ),
           ],
         ),
       ),
@@ -386,11 +536,16 @@ class _OperatorPublishViewState extends State<OperatorPublishView> {
   }
 
   Widget _buildDrawerItem(String title, IconData icon, VoidCallback onTap) {
+    final isActive = title == 'Publicar';
     return ListTile(
       leading: Icon(icon, color: const Color(0xFFFC6707)),
       title: Text(
         title,
-        style: GoogleFonts.outfit(fontSize: 16, fontWeight: FontWeight.w500, color: const Color(0xFF333333)),
+        style: GoogleFonts.outfit(
+          fontSize: 16,
+          fontWeight: isActive ? FontWeight.bold : FontWeight.w500,
+          color: isActive ? const Color(0xFFFC6707) : const Color(0xFF333333),
+        ),
       ),
       onTap: onTap,
     );
@@ -401,7 +556,6 @@ class _OperatorPublishViewState extends State<OperatorPublishView> {
       padding: const EdgeInsets.all(16),
       child: Column(
         children: [
-          _buildHeader(isMobile: true),
           const SizedBox(height: 16),
           _buildFormContent(isMobile: true),
           const SizedBox(height: 24),
@@ -412,13 +566,12 @@ class _OperatorPublishViewState extends State<OperatorPublishView> {
     );
   }
 
-  Widget _buildDesktopLayout() {
+  Widget _buildDesktopLayout(bool isLargeScreen) {
     return SingleChildScrollView(
-      padding: const EdgeInsets.all(24),
+      padding: EdgeInsets.all(isLargeScreen ? 40 : 24),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _buildHeader(isMobile: false),
           const SizedBox(height: 16),
           _buildFormContent(isMobile: false),
           const SizedBox(height: 24),
@@ -428,37 +581,10 @@ class _OperatorPublishViewState extends State<OperatorPublishView> {
     );
   }
 
-  Widget _buildHeader({required bool isMobile}) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: [
-        Text(
-          'Publicar Nuevo Tour',
-          style: GoogleFonts.outfit(
-            fontSize: isMobile ? 24 : 28,
-            fontWeight: FontWeight.bold,
-            color: const Color(0xFF333333),
-          ),
-        ),
-        MouseRegion(
-          cursor: SystemMouseCursors.click,
-          child: GestureDetector(
-            onTap: () => Navigator.pop(context, true),
-            child: Text(
-              'Volver',
-              style: GoogleFonts.outfit(
-                fontSize: 14,
-                color: const Color(0xFFFC6707),
-                fontWeight: FontWeight.w500,
-              ),
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-
   Widget _buildFormContent({required bool isMobile}) {
+    final screenWidth = MediaQuery.of(context).size.width;
+    final isLargeScreen = screenWidth > 1400;
+
     return Container(
       decoration: BoxDecoration(
         color: Colors.white,
@@ -490,6 +616,10 @@ class _OperatorPublishViewState extends State<OperatorPublishView> {
   }
 
   Widget _buildImageSection({required bool isMobile}) {
+    final screenWidth = MediaQuery.of(context).size.width;
+    final isLargeScreen = screenWidth > 1400;
+    final double imageHeight = isMobile ? 180 : (isLargeScreen ? 260 : 220);
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -511,7 +641,7 @@ class _OperatorPublishViewState extends State<OperatorPublishView> {
             child: AnimatedContainer(
               duration: const Duration(milliseconds: 200),
               width: double.infinity,
-              height: isMobile ? 180 : 220,
+              height: imageHeight,
               decoration: BoxDecoration(
                 color: _isHoveringPortada ? const Color(0xFFFDF5ED) : const Color(0xFFF8F8F8),
                 borderRadius: BorderRadius.circular(16),
@@ -583,7 +713,7 @@ class _OperatorPublishViewState extends State<OperatorPublishView> {
                           ),
                         ),
                         Text(
-                          'Sube o arrastra tu imagen de portada',
+                          'Solo PNG, JPG o JPEG',
                           style: GoogleFonts.outfit(fontSize: 12, color: const Color(0xFF999999)),
                         ),
                       ],
@@ -656,6 +786,9 @@ class _OperatorPublishViewState extends State<OperatorPublishView> {
   }
 
   Widget _buildDetailsSection({required bool isMobile}) {
+    final screenWidth = MediaQuery.of(context).size.width;
+    final isLargeScreen = screenWidth > 1400;
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -672,9 +805,20 @@ class _OperatorPublishViewState extends State<OperatorPublishView> {
           children: [
             Expanded(child: _buildTextField('Título del Viaje', _tituloController, 'Ej: Aventura en Canaima')),
             const SizedBox(width: 16),
-            Expanded(child: _buildTextField('Ubicación', _ubicacionController, 'Ej: Bolívar, Venezuela')),
+            Expanded(child: _buildTextField('Ubicación', _ubicacionController, 'Ej: Canaima, Bolívar', onChanged: _validarUbicacion)),
           ],
         ),
+        if (_ubicacionError != null)
+          Padding(
+            padding: const EdgeInsets.only(top: 4, left: 4),
+            child: Text(
+              _ubicacionError!,
+              style: GoogleFonts.outfit(
+                fontSize: 12,
+                color: const Color(0xFFFC6707),
+              ),
+            ),
+          ),
         const SizedBox(height: 16),
         Row(
           children: [
@@ -754,7 +898,8 @@ class _OperatorPublishViewState extends State<OperatorPublishView> {
     );
   }
 
-  Widget _buildTextField(String label, TextEditingController controller, String hint, {bool isNumber = false, bool small = false}) {
+  Widget _buildTextField(String label, TextEditingController controller, String hint,
+      {bool isNumber = false, bool small = false, VoidCallback? onChanged}) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -765,6 +910,7 @@ class _OperatorPublishViewState extends State<OperatorPublishView> {
         const SizedBox(height: 4),
         TextField(
           controller: controller,
+          onChanged: (_) => onChanged?.call(),
           keyboardType: isNumber ? TextInputType.number : TextInputType.text,
           inputFormatters: isNumber ? [FilteringTextInputFormatter.digitsOnly] : null,
           style: GoogleFonts.outfit(fontSize: 14),
@@ -907,7 +1053,7 @@ class _OperatorPublishViewState extends State<OperatorPublishView> {
           child: AnimatedContainer(
             duration: const Duration(milliseconds: 200),
             child: ElevatedButton(
-              onPressed: () => Navigator.pop(context, true),
+              onPressed: _volver,
               style: ElevatedButton.styleFrom(
                 backgroundColor: const Color(0xFFFDDBB3),
                 foregroundColor: const Color(0xFFFC6707),
