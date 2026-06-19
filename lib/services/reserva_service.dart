@@ -73,8 +73,7 @@ class ReservaService {
   }
   
   Future<void> subirComprobante(String reservaId, String comprobanteUrl) async {
-    final bool esPaypal = comprobanteUrl.startsWith('paypal_');
-    final EstadoReserva nuevoEstado = esPaypal ? EstadoReserva.pagado : EstadoReserva.verificandoPago;
+    final EstadoReserva nuevoEstado = EstadoReserva.verificandoPago;
 
     await _firestore.collection('reservas').doc(reservaId).update({
       'comprobanteUrl': comprobanteUrl,

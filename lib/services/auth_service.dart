@@ -16,7 +16,14 @@ class AuthService {
   final GoogleSignIn _googleSignIn = GoogleSignIn();
 
   Future<User?> getCurrentFirebaseUser() async {
-    return await _auth.authStateChanges().first;
+    // En Flutter Web, la sesión tarda unos milisegundos en cargarse desde IndexedDB.
+    // 'first' devolvería null casi siempre. Debemos esperar a que emita un usuario válido o usar un timeout.
+    try {
+      final user = await _auth.authStateChanges().firstWhere((u) => u != null).timeout(const Duration(seconds: 2));
+      return user;
+    } catch (e) {
+      return _auth.currentUser;
+    }
   }
 
   // Inicia sesión con Google

@@ -184,16 +184,6 @@ class ReservaController extends ChangeNotifier {
     try {
       await _reservaService.subirComprobante(reserva.id, comprobanteUrl);
       
-      final esPaypal = comprobanteUrl.startsWith('paypal_');
-      if (esPaypal) {
-        final nombrePaquete = await _obtenerNombrePaquete(reserva.paqueteId);
-        await _notificacionService.notificarPagoConfirmado(
-          estudianteId: reserva.estudianteId,
-          nombrePaquete: nombrePaquete,
-          reservaId: reserva.id,
-        );
-      }
-
       _setLoading(false);
       return true;
     } catch (e) {

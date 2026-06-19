@@ -23,6 +23,8 @@ import 'package:flutter/foundation.dart' show kIsWeb;
 import 'dart:html' as html;
 import 'dart:convert';
 
+import 'views/student/payment_return_view.dart';
+
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
@@ -70,7 +72,19 @@ class SamanGoApp extends StatelessWidget {
         ),
         textTheme: GoogleFonts.outfitTextTheme(),
       ),
-      home: const HomeView(),
+      initialRoute: '/',
+      routes: {
+        '/': (context) => const HomeView(),
+      },
+      onGenerateRoute: (settings) {
+        if (settings.name != null && settings.name!.startsWith('/paypal_return')) {
+          return MaterialPageRoute(
+            builder: (context) => const PaymentReturnView(),
+            settings: settings,
+          );
+        }
+        return null;
+      },
     );
   }
 }

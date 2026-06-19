@@ -86,8 +86,8 @@ class PayPalService {
       final approveUrl = approveLink['href'];
 
       if (kIsWeb) {
-        // Abrir en una nueva pestaña
-        html.window.open(approveUrl, 'PayPal', 'width=500,height=600');
+        // Redirigir en la misma pestaña (evita popups que no se cierran)
+        html.window.location.href = approveUrl;
         return true;
       }
 

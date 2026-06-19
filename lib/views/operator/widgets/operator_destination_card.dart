@@ -203,20 +203,29 @@ class OperatorDestinationCard extends StatelessWidget {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.end,
                         children: [
-                          Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                            decoration: BoxDecoration(
-                              color: _primaryColor.withOpacity(0.1),
-                              borderRadius: BorderRadius.circular(10),
-                            ),
-                            child: Text(
-                              'Cupos: $_cuposReservados/$cuposTotales',
-                              style: GoogleFonts.outfit(
-                                fontSize: screenWidth < 600 ? 9 : 11,
-                                fontWeight: FontWeight.w600,
-                                color: _primaryColor,
+                          Column(
+                            crossAxisAlignment: CrossAxisAlignment.end,
+                            children: [
+                              Text(
+                                '$_cuposReservados/$cuposTotales ocupados',
+                                style: GoogleFonts.outfit(
+                                  fontSize: screenWidth < 600 ? 9 : 11,
+                                  fontWeight: FontWeight.w600,
+                                  color: _primaryColor,
+                                ),
                               ),
-                            ),
+                              const SizedBox(height: 4),
+                              SizedBox(
+                                width: 80,
+                                height: 4,
+                                child: LinearProgressIndicator(
+                                  value: cuposTotales > 0 ? _cuposReservados / cuposTotales : 0,
+                                  backgroundColor: _primaryColor.withOpacity(0.1),
+                                  valueColor: AlwaysStoppedAnimation<Color>(_primaryColor),
+                                  borderRadius: BorderRadius.circular(2),
+                                ),
+                              ),
+                            ],
                           ),
                         ],
                       ),

@@ -1480,23 +1480,26 @@ class _PaqueteDetailViewState extends State<PaqueteDetailView> {
     }
 
     if (tipo == 'pago') {
+      final esPaypal = reserva.comprobanteUrl?.startsWith('paypal_') ?? false;
+      
       return Row(
         mainAxisAlignment: MainAxisAlignment.end,
         children: [
-          TextButton(
-            onPressed: () => _verComprobante(reserva),
-            style: TextButton.styleFrom(
-              foregroundColor: _color,
-            ),
-            child: Text(
-              'Ver comprobante',
-              style: GoogleFonts.outfit(
-                fontSize: isMobile ? 13 : 14,
-                color: _color,
-                fontWeight: FontWeight.w600,
+          if (!esPaypal)
+            TextButton(
+              onPressed: () => _verComprobante(reserva),
+              style: TextButton.styleFrom(
+                foregroundColor: _color,
+              ),
+              child: Text(
+                'Ver comprobante',
+                style: GoogleFonts.outfit(
+                  fontSize: isMobile ? 13 : 14,
+                  color: _color,
+                  fontWeight: FontWeight.w600,
+                ),
               ),
             ),
-          ),
           const SizedBox(width: 4),
           TextButton(
             onPressed: () => _rechazarPago(reserva),
