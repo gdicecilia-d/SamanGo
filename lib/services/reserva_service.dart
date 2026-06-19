@@ -73,10 +73,13 @@ class ReservaService {
   }
   
   Future<void> subirComprobante(String reservaId, String comprobanteUrl) async {
+    final bool esPaypal = comprobanteUrl.startsWith('paypal_');
+    final EstadoReserva nuevoEstado = esPaypal ? EstadoReserva.pagado : EstadoReserva.verificandoPago;
+
     await _firestore.collection('reservas').doc(reservaId).update({
       'comprobanteUrl': comprobanteUrl,
-      'estadoActual': EstadoReserva.verificandoPago.toMap(),
-      'historial.${EstadoReserva.verificandoPago.toMap()}': FieldValue.serverTimestamp(),
+      'estadoActual': nuevoEstado.toMap(),
+      'historial.${nuevoEstado.toMap()}': FieldValue.serverTimestamp(),
     });
   }
 
@@ -133,6 +136,28 @@ class ReservaService {
       return doc.data()?['nombre'] ?? 'otro viaje';
     } catch (e) {
       return 'otro viaje';
+    }
+  }
+
+  // Restaurar cupo del paquete cuando se cancela una reserva
+  Future<bool> restaurarCupo(String paqueteId) async {
+    try {
+      final destinoRef = _firestore.collection('destinos').doc(paqueteId);
+      
+      // Obtener el paquete para asegurar que existe
+      final doc = await destinoRef.get();
+      if (!doc.exists) {
+        return false;
+      }
+      
+      await destinoRef.update({
+        'cuposDisponibles': FieldValue.increment(1),
+      });
+      
+      return true;
+    } catch (e) {
+      print('Error restaurando cupo: $e');
+      return false;
     }
   }
 }

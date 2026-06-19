@@ -183,6 +183,17 @@ class ReservaController extends ChangeNotifier {
     _setLoading(true);
     try {
       await _reservaService.subirComprobante(reserva.id, comprobanteUrl);
+      
+      final esPaypal = comprobanteUrl.startsWith('paypal_');
+      if (esPaypal) {
+        final nombrePaquete = await _obtenerNombrePaquete(reserva.paqueteId);
+        await _notificacionService.notificarPagoConfirmado(
+          estudianteId: reserva.estudianteId,
+          nombrePaquete: nombrePaquete,
+          reservaId: reserva.id,
+        );
+      }
+
       _setLoading(false);
       return true;
     } catch (e) {
@@ -195,6 +206,48 @@ class ReservaController extends ChangeNotifier {
   // Obtener cupos disponibles de un paquete (para mostrar en UI)
   Future<int> obtenerCuposDisponibles(String paqueteId) async {
     return await _reservaService.obtenerCuposDisponibles(paqueteId);
+  }
+
+  Future<bool> cancelarReserva(Reserva reserva, Usuario estudiante) async {
+    if (!estudiante.isEstudiante) return false;
+
+    _setLoading(true);
+    try {
+      await _reservaService.actualizarEstado(reserva.id, EstadoReserva.cancelado);
+
+      // Si la reserva fue cancelada después de ser aceptada, se devuelve el cupo
+      if (reserva.estadoActual == EstadoReserva.aceptado ||
+          reserva.estadoActual == EstadoReserva.verificandoPago ||
+          reserva.estadoActual == EstadoReserva.pagado) {
+        await _reservaService.restaurarCupo(reserva.paqueteId);
+      }
+
+      _setLoading(false);
+      return true;
+    } catch (e) {
+      debugPrint('Error cancelando reserva: $e');
+      _setLoading(false);
+      return false;
+    }
+  }
+
+  Future<bool> cancelarPorTimeout(Reserva reserva, Usuario operador) async {
+    if (!operador.isOperador) return false;
+
+    _setLoading(true);
+    try {
+      await _reservaService.actualizarEstado(reserva.id, EstadoReserva.cancelado);
+
+      // Restaurar cupo descontado previamente
+      await _reservaService.restaurarCupo(reserva.paqueteId);
+
+      _setLoading(false);
+      return true;
+    } catch (e) {
+      debugPrint('Error cancelando reserva por timeout: $e');
+      _setLoading(false);
+      return false;
+    }
   }
 
   Stream<List<Reserva>> obtenerMisReservasEstudiante(String estudianteId) {
