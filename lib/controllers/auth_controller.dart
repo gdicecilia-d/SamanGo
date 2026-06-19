@@ -13,6 +13,19 @@ class AuthController extends ChangeNotifier {
   bool get isLoading => _isLoading;
   bool get isAuthenticated => _usuarioActual != null && _usuarioActual!.isNotEmpty;
 
+  AuthController() {
+    _initAuth();
+  }
+
+  Future<void> _initAuth() async {
+    _setLoading(true);
+    final user = await _authService.getCurrentFirebaseUser();
+    if (user != null) {
+      _usuarioActual = await _authService.cargarUsuarioDeFirestore(user.uid);
+    }
+    _setLoading(false);
+  }
+
   // Login
   Future<bool> login(String email, String password) async {
     _setLoading(true);

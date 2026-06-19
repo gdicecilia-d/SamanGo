@@ -15,6 +15,10 @@ class AuthService {
   final FirebaseFirestore _db = FirebaseFirestore.instance;
   final GoogleSignIn _googleSignIn = GoogleSignIn();
 
+  Future<User?> getCurrentFirebaseUser() async {
+    return await _auth.authStateChanges().first;
+  }
+
   // Inicia sesión con Google
   Future<dynamic> signInWithGoogle() async {
     try {

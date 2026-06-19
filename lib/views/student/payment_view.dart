@@ -98,6 +98,11 @@ class _PaymentViewState extends State<PaymentView> {
         return;
       }
 
+      // Esperar a que el AuthController restaure la sesión de Firebase
+      while (auth.isLoading) {
+        await Future.delayed(const Duration(milliseconds: 100));
+      }
+
       await auth.reloadUser();
       final usuarioActual = auth.usuarioActual;
       
