@@ -7,6 +7,7 @@ import 'widgets/commitment_widget.dart';
 import 'widgets/features_widget.dart';
 import 'widgets/destinations_widget.dart';
 import 'widgets/contact_widget.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 class HomeView extends StatefulWidget {
   const HomeView({super.key});
@@ -23,7 +24,35 @@ class _HomeViewState extends State<HomeView> {
   void initState() {
     super.initState();
     _controller = HomeController();
+    _verificarRetornoPayPalNativo();
   }
+
+  void _verificarRetornoPayPalNativo() {
+    try {
+      final uri = Uri.base;
+      if (uri.queryParameters['action'] == 'paypal_success' && uri.queryParameters['token'] != null) {
+        final reservaId = uri.queryParameters['reservaId'];
+        if (reservaId != null && reservaId.isNotEmpty) {
+          WidgetsBinding.instance.addPostFrameCallback((_) async {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text('Procesando pago... Puedes cerrar esta pestaña y volver a la principal.'), duration: Duration(seconds: 10)),
+            );
+            
+            final comprobanteUrl = 'paypal_${DateTime.now().millisecondsSinceEpoch}_$reservaId';
+            
+            await FirebaseFirestore.instance.collection('reservas').doc(reservaId).update({
+              'comprobanteUrl': comprobanteUrl,
+              'estado': 'pagado',
+              'fechaActualizacion': FieldValue.serverTimestamp(),
+            });
+          });
+        }
+      }
+    } catch (e) {
+      debugPrint('Error en retorno de PayPal: $e');
+    }
+  }
+
 
   @override
   Widget build(BuildContext context) {

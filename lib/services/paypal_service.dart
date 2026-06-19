@@ -86,13 +86,8 @@ class PayPalService {
       final approveUrl = approveLink['href'];
 
       if (kIsWeb) {
-        html.window.localStorage['paypal_pending'] = jsonEncode({
-          'reservaId': reservaId,
-          'destinoId': destinoId,
-          'estudianteId': estudianteId,
-        });
-        
-        html.window.location.href = approveUrl;
+        // Abrir en una nueva pestaña
+        html.window.open(approveUrl, 'PayPal', 'width=500,height=600');
         return true;
       }
 

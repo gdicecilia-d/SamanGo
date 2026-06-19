@@ -170,12 +170,12 @@ class _PaymentViewState extends State<PaymentView> {
     final auth = Provider.of<AuthController>(context, listen: false);
 
     try {
-      String currentUrl = 'http://localhost:5000/#/payment';
+      String currentUrl = 'http://localhost:5000/#/';
       
       if (kIsWeb) {
-        final fullUrl = html.window.location.href;
+        final fullUrl = Uri.base.toString();
         final uri = Uri.parse(fullUrl);
-        currentUrl = '${uri.scheme}://${uri.host}:${uri.port}/#/payment';
+        currentUrl = '${uri.scheme}://${uri.host}:${uri.port}/#/?action=paypal_success&reservaId=${widget.reserva.id}';
       }
 
       final exito = await _payPalService.processPayment(
@@ -184,7 +184,7 @@ class _PaymentViewState extends State<PaymentView> {
         currency: 'USD',
         description: 'Reserva: ${widget.destinoData['nombre']}',
         returnUrl: currentUrl,
-        cancelUrl: currentUrl,
+        cancelUrl: kIsWeb ? '${Uri.parse(Uri.base.toString()).scheme}://${Uri.parse(Uri.base.toString()).host}:${Uri.parse(Uri.base.toString()).port}/#/?action=paypal_cancel' : currentUrl,
         reservaId: widget.reserva.id,
         destinoId: widget.reserva.paqueteId,
         estudianteId: widget.reserva.estudianteId,
