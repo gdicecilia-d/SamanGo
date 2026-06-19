@@ -43,10 +43,9 @@ class ReservaController extends ChangeNotifier {
     return 'un destino';
   }
 
-  // Verificar si hay cupos disponibles
-  Future<bool> _verificarCuposDisponibles(String paqueteId) async {
+  Future<bool> _verificarCuposDisponibles(String paqueteId, int personasRequeridas) async {
     final cupos = await _reservaService.obtenerCuposDisponibles(paqueteId);
-    return cupos > 0;
+    return cupos >= personasRequeridas;
   }
 
   Future<bool> cambiarEstadoReserva(Reserva reserva, EstadoReserva nuevoEstado, Usuario actor) async {
@@ -72,20 +71,21 @@ class ReservaController extends ChangeNotifier {
       return false;
     }
 
-    // Si el operador va a aceptar la solicitud, verificar cupos
     if (actor.isOperador && nuevoEstado == EstadoReserva.aceptado) {
-      final hayCupos = await _verificarCuposDisponibles(reserva.paqueteId);
+      final hayCupos = await _verificarCuposDisponibles(reserva.paqueteId, reserva.numeroPersonas);
       if (!hayCupos) {
-        debugPrint('No hay cupos disponibles para el paquete ${reserva.paqueteId}');
+        debugPrint('No hay suficientes cupos para ${reserva.numeroPersonas} personas en el paquete ${reserva.paqueteId}');
         return false;
       }
     }
 
     _setLoading(true);
     try {
-      // Si el operador acepta, descontar cupo ANTES de actualizar el estado
       if (actor.isOperador && nuevoEstado == EstadoReserva.aceptado) {
-        final cupoDescontado = await _reservaService.descontarCupo(reserva.paqueteId);
+        final cupoDescontado = await _reservaService.descontarCupo(
+          reserva.paqueteId,
+          cantidad: reserva.numeroPersonas,
+        );
         if (!cupoDescontado) {
           _setLoading(false);
           return false;
@@ -193,7 +193,6 @@ class ReservaController extends ChangeNotifier {
     }
   }
 
-  // Obtener cupos disponibles de un paquete (para mostrar en UI)
   Future<int> obtenerCuposDisponibles(String paqueteId) async {
     return await _reservaService.obtenerCuposDisponibles(paqueteId);
   }
@@ -205,11 +204,13 @@ class ReservaController extends ChangeNotifier {
     try {
       await _reservaService.actualizarEstado(reserva.id, EstadoReserva.cancelado);
 
-      // Si la reserva fue cancelada después de ser aceptada, se devuelve el cupo
       if (reserva.estadoActual == EstadoReserva.aceptado ||
           reserva.estadoActual == EstadoReserva.verificandoPago ||
           reserva.estadoActual == EstadoReserva.pagado) {
-        await _reservaService.restaurarCupo(reserva.paqueteId);
+        await _reservaService.restaurarCupo(
+          reserva.paqueteId,
+          cantidad: reserva.numeroPersonas,
+        );
       }
 
       _setLoading(false);
@@ -228,8 +229,10 @@ class ReservaController extends ChangeNotifier {
     try {
       await _reservaService.actualizarEstado(reserva.id, EstadoReserva.cancelado);
 
-      // Restaurar cupo descontado previamente
-      await _reservaService.restaurarCupo(reserva.paqueteId);
+      await _reservaService.restaurarCupo(
+        reserva.paqueteId,
+        cantidad: reserva.numeroPersonas,
+      );
 
       _setLoading(false);
       return true;

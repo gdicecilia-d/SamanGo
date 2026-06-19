@@ -98,6 +98,8 @@ class _TicketViewState extends State<TicketView> {
     return nombre;
   }
 
+  bool get _tieneAcompanantes => widget.reserva.datosAcompanantes.isNotEmpty;
+
   Future<void> _descargarTicket() async {
     setState(() => _isDownloading = true);
 
@@ -160,6 +162,60 @@ class _TicketViewState extends State<TicketView> {
                     ),
                   ],
                 ),
+              );
+            }
+
+            pw.Widget buildAcompanantesSection() {
+              final acompanantes = widget.reserva.datosAcompanantes;
+              if (acompanantes.isEmpty) {
+                return pw.SizedBox();
+              }
+              return pw.Column(
+                crossAxisAlignment: pw.CrossAxisAlignment.start,
+                children: [
+                  pw.Padding(
+                    padding: const pw.EdgeInsets.only(bottom: 8),
+                    child: pw.Text(
+                      'Acompañantes:',
+                      style: pw.TextStyle(
+                        fontWeight: pw.FontWeight.bold,
+                        fontSize: 14,
+                        color: const PdfColor.fromInt(0xFFE65C00),
+                      ),
+                    ),
+                  ),
+                  ...acompanantes.asMap().entries.map((entry) {
+                    final index = entry.key;
+                    final a = entry.value;
+                    final nombre = a['nombre']?.toString() ?? 'Sin nombre';
+                    final carnet = a['carnet']?.toString() ?? 'Sin carnet';
+                    return pw.Padding(
+                      padding: const pw.EdgeInsets.only(left: 20, bottom: 6),
+                      child: pw.Row(
+                        crossAxisAlignment: pw.CrossAxisAlignment.start,
+                        children: [
+                          pw.Text(
+                            '${index + 1}.',
+                            style: pw.TextStyle(
+                              fontSize: 13,
+                              color: const PdfColor.fromInt(0xFF888888),
+                            ),
+                          ),
+                          pw.SizedBox(width: 8),
+                          pw.Expanded(
+                            child: pw.Text(
+                              '$nombre (Carnet: $carnet)',
+                              style: pw.TextStyle(
+                                fontSize: 13,
+                                color: const PdfColor.fromInt(0xFF333333),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    );
+                  }).toList(),
+                ],
               );
             }
 
@@ -237,6 +293,9 @@ class _TicketViewState extends State<TicketView> {
                           buildInfoRow('N° Transacción:', _transactionId.isEmpty ? 'N/A' : _transactionId),
                           buildInfoRow('Pasajero:', _getNombreCompleto()),
                           buildInfoRow('Carnet:', _getCarnet()),
+                          buildInfoRow('Personas:', '${widget.reserva.numeroPersonas} persona${widget.reserva.numeroPersonas > 1 ? 's' : ''}'),
+                          buildAcompanantesSection(),
+                          pw.SizedBox(height: 8),
                           buildInfoRow('Fecha:', _formattedFecha),
                           buildInfoRow('Hora salida:', _horaSalida),
                           buildInfoRow('Punto encuentro:', _puntoEncuentro),
@@ -489,6 +548,12 @@ class _TicketViewState extends State<TicketView> {
                                         const SizedBox(height: 14),
                                         _buildInfoRow('Carnet:', _getCarnet(), isMobile, infoFontSize),
                                         const SizedBox(height: 14),
+                                        _buildInfoRow('Personas:', '${widget.reserva.numeroPersonas} persona${widget.reserva.numeroPersonas > 1 ? 's' : ''}', isMobile, infoFontSize),
+                                        if (_tieneAcompanantes) ...[
+                                          const SizedBox(height: 14),
+                                          _buildAcompanantesSectionUI(isMobile, infoFontSize),
+                                        ],
+                                        const SizedBox(height: 14),
                                         _buildInfoRow('Fecha:', _formattedFecha, isMobile, infoFontSize),
                                         const SizedBox(height: 14),
                                         _buildInfoRow('Hora salida:', _horaSalida, isMobile, infoFontSize),
@@ -516,6 +581,12 @@ class _TicketViewState extends State<TicketView> {
                                               _buildInfoRow('Pasajero:', _getNombreCompleto(), isMobile, infoFontSize),
                                               const SizedBox(height: 16),
                                               _buildInfoRow('Carnet:', _getCarnet(), isMobile, infoFontSize),
+                                              const SizedBox(height: 16),
+                                              _buildInfoRow('Personas:', '${widget.reserva.numeroPersonas} persona${widget.reserva.numeroPersonas > 1 ? 's' : ''}', isMobile, infoFontSize),
+                                              if (_tieneAcompanantes) ...[
+                                                const SizedBox(height: 16),
+                                                _buildAcompanantesSectionUI(isMobile, infoFontSize),
+                                              ],
                                               const SizedBox(height: 16),
                                               _buildInfoRow('Fecha:', _formattedFecha, isMobile, infoFontSize),
                                               const SizedBox(height: 16),
@@ -769,6 +840,42 @@ class _TicketViewState extends State<TicketView> {
             ),
           ),
         ),
+      ],
+    );
+  }
+
+  Widget _buildAcompanantesSectionUI(bool isMobile, double fontSize) {
+    final acompanantes = widget.reserva.datosAcompanantes;
+    if (acompanantes.isEmpty) return const SizedBox.shrink();
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Acompañantes:',
+          style: GoogleFonts.outfit(
+            fontSize: fontSize,
+            fontWeight: FontWeight.w600,
+            color: _primaryColor,
+          ),
+        ),
+        const SizedBox(height: 6),
+        ...acompanantes.asMap().entries.map((entry) {
+          final index = entry.key;
+          final a = entry.value;
+          final nombre = a['nombre']?.toString() ?? 'Sin nombre';
+          final carnet = a['carnet']?.toString() ?? 'Sin carnet';
+          return Padding(
+            padding: const EdgeInsets.only(left: 16, bottom: 4),
+            child: Text(
+              '${index + 1}. $nombre (Carnet: $carnet)',
+              style: GoogleFonts.outfit(
+                fontSize: fontSize - 1,
+                color: const Color(0xFF555555),
+              ),
+            ),
+          );
+        }).toList(),
       ],
     );
   }

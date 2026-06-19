@@ -198,13 +198,6 @@ class _OperatorHomeViewState extends State<OperatorHomeView> {
           ),
         ],
       ),
-      floatingActionButton: !isMobile
-          ? FloatingActionButton(
-              onPressed: () {},
-              backgroundColor: const Color(0xFFFC6707),
-              child: const Icon(Icons.help_outline, color: Colors.white),
-            )
-          : null,
     );
   }
 

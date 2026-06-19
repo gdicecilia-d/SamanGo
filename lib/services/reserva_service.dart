@@ -28,12 +28,10 @@ class ReservaService {
     });
   }
 
-  // Descontar cupo del paquete cuando se acepta una reserva
-  Future<bool> descontarCupo(String paqueteId) async {
+  Future<bool> descontarCupo(String paqueteId, {int cantidad = 1}) async {
     try {
       final destinoRef = _firestore.collection('destinos').doc(paqueteId);
       
-      // Obtener el paquete actual para verificar cupos disponibles
       final doc = await destinoRef.get();
       if (!doc.exists) {
         return false;
@@ -42,14 +40,12 @@ class ReservaService {
       final data = doc.data() as Map<String, dynamic>?;
       final cuposDisponibles = data?['cuposDisponibles'] as int? ?? 0;
       
-      // Verificar si hay cupos disponibles
-      if (cuposDisponibles <= 0) {
+      if (cuposDisponibles < cantidad) {
         return false;
       }
       
-      // Descontar 1 cupo
       await destinoRef.update({
-        'cuposDisponibles': FieldValue.increment(-1),
+        'cuposDisponibles': FieldValue.increment(-cantidad),
       });
       
       return true;
@@ -59,7 +55,6 @@ class ReservaService {
     }
   }
 
-  // Obtener cupos disponibles de un paquete
   Future<int> obtenerCuposDisponibles(String paqueteId) async {
     try {
       final doc = await _firestore.collection('destinos').doc(paqueteId).get();
@@ -138,19 +133,17 @@ class ReservaService {
     }
   }
 
-  // Restaurar cupo del paquete cuando se cancela una reserva
-  Future<bool> restaurarCupo(String paqueteId) async {
+  Future<bool> restaurarCupo(String paqueteId, {int cantidad = 1}) async {
     try {
       final destinoRef = _firestore.collection('destinos').doc(paqueteId);
       
-      // Obtener el paquete para asegurar que existe
       final doc = await destinoRef.get();
       if (!doc.exists) {
         return false;
       }
       
       await destinoRef.update({
-        'cuposDisponibles': FieldValue.increment(1),
+        'cuposDisponibles': FieldValue.increment(cantidad),
       });
       
       return true;

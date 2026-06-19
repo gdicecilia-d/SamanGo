@@ -52,7 +52,6 @@ class _CheckoutViewState extends State<CheckoutView> {
   late ImageProvider? _backgroundImage;
   late ImageProvider? _paqueteImagen;
 
-  // Estados de error para validación de acompañantes
   final List<String> _nombreErrores = [];
   final List<String> _carnetErrores = [];
 
@@ -202,7 +201,6 @@ class _CheckoutViewState extends State<CheckoutView> {
     while (_acompanantes.length > cantidadNecesaria) {
       _acompanantes.removeLast();
     }
-    // Actualizar listas de errores
     while (_nombreErrores.length < _acompanantes.length) {
       _nombreErrores.add('');
     }
@@ -217,7 +215,6 @@ class _CheckoutViewState extends State<CheckoutView> {
     }
   }
 
-  // VALIDACIONES PARA ACOMPAÑANTES
   String? _validarNombreAcompanante(String value) {
     if (value.trim().isEmpty) {
       return 'El nombre es obligatorio';
@@ -384,6 +381,16 @@ class _CheckoutViewState extends State<CheckoutView> {
     }
   }
 
+  Future<bool> _verificarCuposDisponibles(String paqueteId, int personas) async {
+    final reservaCtrl = Provider.of<ReservaController>(context, listen: false);
+    final cupos = await reservaCtrl.obtenerCuposDisponibles(paqueteId);
+    if (cupos < personas) {
+      _mostrarMensaje('No hay suficientes cupos disponibles. Solo quedan $cupos cupo${cupos > 1 ? 's' : ''} para $personas persona${personas > 1 ? 's' : ''}.');
+      return false;
+    }
+    return true;
+  }
+
   Future<void> _enviarSolicitud() async {
     if (_yaSolicitado) {
       _mostrarMensaje('Ya tienes una solicitud activa para este destino');
@@ -398,6 +405,9 @@ class _CheckoutViewState extends State<CheckoutView> {
       _mostrarMensaje('Completa correctamente los datos de tus acompañantes');
       return;
     }
+
+    final hayCupos = await _verificarCuposDisponibles(widget.destinoId, _numeroPersonas);
+    if (!hayCupos) return;
 
     final yaTieneReserva = await _verificarReservaEnMismaFecha(_fechaInicio!, _fechaFin!);
     if (yaTieneReserva) return;
@@ -881,7 +891,6 @@ class _CheckoutViewState extends State<CheckoutView> {
     );
   }
 
-  // Desktop
   Widget _buildDesktopContentCard(
     double titleFontSize,
     double subtitleFontSize,
@@ -954,7 +963,6 @@ class _CheckoutViewState extends State<CheckoutView> {
           const Divider(height: 1, thickness: 1, color: Color(0xFFE0E0E0)),
           const SizedBox(height: 24),
           
-          // Calendario + Personaliza
           Padding(
             padding: EdgeInsets.symmetric(horizontal: cardPadding),
             child: Row(
@@ -1003,7 +1011,6 @@ class _CheckoutViewState extends State<CheckoutView> {
           ),
           const SizedBox(height: 32),
           
-          // ¿Quiénes van? + Foto
           Padding(
             padding: EdgeInsets.symmetric(horizontal: cardPadding),
             child: Row(
@@ -1065,7 +1072,6 @@ class _CheckoutViewState extends State<CheckoutView> {
     );
   }
 
-  // Cell
   Widget _buildMobileContentCard(
     double titleFontSize,
     double subtitleFontSize,
@@ -1138,7 +1144,6 @@ class _CheckoutViewState extends State<CheckoutView> {
           const Divider(height: 1, thickness: 1, color: Color(0xFFE0E0E0)),
           const SizedBox(height: 24),
           
-          // Calendario
           Padding(
             padding: EdgeInsets.symmetric(horizontal: cardPadding),
             child: Column(
@@ -1162,7 +1167,6 @@ class _CheckoutViewState extends State<CheckoutView> {
           ),
           const SizedBox(height: 32),
           
-          // ¿Quiénes van?
           Padding(
             padding: EdgeInsets.symmetric(horizontal: cardPadding),
             child: Column(
@@ -1195,7 +1199,6 @@ class _CheckoutViewState extends State<CheckoutView> {
           ),
           const SizedBox(height: 32),
           
-          // Personaliza tu experiencia
           Padding(
             padding: EdgeInsets.symmetric(horizontal: cardPadding),
             child: Column(
@@ -1216,7 +1219,6 @@ class _CheckoutViewState extends State<CheckoutView> {
           ),
           const SizedBox(height: 32),
           
-          // Foto 
           Padding(
             padding: EdgeInsets.symmetric(horizontal: cardPadding),
             child: ClipRRect(

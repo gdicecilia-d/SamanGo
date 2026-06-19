@@ -120,11 +120,9 @@ class _OperatorRequestsViewState extends State<OperatorRequestsView> {
     );
   }
 
-  // Layout para móvil con CustomScrollView
   Widget _buildMobileLayout(String operadorId) {
     return CustomScrollView(
       slivers: [
-        // Contenido principal
         SliverToBoxAdapter(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -160,11 +158,9 @@ class _OperatorRequestsViewState extends State<OperatorRequestsView> {
     );
   }
 
-  // Layout para desktop con CustomScrollView
   Widget _buildDesktopLayout(String operadorId) {
     return CustomScrollView(
       slivers: [
-        // Contenido principal
         SliverToBoxAdapter(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -622,7 +618,6 @@ class _OperatorRequestsViewState extends State<OperatorRequestsView> {
   }
 }
 
-// Detalles del paquete
 class PaqueteDetailView extends StatefulWidget {
   final String paqueteId;
   final bool isOffer;
@@ -700,32 +695,33 @@ class _PaqueteDetailViewState extends State<PaqueteDetailView> {
     );
   }
 
-  Future<bool> _verificarCuposDisponibles(String paqueteId) async {
+  Future<bool> _verificarCuposDisponibles(String paqueteId, int personasRequeridas) async {
     final reservaCtrl = Provider.of<ReservaController>(context, listen: false);
     final cupos = await reservaCtrl.obtenerCuposDisponibles(paqueteId);
-    return cupos > 0;
+    return cupos >= personasRequeridas;
   }
 
   Future<void> _aceptarSolicitud(Reserva reserva) async {
     if (!mounted) return;
 
-    final hayCupos = await _verificarCuposDisponibles(reserva.paqueteId);
+    final reservaCtrl = Provider.of<ReservaController>(context, listen: false);
+    final hayCupos = await _verificarCuposDisponibles(reserva.paqueteId, reserva.numeroPersonas);
+    
     if (!hayCupos) {
-      _mostrarMensaje('No hay cupos disponibles para este paquete.');
+      final cupos = await reservaCtrl.obtenerCuposDisponibles(reserva.paqueteId);
+      _mostrarMensaje('No hay suficientes cupos disponibles. Solo quedan $cupos cupo${cupos > 1 ? 's' : ''} para ${reserva.numeroPersonas} persona${reserva.numeroPersonas > 1 ? 's' : ''}.');
       return;
     }
 
     final confirm = await CustomConfirmDialog.show(
       context: context,
       title: 'Aceptar solicitud',
-      message:
-          '¿Confirmas que deseas aceptar la solicitud de ${reserva.nombreEstudiante} ${reserva.apellidoEstudiante}?',
+      message: '¿Confirmas que deseas aceptar la solicitud de ${reserva.nombreEstudiante} ${reserva.apellidoEstudiante} para ${reserva.numeroPersonas} persona${reserva.numeroPersonas > 1 ? 's' : ''}?',
       confirmText: 'Aceptar',
       icon: Icons.check_circle_outline,
     );
     if (confirm != true || !mounted) return;
 
-    final reservaCtrl = Provider.of<ReservaController>(context, listen: false);
     final auth = Provider.of<AuthController>(context, listen: false);
 
     final exito = await reservaCtrl.cambiarEstadoReserva(
@@ -737,12 +733,13 @@ class _PaqueteDetailViewState extends State<PaqueteDetailView> {
     if (!mounted) return;
 
     if (exito) {
-      _mostrarMensaje('Solicitud aceptada. El estudiante fue notificado.');
+      _mostrarMensaje('Solicitud aceptada. Se descontaron ${reserva.numeroPersonas} cupo${reserva.numeroPersonas > 1 ? 's' : ''}.');
       setState(() => _refreshKey++);
     } else {
-      final aunHayCupos = await _verificarCuposDisponibles(reserva.paqueteId);
+      final aunHayCupos = await _verificarCuposDisponibles(reserva.paqueteId, reserva.numeroPersonas);
       if (!aunHayCupos) {
-        _mostrarMensaje('No hay cupos disponibles para este paquete.');
+        final cupos = await reservaCtrl.obtenerCuposDisponibles(reserva.paqueteId);
+        _mostrarMensaje('No hay suficientes cupos disponibles. Solo quedan $cupos cupo${cupos > 1 ? 's' : ''}.');
       } else {
         _mostrarMensaje('No se pudo aceptar la solicitud. Intenta de nuevo.');
       }
@@ -818,8 +815,7 @@ class _PaqueteDetailViewState extends State<PaqueteDetailView> {
     final confirm = await CustomConfirmDialog.show(
       context: context,
       title: 'Confirmar pago',
-      message:
-          '¿Confirmas que el comprobante de ${reserva.nombreEstudiante} es válido?',
+      message: '¿Confirmas que el comprobante de ${reserva.nombreEstudiante} es válido?',
       confirmText: 'Confirmar',
       icon: Icons.check_circle_outline,
     );
@@ -913,8 +909,7 @@ class _PaqueteDetailViewState extends State<PaqueteDetailView> {
     final confirm = await CustomConfirmDialog.show(
       context: context,
       title: 'Marcar como Disfrutado',
-      message:
-          '¿Confirmas que ${reserva.nombreEstudiante} ${reserva.apellidoEstudiante} ya realizó el viaje?',
+      message: '¿Confirmas que ${reserva.nombreEstudiante} ${reserva.apellidoEstudiante} ya realizó el viaje?',
       confirmText: 'Confirmar',
       icon: Icons.celebration_outlined,
     );
@@ -1014,7 +1009,6 @@ class _PaqueteDetailViewState extends State<PaqueteDetailView> {
               ),
             ],
           ),
-          // Botón volver flotante
           Positioned(
             top: backButtonTop,
             right: 24,
@@ -1063,7 +1057,6 @@ class _PaqueteDetailViewState extends State<PaqueteDetailView> {
     );
   }
 
-  // Layout móvil para el detalle
   Widget _buildDetailMobileLayout() {
     return CustomScrollView(
       slivers: [
@@ -1102,7 +1095,6 @@ class _PaqueteDetailViewState extends State<PaqueteDetailView> {
     );
   }
 
-  // Layout desktop para el detalle
   Widget _buildDetailDesktopLayout() {
     return CustomScrollView(
       slivers: [
@@ -1440,6 +1432,13 @@ class _PaqueteDetailViewState extends State<PaqueteDetailView> {
                     ),
                     Text(
                       'Carnet: ${reserva.carnetEstudiante}',
+                      style: GoogleFonts.outfit(
+                        fontSize: 13,
+                        color: const Color(0xFF888888),
+                      ),
+                    ),
+                    Text(
+                      'Personas: ${reserva.numeroPersonas}',
                       style: GoogleFonts.outfit(
                         fontSize: 13,
                         color: const Color(0xFF888888),
