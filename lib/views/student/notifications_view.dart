@@ -427,8 +427,6 @@ class _NotificationsViewState extends State<NotificationsView> {
                                   fontSize: 13,
                                   color: const Color(0xFF666666),
                                 ),
-                                maxLines: 3,
-                                overflow: TextOverflow.ellipsis,
                               );
                             },
                           );

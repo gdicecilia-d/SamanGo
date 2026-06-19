@@ -92,7 +92,7 @@ class NotificationsPanel extends StatelessWidget {
                           'Borrar todo',
                           style: GoogleFonts.outfit(
                             fontSize: 13,
-                            fontWeight: FontWeight.bold, // <-- NEGRITA
+                            fontWeight: FontWeight.bold,
                             color: const Color(0xFFFC6707),
                           ),
                         ),
@@ -187,8 +187,6 @@ class NotificationsPanel extends StatelessWidget {
                                                 fontSize: 12,
                                                 color: const Color(0xFF666666),
                                               ),
-                                              maxLines: 2,
-                                              overflow: TextOverflow.ellipsis,
                                             );
                                           },
                                         );

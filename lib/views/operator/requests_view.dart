@@ -112,55 +112,91 @@ class _OperatorRequestsViewState extends State<OperatorRequestsView> {
           ),
           Expanded(
             child: isMobile
-                ? SingleChildScrollView(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const SizedBox(height: 16),
-                        Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 16),
-                          child: Text(
-                            'Gestionar Solicitudes',
-                            style: GoogleFonts.outfit(
-                              fontSize: 24,
-                              fontWeight: FontWeight.bold,
-                              color: const Color(0xFF333333),
-                            ),
-                          ),
-                        ),
-                        const SizedBox(height: 16),
-                        _buildPaquetesList(isMobile: true, operadorId: operadorId),
-                        const SizedBox(height: 24),
-                      ],
-                    ),
-                  )
-                : SingleChildScrollView(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const SizedBox(height: 16),
-                        Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 24),
-                          child: Text(
-                            'Gestionar Solicitudes',
-                            style: GoogleFonts.outfit(
-                              fontSize: 28,
-                              fontWeight: FontWeight.bold,
-                              color: const Color(0xFF333333),
-                            ),
-                          ),
-                        ),
-                        const SizedBox(height: 24),
-                        _buildPaquetesList(isMobile: false, operadorId: operadorId),
-                        const SizedBox(height: 24),
-                      ],
-                    ),
-                  ),
+                ? _buildMobileLayout(operadorId)
+                : _buildDesktopLayout(operadorId),
           ),
-          // Footer fijo abajo - FUERA DEL SCROLL
-          _buildFooter(isMobile),
         ],
       ),
+    );
+  }
+
+  // Layout para móvil con CustomScrollView
+  Widget _buildMobileLayout(String operadorId) {
+    return CustomScrollView(
+      slivers: [
+        // Contenido principal
+        SliverToBoxAdapter(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const SizedBox(height: 16),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                child: Text(
+                  'Gestionar Solicitudes',
+                  style: GoogleFonts.outfit(
+                    fontSize: 24,
+                    fontWeight: FontWeight.bold,
+                    color: const Color(0xFF333333),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 16),
+              _buildPaquetesList(isMobile: true, operadorId: operadorId),
+              const SizedBox(height: 24),
+            ],
+          ),
+        ),
+        SliverFillRemaining(
+          hasScrollBody: false,
+          child: Column(
+            children: [
+              const Spacer(), 
+              _buildFooter(true), 
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  // Layout para desktop con CustomScrollView
+  Widget _buildDesktopLayout(String operadorId) {
+    return CustomScrollView(
+      slivers: [
+        // Contenido principal
+        SliverToBoxAdapter(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const SizedBox(height: 16),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 24),
+                child: Text(
+                  'Gestionar Solicitudes',
+                  style: GoogleFonts.outfit(
+                    fontSize: 28,
+                    fontWeight: FontWeight.bold,
+                    color: const Color(0xFF333333),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 24),
+              _buildPaquetesList(isMobile: false, operadorId: operadorId),
+              const SizedBox(height: 24),
+            ],
+          ),
+        ),
+        SliverFillRemaining(
+          hasScrollBody: false,
+          child: Column(
+            children: [
+              const Spacer(), 
+              _buildFooter(false), 
+            ],
+          ),
+        ),
+      ],
     );
   }
 
@@ -587,8 +623,6 @@ class _OperatorRequestsViewState extends State<OperatorRequestsView> {
 }
 
 // Detalles del paquete
-
-
 class PaqueteDetailView extends StatefulWidget {
   final String paqueteId;
   final bool isOffer;
@@ -954,7 +988,6 @@ class _PaqueteDetailViewState extends State<PaqueteDetailView> {
     final isMobile = screenWidth < 850;
     final isLargeScreen = screenWidth > 1400;
     final double backButtonSize = isLargeScreen ? 20 : 16;
-    // Botón volver 
     final double backButtonTop = isMobile ? 130 : (isLargeScreen ? 100 : 80);
 
     return Scaffold(
@@ -976,56 +1009,12 @@ class _PaqueteDetailViewState extends State<PaqueteDetailView> {
               ),
               Expanded(
                 child: isMobile
-                    ? SingleChildScrollView(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            const SizedBox(height: 16),
-                            Padding(
-                              padding: const EdgeInsets.symmetric(horizontal: 16),
-                              child: Text(
-                                'Gestionar Solicitudes',
-                                style: GoogleFonts.outfit(
-                                  fontSize: 24,
-                                  fontWeight: FontWeight.bold,
-                                  color: const Color(0xFF333333),
-                                ),
-                              ),
-                            ),
-                            const SizedBox(height: 16),
-                            _buildReservasContent(isMobile: true),
-                            const SizedBox(height: 24),
-                          ],
-                        ),
-                      )
-                    : SingleChildScrollView(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            const SizedBox(height: 16),
-                            Padding(
-                              padding: const EdgeInsets.symmetric(horizontal: 24),
-                              child: Text(
-                                'Gestionar Solicitudes',
-                                style: GoogleFonts.outfit(
-                                  fontSize: 28,
-                                  fontWeight: FontWeight.bold,
-                                  color: const Color(0xFF333333),
-                                ),
-                              ),
-                            ),
-                            const SizedBox(height: 24),
-                            _buildReservasContent(isMobile: false),
-                            const SizedBox(height: 24),
-                          ],
-                        ),
-                      ),
+                    ? _buildDetailMobileLayout()
+                    : _buildDetailDesktopLayout(),
               ),
-              // Footer fijo abajo
-              _buildFooter(isMobile),
             ],
           ),
-          // Botón volver flotante 
+          // Botón volver flotante
           Positioned(
             top: backButtonTop,
             right: 24,
@@ -1071,6 +1060,84 @@ class _PaqueteDetailViewState extends State<PaqueteDetailView> {
           ),
         ],
       ),
+    );
+  }
+
+  // Layout móvil para el detalle
+  Widget _buildDetailMobileLayout() {
+    return CustomScrollView(
+      slivers: [
+        SliverToBoxAdapter(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const SizedBox(height: 16),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                child: Text(
+                  'Gestionar Solicitudes',
+                  style: GoogleFonts.outfit(
+                    fontSize: 24,
+                    fontWeight: FontWeight.bold,
+                    color: const Color(0xFF333333),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 16),
+              _buildReservasContent(isMobile: true),
+              const SizedBox(height: 24),
+            ],
+          ),
+        ),
+        SliverFillRemaining(
+          hasScrollBody: false,
+          child: Column(
+            children: [
+              const Spacer(),
+              _buildFooter(true),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  // Layout desktop para el detalle
+  Widget _buildDetailDesktopLayout() {
+    return CustomScrollView(
+      slivers: [
+        SliverToBoxAdapter(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const SizedBox(height: 16),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 24),
+                child: Text(
+                  'Gestionar Solicitudes',
+                  style: GoogleFonts.outfit(
+                    fontSize: 28,
+                    fontWeight: FontWeight.bold,
+                    color: const Color(0xFF333333),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 24),
+              _buildReservasContent(isMobile: false),
+              const SizedBox(height: 24),
+            ],
+          ),
+        ),
+        SliverFillRemaining(
+          hasScrollBody: false,
+          child: Column(
+            children: [
+              const Spacer(),
+              _buildFooter(false),
+            ],
+          ),
+        ),
+      ],
     );
   }
 

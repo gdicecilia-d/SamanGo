@@ -76,7 +76,13 @@ class _OperatorPublishViewState extends State<OperatorPublishView> {
   bool _isHoveringDescartar = false;
   bool _isHoveringPortada = false;
 
-  String? _ubicacionError;
+  // Variables para validación de campos
+  bool _tituloTocado = false;
+  bool _ubicacionTocado = false;
+  bool _precioTocado = false;
+  bool _cuposTocado = false;
+  bool _portadaTocado = false;
+  bool _nochesTocado = false;
 
   @override
   void dispose() {
@@ -113,15 +119,12 @@ class _OperatorPublishViewState extends State<OperatorPublishView> {
     setState(() {
       final texto = _ubicacionController.text.trim();
       if (texto.isEmpty) {
-        _ubicacionError = null;
         return;
       }
       final tieneEstado = _estadosVenezuela.any((estado) =>
           texto.toLowerCase().contains(estado.toLowerCase()));
       if (!tieneEstado) {
-        _ubicacionError = 'Debe incluir un estado de Venezuela (ej: Miranda, Carabobo)';
-      } else {
-        _ubicacionError = null;
+        // El error se muestra en el widget
       }
     });
   }
@@ -129,6 +132,43 @@ class _OperatorPublishViewState extends State<OperatorPublishView> {
   bool _esImagenValida(String fileName) {
     final extension = fileName.split('.').last.toLowerCase();
     return extension == 'jpg' || extension == 'jpeg' || extension == 'png';
+  }
+
+  // Método para verificar si un campo es válido
+  bool _isFieldValid(String fieldKey) {
+    switch (fieldKey) {
+      case 'titulo':
+        return _tituloController.text.trim().isNotEmpty;
+      case 'ubicacion':
+        final texto = _ubicacionController.text.trim();
+        return texto.isNotEmpty && _estadosVenezuela.any((estado) =>
+            texto.toLowerCase().contains(estado.toLowerCase()));
+      case 'precio':
+        return _precioController.text.trim().isNotEmpty;
+      case 'cupos':
+        final cupos = int.tryParse(_cuposController.text.trim());
+        return cupos != null && cupos > 0;
+      case 'portada':
+        return _portadaImagenBytes != null;
+      case 'noches':
+        return _duracionSeleccionada != 'Varias Noches' || _nochesController.text.trim().isNotEmpty;
+      default:
+        return true;
+    }
+  }
+
+  // Método para marcar todos los campos como tocados
+  void _marcarTodosLosCampos() {
+    setState(() {
+      _tituloTocado = true;
+      _ubicacionTocado = true;
+      _precioTocado = true;
+      _cuposTocado = true;
+      _portadaTocado = true;
+      if (_duracionSeleccionada == 'Varias Noches') {
+        _nochesTocado = true;
+      }
+    });
   }
 
   Future<void> _seleccionarPortada() async {
@@ -142,6 +182,7 @@ class _OperatorPublishViewState extends State<OperatorPublishView> {
       final bytes = await image.readAsBytes();
       setState(() {
         _portadaImagenBytes = bytes;
+        _portadaTocado = true;
       });
     }
   }
@@ -171,6 +212,10 @@ class _OperatorPublishViewState extends State<OperatorPublishView> {
   }
 
   Future<void> _publicarTour() async {
+    // Marcar todos los campos como tocados para mostrar validaciones
+    _marcarTodosLosCampos();
+
+    // Validar todos los campos
     if (_tituloController.text.trim().isEmpty) {
       _mostrarMensaje('Por favor ingresa el título del tour');
       return;
@@ -619,6 +664,10 @@ class _OperatorPublishViewState extends State<OperatorPublishView> {
     final screenWidth = MediaQuery.of(context).size.width;
     final isLargeScreen = screenWidth > 1400;
     final double imageHeight = isMobile ? 180 : (isLargeScreen ? 260 : 220);
+    
+    // Verificar si la portada es válida para mostrar el borde naranja
+    bool portadaValida = _portadaImagenBytes != null;
+    bool mostrarErrorPortada = _portadaTocado && !portadaValida;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -646,8 +695,10 @@ class _OperatorPublishViewState extends State<OperatorPublishView> {
                 color: _isHoveringPortada ? const Color(0xFFFDF5ED) : const Color(0xFFF8F8F8),
                 borderRadius: BorderRadius.circular(16),
                 border: Border.all(
-                  color: _isHoveringPortada ? const Color(0xFFFC6707) : const Color(0xFFE0E0E0),
-                  width: _isHoveringPortada ? 2 : 1.5,
+                  color: mostrarErrorPortada 
+                      ? const Color(0xFFFC6707) 
+                      : (_isHoveringPortada ? const Color(0xFFFC6707) : const Color(0xFFE0E0E0)),
+                  width: mostrarErrorPortada ? 2.5 : (_isHoveringPortada ? 2 : 1.5),
                 ),
               ),
               child: _portadaImagenBytes != null
@@ -701,26 +752,46 @@ class _OperatorPublishViewState extends State<OperatorPublishView> {
                         Icon(
                           Icons.cloud_upload_outlined,
                           size: 40,
-                          color: _isHoveringPortada ? const Color(0xFFFC6707) : const Color(0xFF999999),
+                          color: mostrarErrorPortada 
+                              ? const Color(0xFFFC6707) 
+                              : (_isHoveringPortada ? const Color(0xFFFC6707) : const Color(0xFF999999)),
                         ),
                         const SizedBox(height: 8),
                         Text(
-                          'Imagen de Portada',
+                          'Imagen de Portada *',
                           style: GoogleFonts.outfit(
                             fontSize: 14,
                             fontWeight: FontWeight.w500,
-                            color: _isHoveringPortada ? const Color(0xFFFC6707) : const Color(0xFF666666),
+                            color: mostrarErrorPortada 
+                                ? const Color(0xFFFC6707) 
+                                : (_isHoveringPortada ? const Color(0xFFFC6707) : const Color(0xFF666666)),
                           ),
                         ),
                         Text(
                           'Solo PNG, JPG o JPEG',
-                          style: GoogleFonts.outfit(fontSize: 12, color: const Color(0xFF999999)),
+                          style: GoogleFonts.outfit(
+                            fontSize: 12, 
+                            color: mostrarErrorPortada 
+                                ? const Color(0xFFFC6707) 
+                                : const Color(0xFF999999),
+                          ),
                         ),
                       ],
                     ),
             ),
           ),
         ),
+        if (mostrarErrorPortada)
+          Padding(
+            padding: const EdgeInsets.only(top: 4, left: 4),
+            child: Text(
+              'La imagen de portada es requerida',
+              style: GoogleFonts.outfit(
+                fontSize: 12,
+                color: const Color(0xFFFC6707),
+              ),
+            ),
+          ),
         const SizedBox(height: 16),
         Text(
           'Imágenes de referencia',
@@ -803,22 +874,11 @@ class _OperatorPublishViewState extends State<OperatorPublishView> {
         const SizedBox(height: 16),
         Row(
           children: [
-            Expanded(child: _buildTextField('Título del Viaje', _tituloController, 'Ej: Aventura en Canaima')),
+            Expanded(child: _buildTextFieldWithValidation('Título del Viaje', _tituloController, 'Ej: Aventura en Canaima', 'titulo')),
             const SizedBox(width: 16),
-            Expanded(child: _buildTextField('Ubicación', _ubicacionController, 'Ej: Canaima, Bolívar', onChanged: _validarUbicacion)),
+            Expanded(child: _buildTextFieldWithValidation('Ubicación', _ubicacionController, 'Ej: Canaima, Bolívar', 'ubicacion', onChanged: _validarUbicacion)),
           ],
         ),
-        if (_ubicacionError != null)
-          Padding(
-            padding: const EdgeInsets.only(top: 4, left: 4),
-            child: Text(
-              _ubicacionError!,
-              style: GoogleFonts.outfit(
-                fontSize: 12,
-                color: const Color(0xFFFC6707),
-              ),
-            ),
-          ),
         const SizedBox(height: 16),
         Row(
           children: [
@@ -830,7 +890,7 @@ class _OperatorPublishViewState extends State<OperatorPublishView> {
               setState(() => _alojamientoSeleccionado = value!);
             })),
             const SizedBox(width: 16),
-            Expanded(child: _buildTextField('Precio (USD)', _precioController, 'Ej: 99', isNumber: true)),
+            Expanded(child: _buildTextFieldWithValidation('Precio (USD)', _precioController, 'Ej: 99', 'precio', isNumber: true)),
           ],
         ),
         const SizedBox(height: 16),
@@ -840,7 +900,7 @@ class _OperatorPublishViewState extends State<OperatorPublishView> {
               setState(() => _selectedCategoria = value!);
             })),
             const SizedBox(width: 16),
-            Expanded(child: _buildTextField('Cupos disponibles', _cuposController, 'Ej: 20', isNumber: true)),
+            Expanded(child: _buildTextFieldWithValidation('Cupos disponibles', _cuposController, 'Ej: 20', 'cupos', isNumber: true)),
             const SizedBox(width: 16),
             Expanded(child: Container()),
           ],
@@ -860,13 +920,19 @@ class _OperatorPublishViewState extends State<OperatorPublishView> {
             }),
             const SizedBox(width: 24),
             _buildRadioButton('Varias Noches', 'Varias Noches', _duracionSeleccionada, (value) {
-              setState(() => _duracionSeleccionada = value);
+              setState(() {
+                _duracionSeleccionada = value;
+                // Si cambia a "Full Day", ocultamos el campo de noches
+                if (value == 'Full Day') {
+                  _nochesTocado = false;
+                }
+              });
             }),
           ],
         ),
         if (_duracionSeleccionada == 'Varias Noches') ...[
           const SizedBox(height: 12),
-          _buildTextField('Cantidad de noches', _nochesController, 'Ej: 3', isNumber: true, small: true),
+          _buildTextFieldWithValidation('Cantidad de noches', _nochesController, 'Ej: 3', 'noches', isNumber: true, small: true),
         ],
         const SizedBox(height: 16),
         Text(
@@ -898,8 +964,144 @@ class _OperatorPublishViewState extends State<OperatorPublishView> {
     );
   }
 
-  Widget _buildTextField(String label, TextEditingController controller, String hint,
-      {bool isNumber = false, bool small = false, VoidCallback? onChanged}) {
+  // Método para campos con validación
+  Widget _buildTextFieldWithValidation(
+    String label,
+    TextEditingController controller,
+    String hint,
+    String fieldKey, {
+    bool isNumber = false,
+    bool small = false,
+    VoidCallback? onChanged,
+  }) {
+    bool isValid = _isFieldValid(fieldKey);
+    bool isTouched = false;
+
+    switch (fieldKey) {
+      case 'titulo':
+        isTouched = _tituloTocado;
+        break;
+      case 'ubicacion':
+        isTouched = _ubicacionTocado;
+        break;
+      case 'precio':
+        isTouched = _precioTocado;
+        break;
+      case 'cupos':
+        isTouched = _cuposTocado;
+        break;
+      case 'noches':
+        isTouched = _nochesTocado;
+        break;
+    }
+
+    bool showError = isTouched && !isValid;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          label,
+          style: GoogleFonts.outfit(
+            fontSize: 12,
+            fontWeight: FontWeight.w500,
+            color: showError ? const Color(0xFFFC6707) : const Color(0xFF666666),
+          ),
+        ),
+        const SizedBox(height: 4),
+        TextField(
+          controller: controller,
+          onChanged: (_) {
+            onChanged?.call();
+            setState(() {
+              // Marcar el campo como tocado cuando el usuario comienza a escribir
+              switch (fieldKey) {
+                case 'titulo':
+                  _tituloTocado = true;
+                  break;
+                case 'ubicacion':
+                  _ubicacionTocado = true;
+                  break;
+                case 'precio':
+                  _precioTocado = true;
+                  break;
+                case 'cupos':
+                  _cuposTocado = true;
+                  break;
+                case 'noches':
+                  _nochesTocado = true;
+                  break;
+              }
+            });
+          },
+          keyboardType: isNumber ? TextInputType.number : TextInputType.text,
+          inputFormatters: isNumber ? [FilteringTextInputFormatter.digitsOnly] : null,
+          style: GoogleFonts.outfit(fontSize: 14),
+          decoration: InputDecoration(
+            hintText: hint,
+            hintStyle: GoogleFonts.outfit(fontSize: 14, color: const Color(0xFF999999)),
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(30),
+              borderSide: BorderSide(
+                color: showError ? const Color(0xFFFC6707) : const Color(0xFFE0E0E0),
+              ),
+            ),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(30),
+              borderSide: BorderSide(
+                color: showError ? const Color(0xFFFC6707) : const Color(0xFFE0E0E0),
+              ),
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(30),
+              borderSide: const BorderSide(color: Color(0xFFFC6707), width: 1.5),
+            ),
+            contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: small ? 10 : 14),
+          ),
+        ),
+        if (showError)
+          Padding(
+            padding: const EdgeInsets.only(top: 4, left: 4),
+            child: Text(
+              _getErrorMessage(fieldKey),
+              style: GoogleFonts.outfit(
+                fontSize: 12,
+                color: const Color(0xFFFC6707),
+              ),
+            ),
+          ),
+      ],
+    );
+  }
+
+  // Método para obtener el mensaje de error según el campo
+  String _getErrorMessage(String fieldKey) {
+    switch (fieldKey) {
+      case 'titulo':
+        return 'El título es requerido';
+      case 'ubicacion':
+        return 'Debe incluir un estado de Venezuela (ej: Miranda, Carabobo)';
+      case 'precio':
+        return 'El precio es requerido';
+      case 'cupos':
+        return 'Debe ser un número mayor a 0';
+      case 'portada':
+        return 'La imagen de portada es requerida';
+      case 'noches':
+        return 'La cantidad de noches es requerida';
+      default:
+        return 'Campo requerido';
+    }
+  }
+
+  Widget _buildTextField(
+    String label,
+    TextEditingController controller,
+    String hint, {
+    bool isNumber = false,
+    bool small = false,
+    VoidCallback? onChanged,
+  }) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -917,9 +1119,18 @@ class _OperatorPublishViewState extends State<OperatorPublishView> {
           decoration: InputDecoration(
             hintText: hint,
             hintStyle: GoogleFonts.outfit(fontSize: 14, color: const Color(0xFF999999)),
-            border: OutlineInputBorder(borderRadius: BorderRadius.circular(30), borderSide: const BorderSide(color: Color(0xFFE0E0E0))),
-            enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(30), borderSide: const BorderSide(color: Color(0xFFE0E0E0))),
-            focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(30), borderSide: const BorderSide(color: Color(0xFFFC6707), width: 1.5)),
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(30),
+              borderSide: const BorderSide(color: Color(0xFFE0E0E0)),
+            ),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(30),
+              borderSide: const BorderSide(color: Color(0xFFE0E0E0)),
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(30),
+              borderSide: const BorderSide(color: Color(0xFFFC6707), width: 1.5),
+            ),
             contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: small ? 10 : 14),
           ),
         ),
@@ -943,9 +1154,18 @@ class _OperatorPublishViewState extends State<OperatorPublishView> {
           decoration: InputDecoration(
             hintText: hint,
             hintStyle: GoogleFonts.outfit(fontSize: 14, color: const Color(0xFF999999)),
-            border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: const BorderSide(color: Color(0xFFE0E0E0))),
-            enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: const BorderSide(color: Color(0xFFE0E0E0))),
-            focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: const BorderSide(color: Color(0xFFFC6707), width: 1.5)),
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(16),
+              borderSide: const BorderSide(color: Color(0xFFE0E0E0)),
+            ),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(16),
+              borderSide: const BorderSide(color: Color(0xFFE0E0E0)),
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(16),
+              borderSide: const BorderSide(color: Color(0xFFFC6707), width: 1.5),
+            ),
             contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
           ),
         ),

@@ -110,7 +110,7 @@ class NotificacionService {
     required String estudianteCarnet,
     required String nombrePaquete,
   }) async {
-    final mensaje = '❌ $estudianteNombre $estudianteApellido (Carnet: $estudianteCarnet) ha cancelado su solicitud para el paquete "$nombrePaquete".';
+    final mensaje = '$estudianteNombre $estudianteApellido (Carnet: $estudianteCarnet) ha cancelado su solicitud para el paquete "$nombrePaquete".';
 
     await _crearNotificacion(
       coleccion: 'operadores',
@@ -149,7 +149,7 @@ class NotificacionService {
     required DateTime nuevaFecha,
   }) async {
     final fechaStr = '${nuevaFecha.day}/${nuevaFecha.month}/${nuevaFecha.year}';
-    final mensaje = '📅 $estudianteNombre $estudianteApellido (Carnet: $estudianteCarnet) modificó la fecha del paquete "$nombrePaquete" al $fechaStr.';
+    final mensaje = '$estudianteNombre $estudianteApellido (Carnet: $estudianteCarnet) modificó la fecha del paquete "$nombrePaquete" al $fechaStr.';
 
     await _crearNotificacion(
       coleccion: 'operadores',
@@ -167,7 +167,7 @@ class NotificacionService {
     required String nombrePaquete,
     required String reservaId,
   }) async {
-    final mensaje = '✅ ¡Buenas noticias! Tu solicitud para "$nombrePaquete" fue aceptada. Puedes proceder al pago desde "Mis Viajes".';
+    final mensaje = '¡Buenas noticias! Tu solicitud para "$nombrePaquete" fue aceptada. Puedes proceder al pago desde "Mis Viajes".';
 
     await _crearNotificacion(
       coleccion: 'estudiantes',
@@ -186,7 +186,7 @@ class NotificacionService {
     String? motivo,
   }) async {
     final motivoTexto = motivo != null && motivo.isNotEmpty ? ' Motivo: $motivo.' : '';
-    final mensaje = '❌ Tu solicitud para "$nombrePaquete" fue rechazada.$motivoTexto';
+    final mensaje = 'Tu solicitud para "$nombrePaquete" fue rechazada.$motivoTexto';
 
     await _crearNotificacion(
       coleccion: 'estudiantes',
@@ -202,7 +202,7 @@ class NotificacionService {
     required String nombrePaquete,
     required String reservaId,
   }) async {
-    final mensaje = '🎉 Tu pago para "$nombrePaquete" fue confirmado. ¡Tu cupo está asegurado!';
+    final mensaje = 'Tu pago para "$nombrePaquete" fue confirmado. ¡Tu cupo está asegurado!';
 
     await _crearNotificacion(
       coleccion: 'estudiantes',
@@ -220,7 +220,7 @@ class NotificacionService {
     String? motivo,
   }) async {
     final motivoTexto = motivo != null && motivo.isNotEmpty ? ' Motivo: $motivo.' : '';
-    final mensaje = '⚠️ Tu comprobante para "$nombrePaquete" fue rechazado.$motivoTexto Sube uno nuevo desde "Mis Viajes".';
+    final mensaje = 'Tu comprobante para "$nombrePaquete" fue rechazado.$motivoTexto Sube uno nuevo desde "Mis Viajes".';
 
     await _crearNotificacion(
       coleccion: 'estudiantes',

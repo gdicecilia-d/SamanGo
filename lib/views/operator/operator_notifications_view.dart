@@ -404,8 +404,6 @@ class _OperatorNotificationsViewState extends State<OperatorNotificationsView> {
                           fontSize: 13,
                           color: const Color(0xFF666666),
                         ),
-                        maxLines: 3,
-                        overflow: TextOverflow.ellipsis,
                       ),
                       const SizedBox(height: 6),
                       Text(

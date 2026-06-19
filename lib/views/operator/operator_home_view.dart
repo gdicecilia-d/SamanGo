@@ -32,7 +32,6 @@ class _OperatorHomeViewState extends State<OperatorHomeView> {
 
   int _totalPublicaciones = 0;
   int _totalReservas = 0;
-  int _reservasPendientes = 0;
   double _calificacionPromedio = 0;
   int _totalResenas = 0;
   bool _cargandoMetricas = true;
@@ -68,14 +67,6 @@ class _OperatorHomeViewState extends State<OperatorHomeView> {
       final reservasSnap = results[1] as QuerySnapshot;
       final operadorDoc = results[2] as DocumentSnapshot;
 
-      int pendientes = 0;
-      for (final doc in reservasSnap.docs) {
-        final estado = doc['estadoActual'] as String? ?? '';
-        if (estado == 'solicitado' || estado == 'verificandoPago') {
-          pendientes++;
-        }
-      }
-
       final operadorData = operadorDoc.data() as Map<String, dynamic>? ?? {};
       final calificacion = (operadorData['calificacionPromedio'] as num? ?? 0).toDouble();
       final totalResenas = (operadorData['totalResenas'] as num? ?? 0).toInt();
@@ -84,7 +75,6 @@ class _OperatorHomeViewState extends State<OperatorHomeView> {
         setState(() {
           _totalPublicaciones = destinosSnap.docs.length;
           _totalReservas = reservasSnap.docs.length;
-          _reservasPendientes = pendientes;
           _calificacionPromedio = calificacion;
           _totalResenas = totalResenas;
           _cargandoMetricas = false;
@@ -203,94 +193,8 @@ class _OperatorHomeViewState extends State<OperatorHomeView> {
           ),
           Expanded(
             child: isMobile
-                ? SingleChildScrollView(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const SizedBox(height: 16),
-                        Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 16),
-                          child: RichText(
-                            text: TextSpan(
-                              style: GoogleFonts.outfit(
-                                fontSize: 22,
-                                fontWeight: FontWeight.bold,
-                                color: const Color(0xFF333333),
-                              ),
-                              children: [
-                                const TextSpan(text: '¡Hola '),
-                                TextSpan(text: empresa, style: const TextStyle(color: Color(0xFFFC6707))),
-                                const TextSpan(text: '! Revisa el estado de tus servicios'),
-                              ],
-                            ),
-                          ),
-                        ),
-                        const SizedBox(height: 24),
-                        _buildMainContent(isMobile: true, operadorId: operadorId),
-                        const SizedBox(height: 40),
-                        _buildFooter(true),
-                      ],
-                    ),
-                  )
-                : Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Expanded(
-                        flex: 7,
-                        child: Container(
-                          decoration: const BoxDecoration(
-                            border: Border(
-                              right: BorderSide(
-                                color: Color(0xFFE0E0E0),
-                                width: 1.5,
-                              ),
-                            ),
-                          ),
-                          child: SingleChildScrollView(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                const SizedBox(height: 16),
-                                Padding(
-                                  padding: const EdgeInsets.symmetric(horizontal: 24),
-                                  child: RichText(
-                                    text: TextSpan(
-                                      style: GoogleFonts.outfit(
-                                        fontSize: 28,
-                                        fontWeight: FontWeight.bold,
-                                        color: const Color(0xFF333333),
-                                      ),
-                                      children: [
-                                        const TextSpan(text: '¡Hola '),
-                                        TextSpan(text: empresa, style: const TextStyle(color: Color(0xFFFC6707))),
-                                        const TextSpan(text: '! Revisa el estado de tus servicios'),
-                                      ],
-                                    ),
-                                  ),
-                                ),
-                                const SizedBox(height: 32),
-                                _buildMainContent(isMobile: false, operadorId: operadorId),
-                                _buildFooter(false),
-                              ],
-                            ),
-                          ),
-                        ),
-                      ),
-                      Container(
-                        width: 320,
-                        child: SingleChildScrollView(
-                          padding: const EdgeInsets.symmetric(vertical: 20),
-                          child: Column(
-                            mainAxisAlignment: MainAxisAlignment.start,
-                            children: [
-                              const NotificationsPanel(),
-                              const SizedBox(height: 80),
-                            ],
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
+                ? _buildMobileLayout(operadorId, empresa)
+                : _buildDesktopLayout(operadorId, empresa),
           ),
         ],
       ),
@@ -301,6 +205,131 @@ class _OperatorHomeViewState extends State<OperatorHomeView> {
               child: const Icon(Icons.help_outline, color: Colors.white),
             )
           : null,
+    );
+  }
+
+  // Layout para móvil con CustomScrollView
+  Widget _buildMobileLayout(String operadorId, String empresa) {
+    return CustomScrollView(
+      slivers: [
+        // Contenido principal
+        SliverToBoxAdapter(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const SizedBox(height: 16),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                child: RichText(
+                  text: TextSpan(
+                    style: GoogleFonts.outfit(
+                      fontSize: 22,
+                      fontWeight: FontWeight.bold,
+                      color: const Color(0xFF333333),
+                    ),
+                    children: [
+                      const TextSpan(text: '¡Hola '),
+                      TextSpan(text: empresa, style: const TextStyle(color: Color(0xFFFC6707))),
+                      const TextSpan(text: '! Revisa el estado de tus servicios'),
+                    ],
+                  ),
+                ),
+              ),
+              const SizedBox(height: 24),
+              _buildMainContent(isMobile: true, operadorId: operadorId),
+              const SizedBox(height: 16),
+            ],
+          ),
+        ),
+        SliverFillRemaining(
+          hasScrollBody: false,
+          child: Column(
+            children: [
+              const Spacer(), 
+              _buildFooter(true), 
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  // Layout para desktop con CustomScrollView en el panel izquierdo
+  Widget _buildDesktopLayout(String operadorId, String empresa) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Expanded(
+          flex: 7,
+          child: Container(
+            decoration: const BoxDecoration(
+              border: Border(
+                right: BorderSide(
+                  color: Color(0xFFE0E0E0),
+                  width: 1.5,
+                ),
+              ),
+            ),
+            child: CustomScrollView(
+              slivers: [
+                // Contenido principal
+                SliverToBoxAdapter(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const SizedBox(height: 16),
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 24),
+                        child: RichText(
+                          text: TextSpan(
+                            style: GoogleFonts.outfit(
+                              fontSize: 28,
+                              fontWeight: FontWeight.bold,
+                              color: const Color(0xFF333333),
+                            ),
+                            children: [
+                              const TextSpan(text: '¡Hola '),
+                              TextSpan(text: empresa, style: const TextStyle(color: Color(0xFFFC6707))),
+                              const TextSpan(text: '! Revisa el estado de tus servicios'),
+                            ],
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 32),
+                      _buildMainContent(isMobile: false, operadorId: operadorId),
+                      // Espacio extra para separación visual
+                      const SizedBox(height: 16),
+                    ],
+                  ),
+                ),
+                SliverFillRemaining(
+                  hasScrollBody: false,
+                  child: Column(
+                    children: [
+                      const Spacer(), 
+                      _buildFooter(false), 
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+        // Panel derecho de notificaciones (fijo)
+        Container(
+          width: 320,
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.symmetric(vertical: 20),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.start,
+              children: [
+                const NotificationsPanel(),
+                const SizedBox(height: 80),
+              ],
+            ),
+          ),
+        ),
+      ],
     );
   }
 
@@ -445,7 +474,7 @@ class _OperatorHomeViewState extends State<OperatorHomeView> {
           child: ListView.separated(
             scrollDirection: Axis.horizontal,
             padding: EdgeInsets.symmetric(horizontal: isMobile ? 16 : 24),
-            itemCount: 3,
+            itemCount: 2,
             separatorBuilder: (_, __) => const SizedBox(width: 16),
             itemBuilder: (context, index) {
               final metrics = [
@@ -454,12 +483,6 @@ class _OperatorHomeViewState extends State<OperatorHomeView> {
                   'valor': '$_totalPublicaciones',
                   'icono': Icons.tour_outlined,
                   'color': const Color(0xFFFC6707),
-                },
-                {
-                  'titulo': 'Solicitudes Pendientes',
-                  'valor': '$_reservasPendientes',
-                  'icono': Icons.pending_actions_outlined,
-                  'color': _reservasPendientes > 0 ? Colors.red : const Color(0xFF888888),
                 },
                 {
                   'titulo': 'Calificación',
@@ -570,7 +593,6 @@ class _OperatorHomeViewState extends State<OperatorHomeView> {
               );
             }
 
-            // Cards con scroll horizontal
             final cards = destinos.map((doc) {
               final data = doc.data() as Map<String, dynamic>;
               return OperatorDestinationCard(
@@ -598,6 +620,7 @@ class _OperatorHomeViewState extends State<OperatorHomeView> {
             );
           },
         ),
+        const SizedBox(height: 20),
       ],
     );
   }
@@ -678,7 +701,6 @@ class _OperatorHomeViewState extends State<OperatorHomeView> {
     return Container(
       width: double.infinity,
       padding: EdgeInsets.symmetric(vertical: isMobile ? 12 : 16),
-      margin: const EdgeInsets.only(top: 40),
       decoration: const BoxDecoration(
         color: Color(0xFFFC6707),
         borderRadius: BorderRadius.only(
