@@ -16,6 +16,7 @@ import 'requests_view.dart';
 import 'operator_notifications_view.dart';
 import '../../views/shared/widgets/custom_dialog.dart';
 import '../auth/login_view.dart';
+import '../auth/account_disabled_view.dart';
 
 class OperatorPublishView extends StatefulWidget {
   const OperatorPublishView({super.key});
@@ -86,6 +87,7 @@ class _OperatorPublishViewState extends State<OperatorPublishView> {
   String _operadorId = '';
   Map<String, dynamic>? _operadorData;
   bool _cargandoOperador = true;
+  bool _estaInhabilitado = false;
 
   @override
   void initState() {
@@ -114,6 +116,7 @@ class _OperatorPublishViewState extends State<OperatorPublishView> {
     if (user != null) {
       setState(() {
         _operadorId = user.id;
+        _estaInhabilitado = auth.esInhabilitado;
       });
       
       try {
@@ -317,7 +320,118 @@ class _OperatorPublishViewState extends State<OperatorPublishView> {
     return incluidos.isEmpty ? 'No especificado' : incluidos.join(', ');
   }
 
+  void _mostrarDialogoInhabilitado() {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(20),
+        ),
+        elevation: 4,
+        backgroundColor: Colors.white,
+        contentPadding: const EdgeInsets.all(24),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 60,
+              height: 60,
+              decoration: BoxDecoration(
+                color: const Color(0xFFFC6707).withOpacity(0.15),
+                shape: BoxShape.circle,
+              ),
+              child: Icon(
+                Icons.block,
+                color: const Color(0xFFFC6707),
+                size: 40,
+              ),
+            ),
+            const SizedBox(height: 16),
+            Text(
+              'Cuenta Inhabilitada',
+              style: GoogleFonts.outfit(
+                fontSize: 20,
+                fontWeight: FontWeight.bold,
+                color: const Color(0xFF333333),
+              ),
+            ),
+            const SizedBox(height: 12),
+            Text(
+              'Tu cuenta ha sido inhabilitada por un administrador.\nNo puedes publicar nuevos paquetes en este momento.',
+              textAlign: TextAlign.center,
+              style: GoogleFonts.outfit(
+                fontSize: 14,
+                color: const Color(0xFF666666),
+                height: 1.5,
+              ),
+            ),
+            const SizedBox(height: 24),
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton(
+                onPressed: () async {
+                  Navigator.pop(context);
+                  Navigator.pushReplacement(
+                    context,
+                    MaterialPageRoute(builder: (_) => const AccountDisabledView()),
+                  );
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFFFC6707),
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(vertical: 12),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(30),
+                  ),
+                ),
+                child: Text(
+                  'Apelar',
+                  style: GoogleFonts.outfit(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(height: 8),
+            SizedBox(
+              width: double.infinity,
+              child: OutlinedButton(
+                onPressed: () {
+                  Navigator.pop(context);
+                  Navigator.pop(context);
+                },
+                style: OutlinedButton.styleFrom(
+                  backgroundColor: Colors.white,
+                  foregroundColor: const Color(0xFF666666),
+                  padding: const EdgeInsets.symmetric(vertical: 12),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(30),
+                  ),
+                  side: const BorderSide(color: Color(0xFFE0E0E0)),
+                ),
+                child: Text(
+                  'Entendido',
+                  style: GoogleFonts.outfit(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   Future<void> _publicarTour() async {
+    if (_estaInhabilitado) {
+      _mostrarDialogoInhabilitado();
+      return;
+    }
+
     _marcarTodosLosCampos();
 
     if (_tituloController.text.trim().isEmpty) {
@@ -508,6 +622,113 @@ class _OperatorPublishViewState extends State<OperatorPublishView> {
     final isLargeScreen = screenWidth > 1400;
     final double backButtonSize = isLargeScreen ? 20 : 16;
     final double backButtonTop = isMobile ? 80 : (isLargeScreen ? 100 : 80);
+
+    if (_estaInhabilitado) {
+      return Scaffold(
+        key: _scaffoldKey,
+        backgroundColor: Colors.white,
+        body: Center(
+          child: SingleChildScrollView(
+            padding: EdgeInsets.all(isMobile ? 16 : 32),
+            child: Container(
+              width: isMobile ? double.infinity : 500,
+              padding: EdgeInsets.all(isMobile ? 24 : 40),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(24),
+                border: Border.all(color: const Color(0xFFE0E0E0), width: 1),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.05),
+                    blurRadius: 20,
+                    offset: const Offset(0, 8),
+                  ),
+                ],
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Container(
+                    width: 80,
+                    height: 80,
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFFC6707).withOpacity(0.15),
+                      shape: BoxShape.circle,
+                    ),
+                    child: Icon(
+                      Icons.block,
+                      color: const Color(0xFFFC6707),
+                      size: 48,
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+                  Text(
+                    'Cuenta Inhabilitada',
+                    style: GoogleFonts.outfit(
+                      fontSize: 24,
+                      fontWeight: FontWeight.bold,
+                      color: const Color(0xFF333333),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  Text(
+                    'Tu cuenta ha sido inhabilitada por un administrador. '
+                    'No puedes publicar nuevos paquetes en este momento. '
+                    'Si consideras que se trata de un error, puedes enviar una '
+                    'apelación para que tu caso sea revisado.',
+                    textAlign: TextAlign.center,
+                    style: GoogleFonts.outfit(
+                      fontSize: 14,
+                      color: const Color(0xFF666666),
+                      height: 1.5,
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton(
+                      onPressed: () {
+                        Navigator.pushReplacement(
+                          context,
+                          MaterialPageRoute(builder: (_) => const AccountDisabledView()),
+                        );
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFFFC6707),
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(30),
+                        ),
+                      ),
+                      child: Text(
+                        'Enviar apelación',
+                        style: GoogleFonts.outfit(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  TextButton(
+                    onPressed: () => Navigator.pop(context),
+                    child: Text(
+                      'Volver',
+                      style: GoogleFonts.outfit(
+                        fontSize: 14,
+                        color: const Color(0xFFFC6707),
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      );
+    }
 
     return Scaffold(
       key: _scaffoldKey,
@@ -1410,7 +1631,7 @@ class _OperatorPublishViewState extends State<OperatorPublishView> {
           child: AnimatedContainer(
             duration: const Duration(milliseconds: 200),
             child: ElevatedButton(
-              onPressed: _isUploadingImages ? null : _publicarTour,
+              onPressed: (_isUploadingImages || _estaInhabilitado) ? null : _publicarTour,
               style: ElevatedButton.styleFrom(
                 backgroundColor: const Color(0xFFFC6707),
                 foregroundColor: Colors.white,

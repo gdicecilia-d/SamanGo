@@ -86,7 +86,12 @@ class PayPalService {
       final approveUrl = approveLink['href'];
 
       if (kIsWeb) {
-        // Redirigir en la misma pestaña (evita popups que no se cierran)
+        html.window.localStorage['paypal_pending'] = jsonEncode({
+          'reservaId': reservaId,
+          'destinoId': destinoId,
+          'estudianteId': estudianteId,
+          'timestamp': DateTime.now().millisecondsSinceEpoch,
+        });
         html.window.location.href = approveUrl;
         return true;
       }
@@ -104,6 +109,7 @@ class PayPalService {
       return result == true;
       
     } catch (e) {
+      print('Error en PayPal: $e');
       return false;
     }
   }

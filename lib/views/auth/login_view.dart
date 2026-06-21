@@ -1,4 +1,3 @@
-// Pantalla de iniciar sesión
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
@@ -59,8 +58,23 @@ class _LoginViewState extends State<LoginView> {
       _isLoading = false;
     });
 
+    if (result is String && result == 'Cuenta inhabilitada') {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) {
+          _mostrarDialogoCuentaInhabilitada();
+        }
+      });
+      return;
+    }
+
     if (result == true) {
-      final usuario = authController.usuarioActual!;
+      final usuario = authController.usuarioActual;
+      
+      if (usuario == null) {
+        _mostrarMensaje('Error al obtener datos del usuario', isError: true);
+        return;
+      }
+      
       if (usuario.isEstudiante) {
         Navigator.pushReplacement(
           context,
@@ -98,7 +112,6 @@ class _LoginViewState extends State<LoginView> {
     }
   }
 
-  // ✅ MÉTODO LOGIN CON DIÁLOGO DE CUENTA INHABILITADA
   Future<void> _handleLogin() async {
     if (_emailController.text.isEmpty || _passwordController.text.isEmpty) {
       setState(() {
@@ -174,7 +187,7 @@ class _LoginViewState extends State<LoginView> {
     showDialog(
       context: context,
       barrierDismissible: false,
-      builder: (context) => AlertDialog(
+      builder: (BuildContext dialogContext) => AlertDialog(
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(20),
         ),
@@ -188,12 +201,12 @@ class _LoginViewState extends State<LoginView> {
               width: 60,
               height: 60,
               decoration: BoxDecoration(
-                color: const Color(0xFFFF9800).withOpacity(0.15),
+                color: const Color(0xFFFC6707).withOpacity(0.15),
                 shape: BoxShape.circle,
               ),
               child: Icon(
                 Icons.block,
-                color: const Color(0xFFFF9800),
+                color: const Color(0xFFFC6707),
                 size: 40,
               ),
             ),
@@ -220,10 +233,8 @@ class _LoginViewState extends State<LoginView> {
             SizedBox(
               width: double.infinity,
               child: ElevatedButton(
-                onPressed: () async {
-                  Navigator.pop(context);
-                  await Provider.of<AuthController>(context, listen: false).logout();
-                  if (!mounted) return;
+                onPressed: () {
+                  Navigator.pop(dialogContext);
                   Navigator.pushReplacement(
                     context,
                     MaterialPageRoute(builder: (_) => const AccountDisabledView()),
@@ -251,7 +262,7 @@ class _LoginViewState extends State<LoginView> {
               width: double.infinity,
               child: OutlinedButton(
                 onPressed: () async {
-                  Navigator.pop(context);
+                  Navigator.pop(dialogContext);
                   await Provider.of<AuthController>(context, listen: false).logout();
                   if (!mounted) return;
                   Navigator.pushReplacement(
@@ -471,7 +482,6 @@ class _LoginViewState extends State<LoginView> {
       );
     }
 
-    // Computadora
     return AuthBaseView(
       bottomText: '¿No tienes cuenta? ',
       bottomLinkText: 'Regístrate Aquí',

@@ -17,6 +17,7 @@ class Usuario {
   final String? descripcion;
   final String? carrera;
   final String? estado;
+  final bool activo;
 
   const Usuario({
     required this.id,
@@ -36,6 +37,7 @@ class Usuario {
     this.descripcion,
     this.carrera,
     this.estado,
+    this.activo = true,
   });
 
   factory Usuario.fromMap(String uid, Map<String, dynamic> map) {
@@ -57,6 +59,7 @@ class Usuario {
       descripcion: map['descripcion'] as String?,
       carrera: map['carrera'] as String?,
       estado: map['estado'] as String?,
+      activo: map['activo'] as bool? ?? true,
     );
   }
 
@@ -79,10 +82,11 @@ class Usuario {
       if (descripcion != null) 'descripcion': descripcion,
       if (carrera != null) 'carrera': carrera,
       if (estado != null) 'estado': estado,
+      'activo': activo,
     };
   }
 
-  static const empty = Usuario(id: '', nombre: '', correo: '', rol: '');
+  static const empty = Usuario(id: '', nombre: '', correo: '', rol: '', activo: true);
 
   bool get isEmpty => id.isEmpty;
   bool get isNotEmpty => id.isNotEmpty;

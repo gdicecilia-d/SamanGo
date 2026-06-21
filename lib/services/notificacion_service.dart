@@ -91,7 +91,7 @@ class NotificacionService {
     required String nombrePaquete,
     required String reservaId,
   }) async {
-    final mensaje = '📋 $estudianteNombre $estudianteApellido (Carnet: $estudianteCarnet) ha solicitado cupo para el paquete "$nombrePaquete".';
+    final mensaje = '$estudianteNombre $estudianteApellido (Carnet: $estudianteCarnet) ha solicitado cupo para el paquete "$nombrePaquete".';
 
     await _crearNotificacion(
       coleccion: 'operadores',
@@ -129,7 +129,7 @@ class NotificacionService {
     required String estudianteCarnet,
     required String nombrePaquete,
   }) async {
-    final mensaje = '💵 $estudianteNombre $estudianteApellido (Carnet: $estudianteCarnet) ha enviado el comprobante de pago para "$nombrePaquete". Revísalo en la pestaña Pagos.';
+    final mensaje = '$estudianteNombre $estudianteApellido (Carnet: $estudianteCarnet) ha enviado el comprobante de pago para "$nombrePaquete". Revísalo en la pestaña Pagos.';
 
     await _crearNotificacion(
       coleccion: 'operadores',

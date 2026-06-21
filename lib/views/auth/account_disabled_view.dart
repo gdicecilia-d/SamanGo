@@ -14,115 +14,211 @@ class AccountDisabledView extends StatefulWidget {
 }
 
 class _AccountDisabledViewState extends State<AccountDisabledView> {
+  final TextEditingController _emailController = TextEditingController();
   final TextEditingController _apelacionController = TextEditingController();
   bool _enviando = false;
+  bool _cargando = false;
   String? _userId;
   String? _userEmail;
   String? _userName;
-  bool _cargando = true;
+  String? _userRol;
+  bool _usuarioEncontrado = false;
+  String? _emailError;
 
   @override
   void initState() {
     super.initState();
-    _cargarDatosUsuario();
+    _emailController.addListener(_onEmailChanged);
+    _cargarUsuarioActual();
   }
 
   @override
   void dispose() {
+    _emailController.dispose();
     _apelacionController.dispose();
     super.dispose();
   }
 
-  Future<void> _cargarDatosUsuario() async {
-    setState(() => _cargando = true);
-    
+  void _onEmailChanged() {
+    setState(() {
+      _emailError = null;
+      _usuarioEncontrado = false;
+      _userId = null;
+      _userName = null;
+      _userEmail = null;
+      _userRol = null;
+    });
+  }
+
+  Future<void> _cargarUsuarioActual() async {
     try {
       final auth = Provider.of<AuthController>(context, listen: false);
+      final usuario = auth.usuarioActual;
       
-      if (auth.usuarioActual != null && auth.usuarioActual!.id.isNotEmpty) {
-        final usuario = auth.usuarioActual!;
+      if (usuario != null && usuario.id.isNotEmpty) {
         setState(() {
+          _emailController.text = usuario.correo;
           _userId = usuario.id;
-          _userEmail = usuario.correo;
           _userName = usuario.nombre;
-          _cargando = false;
+          _userEmail = usuario.correo;
+          _userRol = usuario.rol;
+          _usuarioEncontrado = true;
         });
         return;
       }
 
       final firebaseUser = FirebaseAuth.instance.currentUser;
-      
       if (firebaseUser != null) {
-        final uid = firebaseUser.uid;
         final email = firebaseUser.email;
-        
-        final estudianteDoc = await FirebaseFirestore.instance
-            .collection('estudiantes')
-            .doc(uid)
-            .get();
-        
-        if (estudianteDoc.exists) {
-          final data = estudianteDoc.data() as Map<String, dynamic>?;
+        if (email != null && email.isNotEmpty) {
           setState(() {
-            _userId = uid;
-            _userEmail = email ?? data?['correo'] ?? '';
-            _userName = data?['nombre'] ?? 'Usuario';
-            _cargando = false;
+            _emailController.text = email;
           });
-          return;
+          
+          final uid = firebaseUser.uid;
+          
+          final estudianteDoc = await FirebaseFirestore.instance
+              .collection('estudiantes')
+              .doc(uid)
+              .get();
+          
+          if (estudianteDoc.exists) {
+            final data = estudianteDoc.data() as Map<String, dynamic>?;
+            setState(() {
+              _userId = uid;
+              _userEmail = email;
+              _userName = data?['nombre'] ?? 'Usuario';
+              _userRol = 'estudiante';
+              _usuarioEncontrado = true;
+            });
+            return;
+          }
+          
+          final operadorDoc = await FirebaseFirestore.instance
+              .collection('operadores')
+              .doc(uid)
+              .get();
+          
+          if (operadorDoc.exists) {
+            final data = operadorDoc.data() as Map<String, dynamic>?;
+            setState(() {
+              _userId = uid;
+              _userEmail = email;
+              _userName = data?['nombre'] ?? 'Usuario';
+              _userRol = 'operador';
+              _usuarioEncontrado = true;
+            });
+            return;
+          }
+          
+          final adminDoc = await FirebaseFirestore.instance
+              .collection('administradores')
+              .doc(uid)
+              .get();
+          
+          if (adminDoc.exists) {
+            final data = adminDoc.data() as Map<String, dynamic>?;
+            setState(() {
+              _userId = uid;
+              _userEmail = email;
+              _userName = data?['nombre'] ?? 'Usuario';
+              _userRol = 'administrador';
+              _usuarioEncontrado = true;
+            });
+            return;
+          }
         }
-        
-        final operadorDoc = await FirebaseFirestore.instance
+      }
+    } catch (e) {
+      print('Error cargando usuario actual: $e');
+    }
+  }
+
+  Future<void> _buscarUsuarioPorEmail() async {
+    final email = _emailController.text.trim();
+    if (email.isEmpty) {
+      setState(() {
+        _emailError = 'Ingresa un correo electrónico';
+      });
+      return;
+    }
+
+    setState(() {
+      _cargando = true;
+      _emailError = null;
+    });
+
+    try {
+      final db = FirebaseFirestore.instance;
+      String? encontradoId;
+      String? encontradoNombre;
+      String? encontradoEmail;
+      String? encontradoRol;
+
+      final estudiantes = await db
+          .collection('estudiantes')
+          .where('correo', isEqualTo: email)
+          .limit(1)
+          .get();
+
+      if (estudiantes.docs.isNotEmpty) {
+        final data = estudiantes.docs.first.data();
+        encontradoId = estudiantes.docs.first.id;
+        encontradoNombre = data['nombre'] ?? 'Usuario';
+        encontradoEmail = data['correo'] ?? email;
+        encontradoRol = 'estudiante';
+      }
+
+      if (encontradoId == null) {
+        final operadores = await db
             .collection('operadores')
-            .doc(uid)
+            .where('correo', isEqualTo: email)
+            .limit(1)
             .get();
-        
-        if (operadorDoc.exists) {
-          final data = operadorDoc.data() as Map<String, dynamic>?;
-          setState(() {
-            _userId = uid;
-            _userEmail = email ?? data?['correo'] ?? '';
-            _userName = data?['nombre'] ?? 'Usuario';
-            _cargando = false;
-          });
-          return;
+
+        if (operadores.docs.isNotEmpty) {
+          final data = operadores.docs.first.data();
+          encontradoId = operadores.docs.first.id;
+          encontradoNombre = data['nombre'] ?? 'Usuario';
+          encontradoEmail = data['correo'] ?? email;
+          encontradoRol = 'operador';
         }
-        
-        final adminDoc = await FirebaseFirestore.instance
+      }
+
+      if (encontradoId == null) {
+        final admins = await db
             .collection('administradores')
-            .doc(uid)
+            .where('correo', isEqualTo: email)
+            .limit(1)
             .get();
-        
-        if (adminDoc.exists) {
-          final data = adminDoc.data() as Map<String, dynamic>?;
-          setState(() {
-            _userId = uid;
-            _userEmail = email ?? data?['correo'] ?? '';
-            _userName = data?['nombre'] ?? 'Usuario';
-            _cargando = false;
-          });
-          return;
+
+        if (admins.docs.isNotEmpty) {
+          final data = admins.docs.first.data();
+          encontradoId = admins.docs.first.id;
+          encontradoNombre = data['nombre'] ?? 'Usuario';
+          encontradoEmail = data['correo'] ?? email;
+          encontradoRol = 'administrador';
         }
-        
+      }
+
+      if (encontradoId != null) {
         setState(() {
-          _userId = uid;
-          _userEmail = email ?? '';
-          _userName = 'Usuario';
+          _userId = encontradoId;
+          _userName = encontradoNombre;
+          _userEmail = encontradoEmail;
+          _userRol = encontradoRol;
+          _usuarioEncontrado = true;
           _cargando = false;
         });
       } else {
         setState(() {
-          _userId = 'usuario_desconocido_${DateTime.now().millisecondsSinceEpoch}';
-          _userEmail = '';
-          _userName = 'Usuario';
+          _emailError = 'No se encontró ningún usuario con ese correo';
           _cargando = false;
         });
       }
     } catch (e) {
       setState(() {
-        _userId = 'usuario_desconocido_${DateTime.now().millisecondsSinceEpoch}';
-        _userEmail = '';
-        _userName = 'Usuario';
+        _emailError = 'Error al buscar el usuario';
         _cargando = false;
       });
     }
@@ -143,17 +239,9 @@ class _AccountDisabledViewState extends State<AccountDisabledView> {
     if (_userId == null || _userId!.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('No se pudo identificar al usuario. Cerrando sesión...'),
+          content: Text('Primero verifica tu correo electrónico'),
           backgroundColor: Color(0xFFFC6707),
         ),
-      );
-      final auth = Provider.of<AuthController>(context, listen: false);
-      await auth.logout();
-      if (!mounted) return;
-      Navigator.pushAndRemoveUntil(
-        context,
-        MaterialPageRoute(builder: (_) => const LoginView()),
-        (route) => false,
       );
       return;
     }
@@ -172,6 +260,7 @@ class _AccountDisabledViewState extends State<AccountDisabledView> {
         'fecha': FieldValue.serverTimestamp(),
         'usuarioId': _userId,
         'correo': _userEmail ?? '',
+        'rol': _userRol ?? '',
       });
 
       ScaffoldMessenger.of(context).showSnackBar(
@@ -236,120 +325,228 @@ class _AccountDisabledViewState extends State<AccountDisabledView> {
                 ),
               ],
             ),
-            child: _cargando
-                ? const Center(
-                    child: Padding(
-                      padding: EdgeInsets.all(40.0),
-                      child: CircularProgressIndicator(color: Color(0xFFFC6707)),
-                    ),
-                  )
-                : Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Container(
-                        width: 80,
-                        height: 80,
-                        decoration: BoxDecoration(
-                          color: const Color(0xFFFF9800).withOpacity(0.15),
-                          shape: BoxShape.circle,
-                        ),
-                        child: Icon(
-                          Icons.block,
-                          color: const Color(0xFFFF9800),
-                          size: 48,
-                        ),
-                      ),
-                      const SizedBox(height: 24),
-                      Text(
-                        'Cuenta Inhabilitada',
-                        style: GoogleFonts.outfit(
-                          fontSize: 24,
-                          fontWeight: FontWeight.bold,
-                          color: const Color(0xFF333333),
-                        ),
-                      ),
-                      const SizedBox(height: 16),
-                      Text(
-                        'Tu cuenta ha sido inhabilitada por un administrador. '
-                        'No puedes acceder a la plataforma en este momento. '
-                        'Si consideras que se trata de un error, puedes enviar una '
-                        'apelación para que tu caso sea revisado.',
-                        textAlign: TextAlign.center,
-                        style: GoogleFonts.outfit(
-                          fontSize: 14,
-                          color: const Color(0xFF666666),
-                          height: 1.5,
-                        ),
-                      ),
-                      const SizedBox(height: 24),
-                      Container(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  width: 80,
+                  height: 80,
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFFC6707).withOpacity(0.15),
+                    shape: BoxShape.circle,
+                  ),
+                  child: Icon(
+                    Icons.block,
+                    color: const Color(0xFFFC6707),
+                    size: 48,
+                  ),
+                ),
+                const SizedBox(height: 24),
+                Text(
+                  'Cuenta Inhabilitada',
+                  style: GoogleFonts.outfit(
+                    fontSize: 24,
+                    fontWeight: FontWeight.bold,
+                    color: const Color(0xFF333333),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                Text(
+                  'Tu cuenta ha sido inhabilitada por un administrador. '
+                  'Para enviar una apelación, primero verifica tu correo electrónico.',
+                  textAlign: TextAlign.center,
+                  style: GoogleFonts.outfit(
+                    fontSize: 14,
+                    color: const Color(0xFF666666),
+                    height: 1.5,
+                  ),
+                ),
+                const SizedBox(height: 24),
+                Row(
+                  children: [
+                    Expanded(
+                      child: Container(
                         decoration: BoxDecoration(
                           color: const Color(0xFFF5F5F5),
                           borderRadius: BorderRadius.circular(12),
+                          border: Border.all(
+                            color: _emailError != null ? const Color(0xFFFC6707) : Colors.transparent,
+                            width: 1.5,
+                          ),
                         ),
                         child: TextField(
-                          controller: _apelacionController,
-                          maxLines: 4,
+                          controller: _emailController,
                           decoration: InputDecoration(
-                            hintText: 'Escribe tu apelación aquí...',
+                            hintText: 'Ingresa tu correo electrónico',
                             hintStyle: GoogleFonts.outfit(
                               fontSize: 14,
                               color: const Color(0xFF999999),
                             ),
                             border: InputBorder.none,
-                            contentPadding: const EdgeInsets.all(16),
+                            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                            suffixIcon: _cargando
+                                ? const Padding(
+                                    padding: EdgeInsets.all(12),
+                                    child: SizedBox(
+                                      width: 20,
+                                      height: 20,
+                                      child: CircularProgressIndicator(
+                                        strokeWidth: 2,
+                                        color: Color(0xFFFC6707),
+                                      ),
+                                    ),
+                                  )
+                                : null,
                           ),
                           style: GoogleFonts.outfit(
                             fontSize: 14,
                             color: const Color(0xFF333333),
                           ),
+                          onSubmitted: (_) => _buscarUsuarioPorEmail(),
                         ),
                       ),
-                      const SizedBox(height: 24),
-                      SizedBox(
-                        width: double.infinity,
-                        child: ElevatedButton(
-                          onPressed: _enviando ? null : _enviarApelacion,
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: const Color(0xFFFC6707),
-                            foregroundColor: Colors.white,
-                            padding: const EdgeInsets.symmetric(vertical: 14),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(30),
+                    ),
+                    const SizedBox(width: 12),
+                    ElevatedButton(
+                      onPressed: _cargando ? null : _buscarUsuarioPorEmail,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFFFC6707),
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                      child: Text(
+                        'Verificar',
+                        style: GoogleFonts.outfit(
+                          fontSize: 14,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                if (_emailError != null)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 8, left: 4),
+                    child: Align(
+                      alignment: Alignment.centerLeft,
+                      child: Text(
+                        _emailError!,
+                        style: GoogleFonts.outfit(
+                          fontSize: 12,
+                          color: const Color(0xFFFC6707),
+                        ),
+                      ),
+                    ),
+                  ),
+                if (_usuarioEncontrado)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 8),
+                    child: Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFFC6707).withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(
+                          color: const Color(0xFFFC6707),
+                          width: 1,
+                        ),
+                      ),
+                      child: Row(
+                        children: [
+                          Icon(
+                            Icons.check_circle,
+                            color: const Color(0xFFFC6707),
+                            size: 20,
+                          ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              'Usuario verificado: $_userName (${_userRol ?? 'usuario'})',
+                              style: GoogleFonts.outfit(
+                                fontSize: 13,
+                                color: const Color(0xFF333333),
+                              ),
                             ),
                           ),
-                          child: _enviando
-                              ? const SizedBox(
-                                  height: 20,
-                                  width: 20,
-                                  child: CircularProgressIndicator(
-                                    strokeWidth: 2,
-                                    color: Colors.white,
-                                  ),
-                                )
-                              : Text(
-                                  'Enviar apelación',
-                                  style: GoogleFonts.outfit(
-                                    fontSize: 16,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                        ),
+                        ],
                       ),
-                      const SizedBox(height: 12),
-                      TextButton(
-                        onPressed: _volverAlLogin,
-                        child: Text(
-                          'Volver al inicio',
-                          style: GoogleFonts.outfit(
-                            fontSize: 14,
-                            color: const Color(0xFFFC6707),
-                            fontWeight: FontWeight.w500,
-                          ),
-                        ),
-                      ),
-                    ],
+                    ),
                   ),
+                const SizedBox(height: 16),
+                Container(
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFF5F5F5),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: TextField(
+                    controller: _apelacionController,
+                    maxLines: 4,
+                    enabled: _usuarioEncontrado,
+                    decoration: InputDecoration(
+                      hintText: _usuarioEncontrado
+                          ? 'Escribe tu apelación aquí...'
+                          : 'Primero verifica tu correo',
+                      hintStyle: GoogleFonts.outfit(
+                        fontSize: 14,
+                        color: const Color(0xFF999999),
+                      ),
+                      border: InputBorder.none,
+                      contentPadding: const EdgeInsets.all(16),
+                    ),
+                    style: GoogleFonts.outfit(
+                      fontSize: 14,
+                      color: _usuarioEncontrado ? const Color(0xFF333333) : const Color(0xFF999999),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 24),
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton(
+                    onPressed: (!_usuarioEncontrado || _enviando) ? null : _enviarApelacion,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFFFC6707),
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(30),
+                      ),
+                    ),
+                    child: _enviando
+                        ? const SizedBox(
+                            height: 20,
+                            width: 20,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              color: Colors.white,
+                            ),
+                          )
+                        : Text(
+                            'Enviar apelación',
+                            style: GoogleFonts.outfit(
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                TextButton(
+                  onPressed: _volverAlLogin,
+                  child: Text(
+                    'Volver al inicio',
+                    style: GoogleFonts.outfit(
+                      fontSize: 14,
+                      color: const Color(0xFFFC6707),
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
       ),

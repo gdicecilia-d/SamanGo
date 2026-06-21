@@ -91,7 +91,6 @@ class _CheckoutViewState extends State<CheckoutView> {
     final hoy = DateTime.now();
     final fechaInicio = hoy.add(const Duration(days: 7));
     
-    // Hash basado en el ID del destino para ser determinista
     int hash = 0;
     for (int i = 0; i < widget.destinoId.length; i++) {
       hash += widget.destinoId.codeUnitAt(i);
@@ -100,7 +99,6 @@ class _CheckoutViewState extends State<CheckoutView> {
     if (duracion == 'Full Day') {
       int diasEncontrados = 0;
       DateTime fecha = fechaInicio;
-      // Posibles dias: Viernes (5), Sábado (6), Domingo (7)
       final int diaSemanaElegido = [5, 6, 7][hash % 3];
       
       while (diasEncontrados < 3 && fecha.difference(hoy).inDays <= 60) {
@@ -121,7 +119,6 @@ class _CheckoutViewState extends State<CheckoutView> {
         final noches = int.parse(match.group(1)!);
         final diasViaje = noches + 1;
         
-        // Determinar días de salida pseudoaleatorios según el hash
         List<int> diasSalida = [];
         int variance = hash % 3;
         
@@ -943,29 +940,39 @@ class _CheckoutViewState extends State<CheckoutView> {
                   ),
                 ),
                 const SizedBox(height: 8),
-                Row(
+                Wrap(
+                  spacing: 16,
+                  runSpacing: 4,
                   children: [
-                    Icon(Icons.access_time, size: subtitleFontSize - 2, color: const Color(0xFF888888)),
-                    const SizedBox(width: 4),
-                    Text(
-                      widget.destinoData['duracion'] ?? 'Full Day',
-                      style: GoogleFonts.outfit(
-                        fontSize: subtitleFontSize - 2,
-                        color: const Color(0xFF888888),
-                      ),
-                    ),
-                    const SizedBox(width: 16),
-                    Icon(Icons.location_on, size: subtitleFontSize - 2, color: const Color(0xFF888888)),
-                    const SizedBox(width: 4),
-                    Expanded(
-                      child: Text(
-                        widget.destinoData['ubicacion'] ?? '',
-                        style: GoogleFonts.outfit(
-                          fontSize: subtitleFontSize - 2,
-                          color: const Color(0xFF888888),
+                    Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(Icons.access_time, size: subtitleFontSize - 2, color: const Color(0xFF888888)),
+                        const SizedBox(width: 4),
+                        Text(
+                          widget.destinoData['duracion'] ?? 'Full Day',
+                          style: GoogleFonts.outfit(
+                            fontSize: subtitleFontSize - 2,
+                            color: const Color(0xFF888888),
+                          ),
                         ),
-                        overflow: TextOverflow.ellipsis,
-                      ),
+                      ],
+                    ),
+                    Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(Icons.location_on, size: subtitleFontSize - 2, color: const Color(0xFF888888)),
+                        const SizedBox(width: 4),
+                        Flexible(
+                          child: Text(
+                            widget.destinoData['ubicacion'] ?? '',
+                            style: GoogleFonts.outfit(
+                              fontSize: subtitleFontSize - 2,
+                              color: const Color(0xFF888888),
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
                   ],
                 ),
@@ -1124,29 +1131,39 @@ class _CheckoutViewState extends State<CheckoutView> {
                   ),
                 ),
                 const SizedBox(height: 8),
-                Row(
+                Wrap(
+                  spacing: 16,
+                  runSpacing: 4,
                   children: [
-                    Icon(Icons.access_time, size: subtitleFontSize - 2, color: const Color(0xFF888888)),
-                    const SizedBox(width: 4),
-                    Text(
-                      widget.destinoData['duracion'] ?? 'Full Day',
-                      style: GoogleFonts.outfit(
-                        fontSize: subtitleFontSize - 2,
-                        color: const Color(0xFF888888),
-                      ),
-                    ),
-                    const SizedBox(width: 16),
-                    Icon(Icons.location_on, size: subtitleFontSize - 2, color: const Color(0xFF888888)),
-                    const SizedBox(width: 4),
-                    Expanded(
-                      child: Text(
-                        widget.destinoData['ubicacion'] ?? '',
-                        style: GoogleFonts.outfit(
-                          fontSize: subtitleFontSize - 2,
-                          color: const Color(0xFF888888),
+                    Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(Icons.access_time, size: subtitleFontSize - 2, color: const Color(0xFF888888)),
+                        const SizedBox(width: 4),
+                        Text(
+                          widget.destinoData['duracion'] ?? 'Full Day',
+                          style: GoogleFonts.outfit(
+                            fontSize: subtitleFontSize - 2,
+                            color: const Color(0xFF888888),
+                          ),
                         ),
-                        overflow: TextOverflow.ellipsis,
-                      ),
+                      ],
+                    ),
+                    Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(Icons.location_on, size: subtitleFontSize - 2, color: const Color(0xFF888888)),
+                        const SizedBox(width: 4),
+                        Flexible(
+                          child: Text(
+                            widget.destinoData['ubicacion'] ?? '',
+                            style: GoogleFonts.outfit(
+                              fontSize: subtitleFontSize - 2,
+                              color: const Color(0xFF888888),
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
                   ],
                 ),
@@ -1777,20 +1794,25 @@ class _CheckoutViewState extends State<CheckoutView> {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        Text(
-          label,
-          style: GoogleFonts.outfit(
-            fontSize: isTotal ? (isLargeScreen ? 18 : 16) : (isExtra ? (isLargeScreen ? 13 : 12) : (isLargeScreen ? 14 : 13)),
-            fontWeight: bold ? FontWeight.bold : FontWeight.normal,
-            color: isExtra ? const Color(0xFF888888) : const Color(0xFF333333),
+        Flexible(
+          child: Text(
+            label,
+            style: GoogleFonts.outfit(
+              fontSize: isTotal ? (isLargeScreen ? 18 : 16) : (isExtra ? (isLargeScreen ? 13 : 12) : (isLargeScreen ? 14 : 13)),
+              fontWeight: bold ? FontWeight.bold : FontWeight.normal,
+              color: isExtra ? const Color(0xFF888888) : const Color(0xFF333333),
+            ),
           ),
         ),
-        Text(
-          value,
-          style: GoogleFonts.outfit(
-            fontSize: isTotal ? (isLargeScreen ? 20 : 18) : (isExtra ? (isLargeScreen ? 13 : 12) : (isLargeScreen ? 14 : 13)),
-            fontWeight: bold ? FontWeight.bold : FontWeight.w500,
-            color: isTotal ? _primaryColor : const Color(0xFF333333),
+        Flexible(
+          child: Text(
+            value,
+            textAlign: TextAlign.right,
+            style: GoogleFonts.outfit(
+              fontSize: isTotal ? (isLargeScreen ? 20 : 18) : (isExtra ? (isLargeScreen ? 13 : 12) : (isLargeScreen ? 14 : 13)),
+              fontWeight: bold ? FontWeight.bold : FontWeight.w500,
+              color: isTotal ? _primaryColor : const Color(0xFF333333),
+            ),
           ),
         ),
       ],

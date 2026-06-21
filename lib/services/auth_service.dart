@@ -24,7 +24,6 @@ class AuthService {
     }
   }
 
-  // Inicia sesión con Google
   Future<dynamic> signInWithGoogle() async {
     try {
       UserCredential userCredential;
@@ -56,36 +55,6 @@ class AuthService {
 
       Usuario? usuario = await cargarUsuarioDeFirestore(uid);
 
-      if (usuario != null) {
-        bool puedeIniciarSesion = true;
-        
-        final docEstudiante = await _db.collection('estudiantes').doc(uid).get();
-        if (docEstudiante.exists) {
-          final data = docEstudiante.data() as Map<String, dynamic>?;
-          if (data != null && !data.containsKey('activo')) {
-            await _db.collection('estudiantes').doc(uid).update({'activo': true});
-          }
-          puedeIniciarSesion = data?['activo'] as bool? ?? true;
-        } else {
-          final docOperador = await _db.collection('operadores').doc(uid).get();
-          if (docOperador.exists) {
-            final data = docOperador.data() as Map<String, dynamic>?;
-            if (data != null && !data.containsKey('activo')) {
-              await _db.collection('operadores').doc(uid).update({'activo': true});
-            }
-            puedeIniciarSesion = data?['activo'] as bool? ?? true;
-          }
-        }
-        
-        if (!puedeIniciarSesion) {
-          await _auth.signOut();
-          if (!kIsWeb) {
-            await _googleSignIn.signOut();
-          }
-          return 'Tu cuenta ha sido inhabilitada por un administrador.';
-        }
-      }
-
       if (usuario == null) {
         return {
           'isNewUser': true,
@@ -106,7 +75,6 @@ class AuthService {
     }
   }
 
-  // Completa el perfil de Google
   Future<Usuario> completeGoogleProfile({
     required String uid,
     required String email,
@@ -130,7 +98,6 @@ class AuthService {
     return usuario;
   }
 
-  // ✅ Inicia sesión con email y contraseña (CON VERIFICACIÓN DE ACTIVO)
   Future<Usuario?> loginWithEmail(String email, String password) async {
     try {
       final credential = await _auth.signInWithEmailAndPassword(
@@ -141,47 +108,16 @@ class AuthService {
       
       final usuario = await cargarUsuarioDeFirestore(uid);
       
-      // ✅ VERIFICAR SI LA CUENTA ESTÁ ACTIVA
-      if (usuario != null) {
-        bool puedeIniciarSesion = true;
-        
-        // Verificar en estudiantes
-        final docEstudiante = await _db.collection('estudiantes').doc(uid).get();
-        if (docEstudiante.exists) {
-          final data = docEstudiante.data() as Map<String, dynamic>?;
-          // Si no existe 'activo', lo creamos como true
-          if (data != null && !data.containsKey('activo')) {
-            await _db.collection('estudiantes').doc(uid).update({'activo': true});
-          }
-          puedeIniciarSesion = data?['activo'] as bool? ?? true;
-        } else {
-          // Verificar en operadores
-          final docOperador = await _db.collection('operadores').doc(uid).get();
-          if (docOperador.exists) {
-            final data = docOperador.data() as Map<String, dynamic>?;
-            // Si no existe 'activo', lo creamos como true
-            if (data != null && !data.containsKey('activo')) {
-              await _db.collection('operadores').doc(uid).update({'activo': true});
-            }
-            puedeIniciarSesion = data?['activo'] as bool? ?? true;
-          }
-        }
-        
-        // Si la cuenta está inhabilitada, cerrar sesión y lanzar error
-        if (!puedeIniciarSesion) {
-          await _auth.signOut();
-          throw Exception('Tu cuenta ha sido inhabilitada por un administrador.');
-        }
-      }
-      
       return usuario;
     } on FirebaseAuthException catch (e) {
-      print('Error de login: ${e.code}');
+      print('Error de login Firebase: ${e.code}');
+      return null;
+    } catch (e) {
+      print('Error de login: $e');
       return null;
     }
   }
 
-  // Registra un nuevo estudiante
   Future<Usuario> registerStudent({
     required String email,
     required String password,
@@ -216,7 +152,6 @@ class AuthService {
     }
   }
 
-  // Registra un nuevo operador
   Future<Usuario> registerOperator({
     required String email,
     required String nombre,
@@ -264,7 +199,6 @@ class AuthService {
     }
   }
 
-  // Aprobar Operador
   Future<void> approveOperator(Usuario operador) async {
     try {
       const chars = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#\$';
@@ -313,7 +247,6 @@ class AuthService {
     }
   }
 
-  // Rechazar Operador
   Future<void> rejectOperator(Usuario operador) async {
     try {
       await _db.collection('operadores').doc(operador.id).update({
@@ -336,7 +269,6 @@ class AuthService {
     }
   }
 
-  // Utilidad para enviar correos vía EmailJS
   Future<void> _sendEmail({required String to, required String subject, required String html}) async {
     const serviceId = 'service_g1qpjdb';
     const templateId = 'template_j16ut8g';
@@ -369,7 +301,6 @@ class AuthService {
     }
   }
 
-  // Verificar si el correo existe
   Future<bool> checkEmailExists(String email) async {
     final queryEmail = email.trim();
     final estudiantes = await _db.collection('estudiantes').where('correo', isEqualTo: queryEmail).limit(1).get();
@@ -384,7 +315,6 @@ class AuthService {
     return false;
   }
 
-  // Actualizar perfil del estudiante
   Future<void> updateStudentProfile({
     required String uid,
     required String carrera,
@@ -396,7 +326,6 @@ class AuthService {
     });
   }
 
-  // Actualizar foto de perfil
   Future<bool> updateProfileImage(String uid, String base64Image) async {
     try {
       var doc = await _db.collection('estudiantes').doc(uid).get();
@@ -421,7 +350,6 @@ class AuthService {
     }
   }
 
-  // Carga los datos del usuario desde Firestore
   Future<Usuario?> cargarUsuarioDeFirestore(String uid) async {
     try {
       var operAuthQuery = await _db.collection('operadores').where('authId', isEqualTo: uid).limit(1).get();
@@ -448,7 +376,6 @@ class AuthService {
     }
   }
 
-  // Cierra sesión
   Future<void> logout() async {
     await _auth.signOut();
     if (!kIsWeb) {
@@ -456,7 +383,6 @@ class AuthService {
     }
   }
 
-  // Enviar correo de restablecimiento
   Future<void> sendPasswordResetEmail(String email) async {
     await _auth.sendPasswordResetEmail(email: email.trim());
   }

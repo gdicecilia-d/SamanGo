@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:provider/provider.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import '../../controllers/auth_controller.dart';
 import '../../controllers/reserva_controller.dart';
 import '../../models/reserva.dart';
@@ -26,13 +27,20 @@ class _PaymentReturnViewState extends State<PaymentReturnView> {
 
   Future<void> _procesarRetorno() async {
     try {
-      // En Flutter Web con hash strategy, los query parameters están DENTRO del fragmento
-      final fragment = Uri.base.fragment;
-      final uriStr = 'http://localhost$fragment';
-      final uri = Uri.parse(uriStr);
-      
-      final reservaId = uri.queryParameters['reservaId'];
-      final action = uri.queryParameters['action'];
+      String reservaId;
+      String action;
+
+      if (kIsWeb) {
+        final fragment = Uri.base.fragment;
+        final uriStr = 'http://localhost$fragment';
+        final uri = Uri.parse(uriStr);
+        reservaId = uri.queryParameters['reservaId'] ?? '';
+        action = uri.queryParameters['action'] ?? '';
+      } else {
+        final uri = Uri.base;
+        reservaId = uri.queryParameters['reservaId'] ?? '';
+        action = uri.queryParameters['action'] ?? '';
+      }
 
       if (action == 'paypal_cancel') {
         setState(() {
@@ -42,7 +50,7 @@ class _PaymentReturnViewState extends State<PaymentReturnView> {
         return;
       }
 
-      if (reservaId == null || reservaId.isEmpty) {
+      if (reservaId.isEmpty) {
         setState(() {
           _procesando = false;
           _mensaje = 'Error: No se encontró la reserva.';
@@ -50,18 +58,20 @@ class _PaymentReturnViewState extends State<PaymentReturnView> {
         return;
       }
 
-      // Esperar a que AuthController restaure la sesión
       final auth = Provider.of<AuthController>(context, listen: false);
       while (auth.isLoading) {
         await Future.delayed(const Duration(milliseconds: 100));
       }
 
       if (!auth.isAuthenticated) {
-        setState(() {
-          _procesando = false;
-          _mensaje = 'Error: No se pudo restaurar la sesión para confirmar el pago.';
-        });
-        return;
+        await auth.reloadUser();
+        if (!auth.isAuthenticated) {
+          setState(() {
+            _procesando = false;
+            _mensaje = 'Error: No se pudo restaurar la sesión para confirmar el pago. Por favor, inicia sesión nuevamente.';
+          });
+          return;
+        }
       }
 
       final comprobanteUrl = 'paypal_${DateTime.now().millisecondsSinceEpoch}_$reservaId';
@@ -79,12 +89,31 @@ class _PaymentReturnViewState extends State<PaymentReturnView> {
       if (data == null) return;
       
       final reserva = Reserva.fromMap(doc.id, data);
+      
+      if (reserva.estadoActual.name == 'pagado') {
+        setState(() {
+          _procesando = false;
+          _exito = true;
+          _mensaje = 'Este pago ya fue confirmado anteriormente.';
+        });
+        return;
+      }
+
       final reservaCtrl = Provider.of<ReservaController>(context, listen: false);
+      final usuarioActual = auth.usuarioActual;
+
+      if (usuarioActual == null) {
+        setState(() {
+          _procesando = false;
+          _mensaje = 'Error: Usuario no autenticado.';
+        });
+        return;
+      }
 
       final subio = await reservaCtrl.subirComprobanteYVerificar(
         reserva,
         comprobanteUrl,
-        auth.usuarioActual!,
+        usuarioActual,
       );
 
       if (subio) {

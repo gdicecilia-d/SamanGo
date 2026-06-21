@@ -15,6 +15,7 @@ import 'operator_notifications_view.dart';
 import '../../views/shared/widgets/custom_dialog.dart';
 import '../auth/login_view.dart';
 import '../student/widgets/horizontal_scroll_section.dart';
+import '../../services/notificacion_service.dart';
 
 class OperatorRequestsView extends StatefulWidget {
   const OperatorRequestsView({super.key});
@@ -636,6 +637,7 @@ class _PaqueteDetailViewState extends State<PaqueteDetailView> {
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
   final List<String> _menuItems = ['Inicio', 'Publicar', 'Solicitudes'];
   int _refreshKey = 0;
+  final NotificacionService _notificacionService = NotificacionService();
 
   Color get _color => widget.isOffer ? const Color(0xFF9C27B0) : const Color(0xFFFC6707);
 
@@ -699,6 +701,18 @@ class _PaqueteDetailViewState extends State<PaqueteDetailView> {
     final reservaCtrl = Provider.of<ReservaController>(context, listen: false);
     final cupos = await reservaCtrl.obtenerCuposDisponibles(paqueteId);
     return cupos >= personasRequeridas;
+  }
+
+  Future<String> _obtenerNombrePaquete(String paqueteId) async {
+    try {
+      final doc = await FirebaseFirestore.instance.collection('destinos').doc(paqueteId).get();
+      if (doc.exists && doc.data() != null) {
+        return doc.data()!['nombre'] as String? ?? 'un destino';
+      }
+    } catch (e) {
+      debugPrint('Error obteniendo nombre del paquete: $e');
+    }
+    return 'un destino';
   }
 
   Future<void> _aceptarSolicitud(Reserva reserva) async {
@@ -843,63 +857,140 @@ class _PaqueteDetailViewState extends State<PaqueteDetailView> {
   Future<void> _rechazarPago(Reserva reserva) async {
     if (!mounted) return;
 
+    final confirm = await CustomConfirmDialog.show(
+      context: context,
+      title: 'Rechazar comprobante',
+      message: '¿Estás seguro de que deseas rechazar el comprobante de ${reserva.nombreEstudiante} ${reserva.apellidoEstudiante}? El estudiante podrá volver a pagar.',
+      confirmText: 'Rechazar',
+      icon: Icons.cancel,
+    );
+
+    if (confirm != true || !mounted) return;
+
     final motivoCtrl = TextEditingController();
 
-    final confirmar = await showDialog<bool>(
+    final motivo = await showDialog<String>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Rechazar comprobante'),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(20),
+        ),
+        elevation: 4,
+        backgroundColor: Colors.white,
+        contentPadding: const EdgeInsets.all(24),
+        title: Text(
+          'Motivo del rechazo',
+          style: GoogleFonts.outfit(
+            fontSize: 18,
+            fontWeight: FontWeight.bold,
+            color: const Color(0xFF333333),
+          ),
+        ),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              'Vas a rechazar el comprobante de ${reserva.nombreEstudiante} ${reserva.apellidoEstudiante}.',
+              'Opcional: Puedes agregar un motivo para el rechazo.',
+              style: GoogleFonts.outfit(
+                fontSize: 14,
+                color: const Color(0xFF666666),
+              ),
             ),
             const SizedBox(height: 12),
             TextField(
               controller: motivoCtrl,
-              decoration: const InputDecoration(
+              decoration: InputDecoration(
                 labelText: 'Motivo (opcional)',
                 hintText: 'Ej: Imagen borrosa, monto incorrecto.',
-                border: OutlineInputBorder(),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
               ),
               maxLines: 2,
             ),
           ],
         ),
         actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('Cancelar'),
-          ),
-          ElevatedButton(
-            onPressed: () => Navigator.pop(ctx, true),
-            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
-            child: const Text('Rechazar', style: TextStyle(color: Colors.white)),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              SizedBox(
+                width: 110,
+                child: TextButton(
+                  onPressed: () => Navigator.pop(ctx, null),
+                  style: TextButton.styleFrom(
+                    backgroundColor: const Color(0xFFF5F5F5),
+                    foregroundColor: const Color(0xFF666666),
+                    padding: const EdgeInsets.symmetric(vertical: 10),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(30),
+                    ),
+                  ),
+                  child: Text(
+                    'Sin motivo',
+                    style: GoogleFonts.outfit(
+                      fontSize: 14,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 12),
+              SizedBox(
+                width: 140,
+                child: ElevatedButton(
+                  onPressed: () {
+                    Navigator.pop(ctx, motivoCtrl.text.trim());
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: _color,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 10),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(30),
+                    ),
+                  ),
+                  child: Text(
+                    'Rechazar',
+                    style: GoogleFonts.outfit(
+                      fontSize: 14,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+              ),
+            ],
           ),
         ],
       ),
     );
 
-    if (confirmar != true || !mounted) return;
-
     final reservaCtrl = Provider.of<ReservaController>(context, listen: false);
     final auth = Provider.of<AuthController>(context, listen: false);
 
-    final exito = await reservaCtrl.rechazarPago(
-      reserva,
-      auth.usuarioActual!,
-      motivo: motivoCtrl.text.trim().isNotEmpty ? motivoCtrl.text.trim() : null,
-    );
+    try {
+      final nombrePaquete = await _obtenerNombrePaquete(reserva.paqueteId);
 
-    if (!mounted) return;
+      await FirebaseFirestore.instance.collection('reservas').doc(reserva.id).update({
+        'estadoActual': 'aceptado',
+        'comprobanteUrl': null,
+        'historial.aceptado': FieldValue.serverTimestamp(),
+      });
 
-    if (exito) {
-      _mostrarMensaje('Comprobante rechazado. El estudiante fue notificado.');
+      await _notificacionService.notificarPagoRechazado(
+        estudianteId: reserva.estudianteId,
+        nombrePaquete: nombrePaquete,
+        motivo: motivo != null && motivo.isNotEmpty ? motivo : null,
+      );
+
+      if (!mounted) return;
+      _mostrarMensaje('Comprobante rechazado. El estudiante podrá volver a pagar.');
       setState(() => _refreshKey++);
-    } else {
-      _mostrarMensaje('No se pudo rechazar el comprobante. Intenta de nuevo.');
+    } catch (e) {
+      if (!mounted) return;
+      _mostrarMensaje('Error al rechazar el comprobante: $e');
     }
   }
 
@@ -931,6 +1022,40 @@ class _PaqueteDetailViewState extends State<PaqueteDetailView> {
       setState(() => _refreshKey++);
     } else {
       _mostrarMensaje('No se pudo actualizar el estado. Intenta de nuevo.');
+    }
+  }
+
+  Future<void> _quitarCupos(Reserva reserva) async {
+    if (!mounted) return;
+
+    final confirm = await CustomConfirmDialog.show(
+      context: context,
+      title: 'Quitar cupos',
+      message: '¿Estás seguro de que deseas quitar los ${reserva.numeroPersonas} cupo${reserva.numeroPersonas > 1 ? 's' : ''} reservados para ${reserva.nombreEstudiante} ${reserva.apellidoEstudiante}? Esta acción cancelará la reserva.',
+      confirmText: 'Quitar cupos',
+      icon: Icons.remove_circle_outline,
+    );
+
+    if (confirm != true || !mounted) return;
+
+    try {
+      final db = FirebaseFirestore.instance;
+      
+      final destinoRef = db.collection('destinos').doc(reserva.paqueteId);
+      await destinoRef.update({
+        'cuposDisponibles': FieldValue.increment(reserva.numeroPersonas),
+      });
+
+      await db.collection('reservas').doc(reserva.id).update({
+        'estadoActual': 'rechazado',
+        'historial.rechazado': FieldValue.serverTimestamp(),
+        'comprobanteUrl': null,
+      });
+
+      _mostrarMensaje('Cupos quitados correctamente. La reserva fue cancelada.');
+      setState(() => _refreshKey++);
+    } catch (e) {
+      _mostrarMensaje('Error al quitar los cupos: $e');
     }
   }
 
@@ -1277,6 +1402,9 @@ class _PaqueteDetailViewState extends State<PaqueteDetailView> {
         final porDisfrutar = reservas
             .where((r) => r.estadoActual == EstadoReserva.pagado)
             .toList();
+        final enEsperaPago = reservas
+            .where((r) => r.estadoActual == EstadoReserva.aceptado)
+            .toList();
 
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -1287,6 +1415,15 @@ class _PaqueteDetailViewState extends State<PaqueteDetailView> {
               'solicitud',
               isMobile,
               const Color(0xFFFC6707),
+            ),
+            const SizedBox(height: 32),
+            
+            _buildSeccionReservas(
+              'En Espera de Pago',
+              enEsperaPago,
+              'espera_pago',
+              isMobile,
+              const Color(0xFFFF9800),
             ),
             const SizedBox(height: 32),
             
@@ -1346,6 +1483,7 @@ class _PaqueteDetailViewState extends State<PaqueteDetailView> {
                 children: [
                   Icon(
                     tipo == 'solicitud' ? Icons.pending_actions :
+                    tipo == 'espera_pago' ? Icons.hourglass_empty :
                     tipo == 'pago' ? Icons.payment : Icons.celebration,
                     size: 40,
                     color: const Color(0xFFCCCCCC),
@@ -1353,6 +1491,7 @@ class _PaqueteDetailViewState extends State<PaqueteDetailView> {
                   const SizedBox(height: 8),
                   Text(
                     tipo == 'solicitud' ? 'No hay solicitudes por aceptar' :
+                    tipo == 'espera_pago' ? 'No hay reservas esperando pago' :
                     tipo == 'pago' ? 'No hay pagos por verificar' :
                     'No hay viajes por marcar como disfrutados',
                     style: GoogleFonts.outfit(
@@ -1473,6 +1612,11 @@ class _PaqueteDetailViewState extends State<PaqueteDetailView> {
               'Fecha solicitud: ${_formatFecha(reserva.fechaInicio!)}',
               style: GoogleFonts.outfit(fontSize: 13, color: const Color(0xFF666666)),
             ),
+          if (tipo == 'espera_pago' && reserva.fechaInicio != null)
+            Text(
+              'Fecha solicitud: ${_formatFecha(reserva.fechaInicio!)}',
+              style: GoogleFonts.outfit(fontSize: 13, color: const Color(0xFF666666)),
+            ),
           if (tipo == 'pago' && reserva.fechaInicio != null) ...[
             Text(
               'Fecha pago: ${_formatFecha(reserva.fechaInicio!)}',
@@ -1540,6 +1684,23 @@ class _PaqueteDetailViewState extends State<PaqueteDetailView> {
                 fontWeight: FontWeight.bold,
               ),
             ),
+          ),
+        ],
+      );
+    }
+
+    if (tipo == 'espera_pago') {
+      return Row(
+        mainAxisAlignment: MainAxisAlignment.end,
+        children: [
+          IconButton(
+            onPressed: () => _quitarCupos(reserva),
+            icon: Icon(
+              Icons.remove_circle_outline,
+              color: Colors.red,
+              size: 24,
+            ),
+            tooltip: 'Quitar cupos',
           ),
         ],
       );

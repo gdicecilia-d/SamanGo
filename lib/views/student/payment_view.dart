@@ -98,7 +98,6 @@ class _PaymentViewState extends State<PaymentView> {
         return;
       }
 
-      // Esperar a que el AuthController restaure la sesión de Firebase
       while (auth.isLoading) {
         await Future.delayed(const Duration(milliseconds: 100));
       }
@@ -112,6 +111,22 @@ class _PaymentViewState extends State<PaymentView> {
         });
         _mostrarMensaje('Error: Usuario no autenticado');
         return;
+      }
+
+      final doc = await FirebaseFirestore.instance.collection('reservas').doc(widget.reserva.id).get();
+      if (doc.exists) {
+        final data = doc.data();
+        if (data != null) {
+          final reserva = Reserva.fromMap(doc.id, data);
+          if (reserva.estadoActual.name == 'pagado') {
+            setState(() {
+              _procesando = false;
+              _pagoExitoso = true;
+            });
+            _mostrarExitoYRedirigir();
+            return;
+          }
+        }
       }
 
       final comprobanteUrl = 'paypal_${DateTime.now().millisecondsSinceEpoch}_${widget.reserva.id}';
@@ -170,13 +185,8 @@ class _PaymentViewState extends State<PaymentView> {
     final auth = Provider.of<AuthController>(context, listen: false);
 
     try {
-      String currentUrl = 'http://localhost:5000/#/paypal_return';
-      
-      if (kIsWeb) {
-        final fullUrl = Uri.base.toString();
-        final uri = Uri.parse(fullUrl);
-        currentUrl = '${uri.scheme}://${uri.host}:${uri.port}/#/paypal_return?reservaId=${widget.reserva.id}';
-      }
+      final baseUrl = Uri.base.origin;
+      final currentUrl = '$baseUrl/#/paypal_return?reservaId=${widget.reserva.id}';
 
       final exito = await _payPalService.processPayment(
         context: context,
@@ -184,7 +194,7 @@ class _PaymentViewState extends State<PaymentView> {
         currency: 'USD',
         description: 'Reserva: ${widget.destinoData['nombre']}',
         returnUrl: currentUrl,
-        cancelUrl: kIsWeb ? '${Uri.parse(Uri.base.toString()).scheme}://${Uri.parse(Uri.base.toString()).host}:${Uri.parse(Uri.base.toString()).port}/#/paypal_return?action=paypal_cancel' : currentUrl,
+        cancelUrl: '$baseUrl/#/paypal_return?action=paypal_cancel',
         reservaId: widget.reserva.id,
         destinoId: widget.reserva.paqueteId,
         estudianteId: widget.reserva.estudianteId,

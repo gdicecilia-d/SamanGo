@@ -125,7 +125,7 @@ class _AdminReportsViewState extends State<AdminReportsView> {
     doc = await FirebaseFirestore.instance.collection('operadores').doc(userId).get();
     if (doc.exists) return doc;
     
-    doc = await FirebaseFirestore.instance.collection('usuarios').doc(userId).get();
+    doc = await FirebaseFirestore.instance.collection('administradores').doc(userId).get();
     if (doc.exists) return doc;
     
     return null;
@@ -134,11 +134,13 @@ class _AdminReportsViewState extends State<AdminReportsView> {
   void _mostrarDetalleReporte(Map<String, dynamic> data) {
     final mensaje = data['mensaje'] ?? 'Sin mensaje adicional';
     final comentarios = data['comentarios'] ?? '';
-    final calificacion = data['calificacion'] ?? 0;
     final correo = data['correo'] ?? 'No disponible';
     final fecha = data['fecha'] != null 
         ? (data['fecha'] as Timestamp).toDate()
         : DateTime.now();
+    final rol = data['rol'] ?? 'No especificado';
+    final tipoAlerta = data['tipo_alerta'] ?? '';
+    final esApelacion = tipoAlerta == 'Apelación';
     
     showDialog(
       context: context,
@@ -173,22 +175,28 @@ class _AdminReportsViewState extends State<AdminReportsView> {
                 ],
               ),
               const SizedBox(height: 16),
-              _buildDetalleRow('Estudiante:', data['estudiante'] ?? 'Sin nombre'),
+              _buildDetalleRow('Usuario:', data['estudiante'] ?? 'Sin nombre'),
+              const SizedBox(height: 8),
+              _buildDetalleRow('Rol:', rol),
               const SizedBox(height: 8),
               _buildDetalleRow('Correo:', correo),
               const SizedBox(height: 8),
-              _buildDetalleRow('Tour:', data['tour'] ?? 'Sin tour'),
+              if (!esApelacion) ...[
+                _buildDetalleRow('Tour:', data['tour'] ?? 'Sin tour'),
+                const SizedBox(height: 8),
+              ],
+              _buildDetalleRow('Tipo:', tipoAlerta.isNotEmpty ? tipoAlerta : 'Sin tipo'),
               const SizedBox(height: 8),
-              _buildDetalleRow('Tipo:', data['tipo_alerta'] ?? 'Sin tipo'),
-              const SizedBox(height: 8),
-              _buildDetalleRow('Calificación:', '$calificacion ⭐'),
-              const SizedBox(height: 8),
+              if (!esApelacion) ...[
+                _buildDetalleRow('Calificación:', '${data['calificacion'] ?? 0} ⭐'),
+                const SizedBox(height: 8),
+              ],
               _buildDetalleRow('Fecha:', '${fecha.day}/${fecha.month}/${fecha.year} ${fecha.hour}:${fecha.minute.toString().padLeft(2, '0')}'),
               const SizedBox(height: 12),
               const Divider(color: Color(0xFFE0E0E0)),
               const SizedBox(height: 8),
               Text(
-                '📝 Mensaje del estudiante:',
+                '📝 Mensaje del usuario:',
                 style: GoogleFonts.outfit(
                   fontSize: 14,
                   fontWeight: FontWeight.bold,
@@ -555,7 +563,7 @@ class _AdminReportsViewState extends State<AdminReportsView> {
                 ),
                 DataColumn(
                   label: Text(
-                    'Estudiante',
+                    'Usuario',
                     style: TextStyle(fontWeight: FontWeight.bold),
                   ),
                 ),

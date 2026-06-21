@@ -1,5 +1,6 @@
 import 'dart:typed_data';
 import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import '../models/usuario.dart';
 import '../services/auth_service.dart';
 import '../services/tips_notificacion_service.dart';
@@ -8,10 +9,12 @@ class AuthController extends ChangeNotifier {
   final AuthService _authService = AuthService();
   Usuario? _usuarioActual;
   bool _isLoading = false;
+  bool _esInhabilitado = false;
 
   Usuario? get usuarioActual => _usuarioActual;
   bool get isLoading => _isLoading;
   bool get isAuthenticated => _usuarioActual != null && _usuarioActual!.isNotEmpty;
+  bool get esInhabilitado => _esInhabilitado;
 
   AuthController() {
     _initAuth();
@@ -22,23 +25,59 @@ class AuthController extends ChangeNotifier {
     final user = await _authService.getCurrentFirebaseUser();
     if (user != null) {
       _usuarioActual = await _authService.cargarUsuarioDeFirestore(user.uid);
+      if (_usuarioActual != null) {
+        _verificarInhabilitado(_usuarioActual!.id);
+      }
     }
     _setLoading(false);
   }
 
-  // ✅ Login (CON CAPTURA DE ERROR DE CUENTA INHABILITADA)
+  Future<void> _verificarInhabilitado(String uid) async {
+    try {
+      final docEstudiante = await FirebaseFirestore.instance
+          .collection('estudiantes')
+          .doc(uid)
+          .get();
+      if (docEstudiante.exists) {
+        _esInhabilitado = docEstudiante.data()?['activo'] == false;
+      } else {
+        final docOperador = await FirebaseFirestore.instance
+            .collection('operadores')
+            .doc(uid)
+            .get();
+        if (docOperador.exists) {
+          _esInhabilitado = docOperador.data()?['activo'] == false;
+        } else {
+          _esInhabilitado = false;
+        }
+      }
+    } catch (e) {
+      _esInhabilitado = false;
+    }
+  }
+
   Future<bool> login(String email, String password) async {
     _setLoading(true);
     try {
       _usuarioActual = await _authService.loginWithEmail(email, password);
-      if (_usuarioActual != null && _usuarioActual!.isEstudiante) {
-        TipsNotificacionService.enviarTipSiCorresponde(_usuarioActual!.id);
+      if (_usuarioActual != null) {
+        await _verificarInhabilitado(_usuarioActual!.id);
+        
+        if (_usuarioActual!.isEstudiante && _esInhabilitado) {
+          await _authService.logout();
+          _usuarioActual = null;
+          _setLoading(false);
+          throw Exception('Tu cuenta ha sido inhabilitada por un administrador.');
+        }
+        
+        if (_usuarioActual!.isEstudiante) {
+          TipsNotificacionService.enviarTipSiCorresponde(_usuarioActual!.id);
+        }
       }
       _setLoading(false);
       return _usuarioActual != null;
     } catch (e) {
       _setLoading(false);
-      // ✅ Si el error es "cuenta inhabilitada", lanzarlo para mostrarlo en el login
       if (e.toString().contains('inhabilitada')) {
         rethrow;
       }
@@ -46,12 +85,19 @@ class AuthController extends ChangeNotifier {
     }
   }
 
-  // Login con Google
   Future<dynamic> signInWithGoogle() async {
     _setLoading(true);
     try {
       final result = await _authService.signInWithGoogle();
       if (result is Usuario) {
+        await _verificarInhabilitado(result.id);
+        
+        if (result.isEstudiante && _esInhabilitado) {
+          _usuarioActual = result;
+          _setLoading(false);
+          return 'Cuenta inhabilitada';
+        }
+        
         _usuarioActual = result;
         if (_usuarioActual!.isEstudiante) {
           TipsNotificacionService.enviarTipSiCorresponde(_usuarioActual!.id);
@@ -59,6 +105,9 @@ class AuthController extends ChangeNotifier {
         _setLoading(false);
         return true;
       } else if (result is Map) {
+        _setLoading(false);
+        return result;
+      } else if (result is String) {
         _setLoading(false);
         return result;
       } else {
@@ -71,7 +120,6 @@ class AuthController extends ChangeNotifier {
     }
   }
 
-  // Completa el perfil de Google
   Future<String?> completeGoogleProfile({
     required String uid,
     required String email,
@@ -100,7 +148,6 @@ class AuthController extends ChangeNotifier {
     }
   }
 
-  // Register Student
   Future<String?> registerStudent({
     required String email,
     required String password,
@@ -127,7 +174,6 @@ class AuthController extends ChangeNotifier {
     }
   }
 
-  // Register Operator 
   Future<String?> registerOperator({
     required String email,
     required String nombre,
@@ -156,7 +202,6 @@ class AuthController extends ChangeNotifier {
     }
   }
 
-  // Aprobar Operador (Admin)
   Future<String?> approveOperator(Usuario operador) async {
     _setLoading(true);
     try {
@@ -169,7 +214,6 @@ class AuthController extends ChangeNotifier {
     }
   }
 
-  // Rechazar Operador (Admin)
   Future<String?> rejectOperator(Usuario operador) async {
     _setLoading(true);
     try {
@@ -182,7 +226,6 @@ class AuthController extends ChangeNotifier {
     }
   }
 
-  // Recuperar Contraseña
   Future<String?> recoverPassword(String email) async {
     _setLoading(true);
     try {
@@ -200,7 +243,6 @@ class AuthController extends ChangeNotifier {
     }
   }
 
-  // Update Student Profile
   Future<bool> updateStudentProfile({
     required String carrera,
     required String telefono,
@@ -215,6 +257,7 @@ class AuthController extends ChangeNotifier {
         telefono: telefono,
       );
       _usuarioActual = await _authService.cargarUsuarioDeFirestore(_usuarioActual!.id);
+      await _verificarInhabilitado(_usuarioActual!.id);
       _setLoading(false);
       return true;
     } catch (e) {
@@ -223,13 +266,13 @@ class AuthController extends ChangeNotifier {
     }
   }
 
-  // Update Profile Image
   Future<bool> updateProfileImage(String uid, String base64Image) async {
     _setLoading(true);
     try {
       final success = await _authService.updateProfileImage(uid, base64Image);
       if (success) {
         _usuarioActual = await _authService.cargarUsuarioDeFirestore(uid);
+        await _verificarInhabilitado(uid);
       }
       _setLoading(false);
       return success;
@@ -239,20 +282,20 @@ class AuthController extends ChangeNotifier {
     }
   }
 
-  // Logout
   Future<void> logout() async {
     _setLoading(true);
     await _authService.logout();
     _usuarioActual = null;
+    _esInhabilitado = false;
     _setLoading(false);
   }
 
-  // Recargar usuario
   Future<void> reloadUser() async {
     if (_usuarioActual != null) {
       final updatedUser = await _authService.cargarUsuarioDeFirestore(_usuarioActual!.id);
       if (updatedUser != null) {
         _usuarioActual = updatedUser;
+        await _verificarInhabilitado(_usuarioActual!.id);
         notifyListeners();
       }
     }
