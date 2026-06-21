@@ -56,6 +56,36 @@ class AuthService {
 
       Usuario? usuario = await cargarUsuarioDeFirestore(uid);
 
+      if (usuario != null) {
+        bool puedeIniciarSesion = true;
+        
+        final docEstudiante = await _db.collection('estudiantes').doc(uid).get();
+        if (docEstudiante.exists) {
+          final data = docEstudiante.data() as Map<String, dynamic>?;
+          if (data != null && !data.containsKey('activo')) {
+            await _db.collection('estudiantes').doc(uid).update({'activo': true});
+          }
+          puedeIniciarSesion = data?['activo'] as bool? ?? true;
+        } else {
+          final docOperador = await _db.collection('operadores').doc(uid).get();
+          if (docOperador.exists) {
+            final data = docOperador.data() as Map<String, dynamic>?;
+            if (data != null && !data.containsKey('activo')) {
+              await _db.collection('operadores').doc(uid).update({'activo': true});
+            }
+            puedeIniciarSesion = data?['activo'] as bool? ?? true;
+          }
+        }
+        
+        if (!puedeIniciarSesion) {
+          await _auth.signOut();
+          if (!kIsWeb) {
+            await _googleSignIn.signOut();
+          }
+          return 'Tu cuenta ha sido inhabilitada por un administrador.';
+        }
+      }
+
       if (usuario == null) {
         return {
           'isNewUser': true,

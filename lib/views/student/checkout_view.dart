@@ -91,18 +91,27 @@ class _CheckoutViewState extends State<CheckoutView> {
     final hoy = DateTime.now();
     final fechaInicio = hoy.add(const Duration(days: 7));
     
+    // Hash basado en el ID del destino para ser determinista
+    int hash = 0;
+    for (int i = 0; i < widget.destinoId.length; i++) {
+      hash += widget.destinoId.codeUnitAt(i);
+    }
+    
     if (duracion == 'Full Day') {
-      int sabadosEncontrados = 0;
+      int diasEncontrados = 0;
       DateTime fecha = fechaInicio;
-      while (sabadosEncontrados < 3 && fecha.difference(hoy).inDays <= 60) {
-        if (fecha.weekday == 6) {
+      // Posibles dias: Viernes (5), Sábado (6), Domingo (7)
+      final int diaSemanaElegido = [5, 6, 7][hash % 3];
+      
+      while (diasEncontrados < 3 && fecha.difference(hoy).inDays <= 60) {
+        if (fecha.weekday == diaSemanaElegido) {
           _bloquesDisponibles.add({
             'fechaInicio': DateTime(fecha.year, fecha.month, fecha.day),
             'fechaFin': DateTime(fecha.year, fecha.month, fecha.day),
             'label': _formatearFecha(DateTime(fecha.year, fecha.month, fecha.day)),
             'dias': 1,
           });
-          sabadosEncontrados++;
+          diasEncontrados++;
         }
         fecha = fecha.add(const Duration(days: 1));
       }
@@ -112,15 +121,18 @@ class _CheckoutViewState extends State<CheckoutView> {
         final noches = int.parse(match.group(1)!);
         final diasViaje = noches + 1;
         
-        List<int> diasSalida;
+        // Determinar días de salida pseudoaleatorios según el hash
+        List<int> diasSalida = [];
+        int variance = hash % 3;
+        
         if (duracion.contains('2 noches')) {
-          diasSalida = [5, 6];
+          diasSalida = [[4, 5], [5, 6], [6, 7]][variance];
         } else if (duracion.contains('3 noches')) {
-          diasSalida = [4, 5];
+          diasSalida = [[3, 4], [4, 5], [5, 6]][variance];
         } else if (duracion.contains('4 noches')) {
-          diasSalida = [3, 4];
+          diasSalida = [[2, 3], [3, 4], [4, 5]][variance];
         } else {
-          diasSalida = [5, 6];
+          diasSalida = [[4, 5], [5, 6], [6, 7]][variance];
         }
         
         int bloquesGenerados = 0;

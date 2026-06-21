@@ -15,6 +15,7 @@ import 'destination_detail_view.dart';
 import 'favorites_view.dart';
 import 'my_trips_view.dart';
 import '../../views/shared/widgets/custom_dialog.dart';
+import '../../views/shared/widgets/gemini_chatbot_widget.dart';
 import '../auth/login_view.dart';
 import '../../controllers/notificacion_controller.dart';
 import 'widgets/notifications_panel.dart';
@@ -111,81 +112,7 @@ class _StudentHomeViewState extends State<StudentHomeView> {
   }
 
   void _mostrarAyuda() {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(20),
-        ),
-        elevation: 4,
-        backgroundColor: Colors.white,
-        contentPadding: const EdgeInsets.all(24),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Container(
-              width: 60,
-              height: 60,
-              decoration: BoxDecoration(
-                color: const Color(0xFFFC6707).withOpacity(0.15),
-                shape: BoxShape.circle,
-              ),
-              child: Icon(
-                Icons.help_outline,
-                color: const Color(0xFFFC6707),
-                size: 32,
-              ),
-            ),
-            const SizedBox(height: 16),
-            Text(
-              '¿Cómo funciona SamanGo?',
-              style: GoogleFonts.outfit(
-                fontSize: 20,
-                fontWeight: FontWeight.bold,
-                color: const Color(0xFF333333),
-              ),
-            ),
-            const SizedBox(height: 12),
-            Text(
-              '1. Explora los destinos disponibles\n'
-              '2. Selecciona tu viaje favorito\n'
-              '3. Solicita cupos para tu fecha\n'
-              '4. Espera la confirmación del operador\n'
-              '5. Realiza el pago con PayPal\n'
-              '6. ¡Disfruta tu viaje y califica!',
-              textAlign: TextAlign.center,
-              style: GoogleFonts.outfit(
-                fontSize: 14,
-                color: const Color(0xFF666666),
-                height: 1.6,
-              ),
-            ),
-            const SizedBox(height: 20),
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton(
-                onPressed: () => Navigator.pop(context),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFFFC6707),
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(vertical: 12),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(30),
-                  ),
-                ),
-                child: Text(
-                  'Entendido',
-                  style: GoogleFonts.outfit(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
+    GeminiChatbotWidget.show(context);
   }
 
   @override

@@ -85,11 +85,41 @@ class _AdminHomeViewState extends State<AdminHomeView> {
         for (final cat in _categoriasValidas) cat: 0,
       };
 
+      final now = DateTime.now();
+      final targetDate = now.add(const Duration(days: 7));
+
       for (final doc in destinosSnap.docs) {
         final data = doc.data();
         final activo = data['activo'] as bool? ?? false;
         final nombre = data['nombre'] as String? ?? 'Sin nombre';
         final categoria = data['categoria'] as String? ?? '';
+
+        bool needsUpdate = false;
+        Map<String, dynamic> updates = {};
+
+        if (data.containsKey('fechaPublicacion') && data['fechaPublicacion'] != null) {
+          try {
+            final fp = DateTime.parse(data['fechaPublicacion'].toString());
+            if (fp.isBefore(now)) {
+              updates['fechaPublicacion'] = targetDate.toIso8601String();
+              needsUpdate = true;
+            }
+          } catch (e) {}
+        }
+
+        if (data.containsKey('fechaInicio') && data['fechaInicio'] != null) {
+          try {
+            final fi = DateTime.parse(data['fechaInicio'].toString());
+            if (fi.isBefore(now)) {
+              updates['fechaInicio'] = targetDate.toIso8601String();
+              needsUpdate = true;
+            }
+          } catch (e) {}
+        }
+
+        if (needsUpdate) {
+          db.collection('destinos').doc(doc.id).update(updates);
+        }
 
         nombrePorDestino[doc.id] = nombre;
 

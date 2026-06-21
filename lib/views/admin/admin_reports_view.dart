@@ -116,6 +116,21 @@ class _AdminReportsViewState extends State<AdminReportsView> {
     }
   }
 
+  Future<DocumentSnapshot?> _getUserData(String? userId) async {
+    if (userId == null || userId.isEmpty) return null;
+    
+    var doc = await FirebaseFirestore.instance.collection('estudiantes').doc(userId).get();
+    if (doc.exists) return doc;
+    
+    doc = await FirebaseFirestore.instance.collection('operadores').doc(userId).get();
+    if (doc.exists) return doc;
+    
+    doc = await FirebaseFirestore.instance.collection('usuarios').doc(userId).get();
+    if (doc.exists) return doc;
+    
+    return null;
+  }
+
   void _mostrarDetalleReporte(Map<String, dynamic> data) {
     final mensaje = data['mensaje'] ?? 'Sin mensaje adicional';
     final comentarios = data['comentarios'] ?? '';
@@ -590,29 +605,57 @@ class _AdminReportsViewState extends State<AdminReportsView> {
                       ),
                     ),
                     DataCell(
-                      MouseRegion(
-                        cursor: SystemMouseCursors.click,
-                        child: GestureDetector(
-                          onTap: () => _mostrarDetalleReporte(data),
-                          child: Row(
-                            children: [
-                              Icon(
-                                Icons.info_outline,
-                                size: 14,
-                                color: const Color(0xFFFC6707),
+                      FutureBuilder<DocumentSnapshot?>(
+                        future: _getUserData(data['usuarioId']),
+                        builder: (context, userSnapshot) {
+                          String realName = estudiante;
+                          String realEmail = data['correo'] ?? 'No disponible';
+                          
+                          if (userSnapshot.hasData && userSnapshot.data != null && userSnapshot.data!.exists) {
+                            final userData = userSnapshot.data!.data() as Map<String, dynamic>?;
+                            if (userData != null) {
+                              final nombre = userData['nombre'] ?? '';
+                              final apellido = userData['apellido'] ?? '';
+                              final fullName = '$nombre $apellido'.trim();
+                              if (fullName.isNotEmpty) {
+                                realName = fullName;
+                              }
+                              if (userData.containsKey('correo')) {
+                                realEmail = userData['correo'];
+                              }
+                            }
+                          }
+                          
+                          return MouseRegion(
+                            cursor: SystemMouseCursors.click,
+                            child: GestureDetector(
+                              onTap: () {
+                                final updatedData = Map<String, dynamic>.from(data);
+                                updatedData['estudiante'] = realName;
+                                updatedData['correo'] = realEmail;
+                                _mostrarDetalleReporte(updatedData);
+                              },
+                              child: Row(
+                                children: [
+                                  Icon(
+                                    Icons.info_outline,
+                                    size: 14,
+                                    color: const Color(0xFFFC6707),
+                                  ),
+                                  const SizedBox(width: 4),
+                                  Text(
+                                    realName,
+                                    style: GoogleFonts.outfit(
+                                      fontWeight: FontWeight.w500,
+                                      color: const Color(0xFF333333),
+                                      decoration: TextDecoration.underline,
+                                    ),
+                                  ),
+                                ],
                               ),
-                              const SizedBox(width: 4),
-                              Text(
-                                estudiante,
-                                style: GoogleFonts.outfit(
-                                  fontWeight: FontWeight.w500,
-                                  color: const Color(0xFF333333),
-                                  decoration: TextDecoration.underline,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
+                            ),
+                          );
+                        },
                       ),
                     ),
                     DataCell(
