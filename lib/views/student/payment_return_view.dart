@@ -27,20 +27,24 @@ class _PaymentReturnViewState extends State<PaymentReturnView> {
 
   Future<void> _procesarRetorno() async {
     try {
-      String reservaId;
-      String action;
+      String reservaId = '';
+      String action = '';
 
       if (kIsWeb) {
         final fragment = Uri.base.fragment;
-        final uriStr = 'http://localhost$fragment';
-        final uri = Uri.parse(uriStr);
-        reservaId = uri.queryParameters['reservaId'] ?? '';
-        action = uri.queryParameters['action'] ?? '';
+        if (fragment.isNotEmpty && fragment.contains('?')) {
+          final queryString = fragment.split('?').last;
+          final params = Uri.splitQueryString(queryString);
+          reservaId = params['reservaId'] ?? '';
+          action = params['action'] ?? '';
+        }
       } else {
         final uri = Uri.base;
         reservaId = uri.queryParameters['reservaId'] ?? '';
         action = uri.queryParameters['action'] ?? '';
       }
+
+      print('ReservaId: $reservaId, Action: $action');
 
       if (action == 'paypal_cancel') {
         setState(() {
@@ -59,8 +63,10 @@ class _PaymentReturnViewState extends State<PaymentReturnView> {
       }
 
       final auth = Provider.of<AuthController>(context, listen: false);
-      while (auth.isLoading) {
-        await Future.delayed(const Duration(milliseconds: 100));
+      int intentos = 0;
+      while (auth.isLoading && intentos < 30) {
+        await Future.delayed(const Duration(milliseconds: 200));
+        intentos++;
       }
 
       if (!auth.isAuthenticated) {
@@ -68,7 +74,7 @@ class _PaymentReturnViewState extends State<PaymentReturnView> {
         if (!auth.isAuthenticated) {
           setState(() {
             _procesando = false;
-            _mensaje = 'Error: No se pudo restaurar la sesión para confirmar el pago. Por favor, inicia sesión nuevamente.';
+            _mensaje = 'Error: No se pudo restaurar la sesión. Por favor, inicia sesión nuevamente.';
           });
           return;
         }
@@ -130,6 +136,7 @@ class _PaymentReturnViewState extends State<PaymentReturnView> {
       }
 
     } catch (e) {
+      print('Error en PaymentReturnView: $e');
       setState(() {
         _procesando = false;
         _mensaje = 'Error al confirmar pago: $e';
