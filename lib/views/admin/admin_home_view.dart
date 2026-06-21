@@ -9,8 +9,9 @@ import '../../views/shared/widgets/custom_dialog.dart';
 import '../auth/login_view.dart';
 import 'admin_users_view.dart';
 import 'admin_edit_profile_view.dart';
-import 'admin_management_view.dart';  // ✅ AGREGAR IMPORT
-import 'admin_reports_view.dart';     // ✅ AGREGAR IMPORT
+import 'admin_management_view.dart';
+import 'admin_reports_view.dart';
+import 'dart:convert';
 
 class AdminHomeView extends StatefulWidget {
   const AdminHomeView({super.key});
@@ -29,7 +30,6 @@ class _AdminHomeViewState extends State<AdminHomeView> {
     'Reportes'
   ];
 
-  // Categorías válidas de destinos (no inventar otras, "Selva" no existe)
   static const List<String> _categoriasValidas = [
     'Playas / Cayos',
     'Montañas / Trekking',
@@ -37,7 +37,13 @@ class _AdminHomeViewState extends State<AdminHomeView> {
     'Cultura / Ciudades',
   ];
 
-  // Métricas cargadas desde Firestore
+  static const List<Color> _coloresCategorias = [
+    Color(0xFFFC6707),
+    Color(0xFFFFB74D),
+    Color(0xFFFF8A65),
+    Color(0xFFFFAB91),
+  ];
+
   int _totalOperadores = 0;
   int _totalEstudiantes = 0;
   int _totalDestinos = 0;
@@ -45,10 +51,8 @@ class _AdminHomeViewState extends State<AdminHomeView> {
   double _totalIngresos = 0;
   bool _cargando = true;
 
-  // Datos para el gráfico de destinos más populares: nombre -> cantidad de reservas
   List<MapEntry<String, int>> _topDestinos = [];
 
-  // Datos para el gráfico de distribución por categoría: categoría -> cantidad de destinos
   Map<String, int> _destinosPorCategoria = {
     for (final cat in _categoriasValidas) cat: 0,
   };
@@ -59,12 +63,10 @@ class _AdminHomeViewState extends State<AdminHomeView> {
     _cargarMetricas();
   }
 
-  // Trae los conteos reales desde Firestore para mostrar en las tarjetas y los gráficos
   Future<void> _cargarMetricas() async {
     try {
       final db = FirebaseFirestore.instance;
 
-      // Consultamos en paralelo para ser más rápidos
       final results = await Future.wait([
         db.collection('estudiantes').get(),
         db.collection('operadores').get(),
@@ -77,7 +79,6 @@ class _AdminHomeViewState extends State<AdminHomeView> {
       final destinosSnap = results[2];
       final reservasSnap = results[3];
 
-      // Armamos un mapa destinoId -> nombre y destinoId -> categoria para usarlo en los gráficos
       final Map<String, String> nombrePorDestino = {};
       int destinosActivos = 0;
       final Map<String, int> conteoCategoria = {
@@ -94,14 +95,11 @@ class _AdminHomeViewState extends State<AdminHomeView> {
 
         if (activo) destinosActivos++;
 
-        // Solo contamos categorías que conocemos (no inventamos categorías nuevas)
         if (conteoCategoria.containsKey(categoria)) {
           conteoCategoria[categoria] = conteoCategoria[categoria]! + 1;
         }
       }
 
-      // Sumamos el totalGeneral de las reservas pagadas/disfrutadas
-      // y contamos cuántas reservas tiene cada destino para el top 5
       double ingresos = 0;
       final Map<String, int> reservasPorDestino = {};
 
@@ -120,7 +118,6 @@ class _AdminHomeViewState extends State<AdminHomeView> {
         }
       }
 
-      // Ordenamos los destinos por cantidad de reservas y tomamos los 5 primeros
       final destinosOrdenados = reservasPorDestino.entries.toList()
         ..sort((a, b) => b.value.compareTo(a.value));
 
@@ -142,12 +139,10 @@ class _AdminHomeViewState extends State<AdminHomeView> {
         });
       }
     } catch (e) {
-      // Si falla la carga, simplemente dejamos los valores en 0
       if (mounted) setState(() => _cargando = false);
     }
   }
 
-  // ✅ NAVEGACIÓN CORRECTA
   void _handleMenuSelected(String menu) {
     if (menu == 'Usuarios') {
       Navigator.push(
@@ -155,13 +150,11 @@ class _AdminHomeViewState extends State<AdminHomeView> {
         MaterialPageRoute(builder: (_) => const AdminUsersView()),
       );
     } else if (menu == 'Gestión') {
-      // ✅ NAVEGAR A GESTIÓN DE TABLAS
       Navigator.push(
         context,
         MaterialPageRoute(builder: (_) => const AdminManagementView()),
       );
     } else if (menu == 'Reportes') {
-      // ✅ NAVEGAR A REPORTES
       Navigator.push(
         context,
         MaterialPageRoute(builder: (_) => const AdminReportsView()),
@@ -200,8 +193,6 @@ class _AdminHomeViewState extends State<AdminHomeView> {
   }
 
   void _openDrawer() => _scaffoldKey.currentState?.openEndDrawer();
-
-  // Build
 
   @override
   Widget build(BuildContext context) {
@@ -245,18 +236,30 @@ class _AdminHomeViewState extends State<AdminHomeView> {
               padding: const EdgeInsets.symmetric(horizontal: 24),
               child: Row(
                 children: [
-                  Container(
-                    width: 50,
-                    height: 50,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      border:
-                          Border.all(color: const Color(0xFFFC6707), width: 2),
-                    ),
-                    child: const CircleAvatar(
-                      backgroundColor: Color(0xFFFDDBB3),
-                      child: Icon(Icons.admin_panel_settings,
-                          color: Color(0xFFFC6707), size: 28),
+                  GestureDetector(
+                    onTap: _handleEditProfile,
+                    child: Container(
+                      width: 50,
+                      height: 50,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        border:
+                            Border.all(color: const Color(0xFFFC6707), width: 2),
+                      ),
+                      child: ClipOval(
+                        child: user?.fotoBase64 != null && user!.fotoBase64!.isNotEmpty
+                            ? Image.memory(
+                                base64Decode(user.fotoBase64!),
+                                width: 50,
+                                height: 50,
+                                fit: BoxFit.cover,
+                              )
+                            : const CircleAvatar(
+                                backgroundColor: Color(0xFFFDDBB3),
+                                child: Icon(Icons.admin_panel_settings,
+                                    color: Color(0xFFFC6707), size: 28),
+                              ),
+                      ),
                     ),
                   ),
                   const SizedBox(width: 12),
@@ -326,35 +329,72 @@ class _AdminHomeViewState extends State<AdminHomeView> {
     );
   }
 
+  // Layout para móvil con CustomScrollView
   Widget _buildMobileLayout() {
-    return SingleChildScrollView(
-      child: Column(
-        children: [
-          const SizedBox(height: 16),
-          _buildMetricsContent(isMobile: true),
-          _buildFooter(true),
-        ],
-      ),
+    return CustomScrollView(
+      slivers: [
+        // Contenido principal
+        SliverToBoxAdapter(
+          child: Column(
+            children: [
+              const SizedBox(height: 16),
+              _buildMetricsContent(isMobile: true),
+            ],
+          ),
+        ),
+        // SliverFillRemaining con Column + Spacer para mantener el footer compacto
+        SliverFillRemaining(
+          hasScrollBody: false,
+          child: Column(
+            children: [
+              const Spacer(), // Espacio blanco que se estira
+              _buildFooter(true), // Footer mantiene su tamaño original
+            ],
+          ),
+        ),
+      ],
     );
   }
 
+  // Layout para desktop con CustomScrollView
   Widget _buildDesktopLayout() {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Expanded(
           flex: 7,
-          child: SingleChildScrollView(
-            child: Column(
-              children: [
-                const SizedBox(height: 16),
-                _buildMetricsContent(isMobile: false),
-                _buildFooter(false),
+          child: Container(
+            decoration: BoxDecoration(
+              border: Border(
+                right: BorderSide(color: Colors.grey.withOpacity(0.3), width: 1.5),
+              ),
+            ),
+            child: CustomScrollView(
+              slivers: [
+                // Contenido principal
+                SliverToBoxAdapter(
+                  child: Column(
+                    children: [
+                      const SizedBox(height: 16),
+                      _buildMetricsContent(isMobile: false),
+                    ],
+                  ),
+                ),
+                // SliverFillRemaining con Column + Spacer para mantener el footer compacto
+                SliverFillRemaining(
+                  hasScrollBody: false,
+                  child: Column(
+                    children: [
+                      const Spacer(), // Espacio blanco que se estira
+                      _buildFooter(false), // Footer mantiene su tamaño original
+                    ],
+                  ),
+                ),
               ],
             ),
           ),
         ),
-        // Imagen decorativa lateral del campus
+        // Panel derecho con imagen del campus
         Container(
           width: 320,
           decoration: BoxDecoration(
@@ -387,7 +427,6 @@ class _AdminHomeViewState extends State<AdminHomeView> {
   }
 
   Widget _buildMetricsContent({required bool isMobile}) {
-    // Total de usuarios = estudiantes + operadores
     final totalUsuarios = _totalEstudiantes + _totalOperadores;
 
     return Padding(
@@ -406,7 +445,6 @@ class _AdminHomeViewState extends State<AdminHomeView> {
                   color: const Color(0xFF333333),
                 ),
               ),
-              // Botón para refrescar todas las métricas manualmente
               IconButton(
                 onPressed: () {
                   setState(() => _cargando = true);
@@ -425,39 +463,44 @@ class _AdminHomeViewState extends State<AdminHomeView> {
           ),
           const SizedBox(height: 24),
 
-          // Tarjetas de métricas
           if (isMobile) ...[
-            _buildMetricCard(
-                'Total Usuarios', '$totalUsuarios', Icons.people),
-            const SizedBox(height: 12),
             Row(
               children: [
+                Expanded(
+                    child: _buildMetricCard('Total Usuarios',
+                        '$totalUsuarios', Icons.people)),
+                const SizedBox(width: 12),
                 Expanded(
                     child: _buildMetricCard('Operadores',
                         '$_totalOperadores', Icons.business)),
-                const SizedBox(width: 12),
-                Expanded(
-                    child: _buildMetricCard('Estudiantes',
-                        '$_totalEstudiantes', Icons.school)),
               ],
             ),
             const SizedBox(height: 12),
             Row(
               children: [
                 Expanded(
-                    child: _buildMetricCard('Destinos Activos',
-                        '$_totalDestinos', Icons.tour)),
+                    child: _buildMetricCard('Estudiantes',
+                        '$_totalEstudiantes', Icons.school)),
                 const SizedBox(width: 12),
                 Expanded(
-                    child: _buildMetricCard(
-                        'Reservas', '$_totalReservas', Icons.receipt)),
+                    child: _buildMetricCard('Destinos Activos',
+                        '$_totalDestinos', Icons.tour)),
               ],
             ),
             const SizedBox(height: 12),
-            _buildMetricCard(
-                'Ingresos Confirmados',
-                '\$${_totalIngresos.toStringAsFixed(2)}',
-                Icons.attach_money),
+            Row(
+              children: [
+                Expanded(
+                    child: _buildMetricCard(
+                        'Reservas', '$_totalReservas', Icons.receipt)),
+                const SizedBox(width: 12),
+                Expanded(
+                    child: _buildMetricCard(
+                        'Ingresos Confirmados',
+                        '\$${_totalIngresos.toStringAsFixed(2)}',
+                        Icons.attach_money)),
+              ],
+            ),
           ] else ...[
             Row(
               children: [
@@ -496,11 +539,11 @@ class _AdminHomeViewState extends State<AdminHomeView> {
 
           const SizedBox(height: 32),
 
-          // Sección de gráficos: destinos populares y distribución por categoría
           if (isMobile) ...[
             _buildTopDestinosChart(),
             const SizedBox(height: 24),
             _buildCategoriaChart(),
+            const SizedBox(height: 16),
           ] else ...[
             Row(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -516,7 +559,6 @@ class _AdminHomeViewState extends State<AdminHomeView> {
     );
   }
 
-  // Tarjeta individual de métrica. Muestra un spinner mientras carga.
   Widget _buildMetricCard(String title, String value, IconData icon) {
     return Container(
       padding: const EdgeInsets.all(16),
@@ -544,7 +586,6 @@ class _AdminHomeViewState extends State<AdminHomeView> {
             child: Icon(icon, color: const Color(0xFFFC6707), size: 24),
           ),
           const SizedBox(height: 12),
-          // Mostramos el spinner mientras se cargan los datos
           _cargando
               ? const SizedBox(
                   height: 28,
@@ -571,7 +612,6 @@ class _AdminHomeViewState extends State<AdminHomeView> {
     );
   }
 
-  // Gráfico de barras horizontales: top 5 destinos con más reservas
   Widget _buildTopDestinosChart() {
     return Container(
       width: double.infinity,
@@ -609,7 +649,6 @@ class _AdminHomeViewState extends State<AdminHomeView> {
               ),
             )
           else
-            // El máximo nos sirve para escalar las barras de forma proporcional
             ..._buildBarrasDestinos(),
         ],
       ),
@@ -663,15 +702,6 @@ class _AdminHomeViewState extends State<AdminHomeView> {
     }).toList();
   }
 
-  // Colores fijos para cada categoría en el gráfico de torta (mismo orden que _categoriasValidas)
-  static const List<Color> _coloresCategorias = [
-    Color(0xFFFC6707), // Playas / Cayos
-    Color(0xFFFDDBB3), // Montañas / Trekking
-    Color(0xFF4CAF50), // Aventura / Ríos
-    Color(0xFF2196F3), // Cultura / Ciudades
-  ];
-
-  // Gráfico de distribución de destinos por categoría (tipo rueda / torta)
   Widget _buildCategoriaChart() {
     final total = _destinosPorCategoria.values.fold<int>(0, (a, b) => a + b);
 
@@ -713,7 +743,6 @@ class _AdminHomeViewState extends State<AdminHomeView> {
           else
             Column(
               children: [
-                // La rueda con los porcentajes calculados a partir de Firestore
                 SizedBox(
                   height: 160,
                   width: 160,
@@ -725,7 +754,6 @@ class _AdminHomeViewState extends State<AdminHomeView> {
                   ),
                 ),
                 const SizedBox(height: 20),
-                // Leyenda con el nombre, cantidad y color de cada categoría
                 ..._destinosPorCategoria.entries.toList().asMap().entries.map(
                   (item) {
                     final index = item.key;
@@ -775,8 +803,7 @@ class _AdminHomeViewState extends State<AdminHomeView> {
   Widget _buildFooter(bool isMobile) {
     return Container(
       width: double.infinity,
-      padding: EdgeInsets.symmetric(vertical: isMobile ? 16 : 20),
-      margin: EdgeInsets.only(top: isMobile ? 16 : 32),
+      padding: EdgeInsets.symmetric(vertical: isMobile ? 12 : 16),
       decoration: const BoxDecoration(
         color: Color(0xFFFC6707),
         borderRadius: BorderRadius.only(
@@ -799,8 +826,6 @@ class _AdminHomeViewState extends State<AdminHomeView> {
   }
 }
 
-// Dibuja el gráfico de torta (rueda) a partir de los valores reales de Firestore.
-// No usa ninguna librería externa, solo CustomPainter nativo de Flutter.
 class _PieChartPainter extends CustomPainter {
   final List<int> valores;
   final List<Color> colores;
@@ -813,7 +838,7 @@ class _PieChartPainter extends CustomPainter {
     if (total == 0) return;
 
     final rect = Rect.fromLTWH(0, 0, size.width, size.height);
-    double anguloInicial = -90 * (3.141592653589793 / 180); // empieza arriba
+    double anguloInicial = -90 * (3.141592653589793 / 180);
 
     for (int i = 0; i < valores.length; i++) {
       final valor = valores[i];
@@ -830,7 +855,6 @@ class _PieChartPainter extends CustomPainter {
       anguloInicial += anguloBarrido;
     }
 
-    // Círculo blanco en el centro para dar el efecto de "donut"
     final centro = Offset(size.width / 2, size.height / 2);
     final radioInterno = size.width * 0.28;
     canvas.drawCircle(centro, radioInterno, Paint()..color = Colors.white);

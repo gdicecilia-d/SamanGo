@@ -1,4 +1,3 @@
-// Pantalla para publicar un nuevo tour
 import 'dart:typed_data';
 import 'dart:convert';
 import 'package:flutter/material.dart';
@@ -38,7 +37,6 @@ class _OperatorPublishViewState extends State<OperatorPublishView> {
   final TextEditingController _descripcionController = TextEditingController();
   final TextEditingController _nochesController = TextEditingController();
 
-  // ✅ LISTAS MODIFICABLES (se cargan desde Firestore)
   List<String> _transportes = ['Cargando...'];
   List<String> _alojamientos = ['Cargando...'];
   
@@ -48,7 +46,6 @@ class _OperatorPublishViewState extends State<OperatorPublishView> {
   String _selectedCategoria = 'Playas / Cayos';
   bool _isOffer = false;
 
-  // ✅ LISTAS ESTÁTICAS (no cambian)
   final List<String> _categorias = [
     'Playas / Cayos',
     'Montañas / Trekking',
@@ -56,7 +53,6 @@ class _OperatorPublishViewState extends State<OperatorPublishView> {
     'Cultura / Ciudades',
   ];
 
-  // Estados de Venezuela para validación
   final List<String> _estadosVenezuela = [
     'Amazonas', 'Anzoátegui', 'Apure', 'Aragua', 'Barinas', 'Bolívar',
     'Carabobo', 'Cojedes', 'Delta Amacuro', 'Distrito Capital', 'Falcón',
@@ -79,7 +75,6 @@ class _OperatorPublishViewState extends State<OperatorPublishView> {
   bool _isHoveringDescartar = false;
   bool _isHoveringPortada = false;
 
-  // Variables para validación de campos
   bool _tituloTocado = false;
   bool _ubicacionTocado = false;
   bool _precioTocado = false;
@@ -88,10 +83,14 @@ class _OperatorPublishViewState extends State<OperatorPublishView> {
   bool _nochesTocado = false;
 
   bool _cargandoOpciones = true;
+  String _operadorId = '';
+  Map<String, dynamic>? _operadorData;
+  bool _cargandoOperador = true;
 
   @override
   void initState() {
     super.initState();
+    _cargarOperadorId();
     _cargarOpcionesActivas();
   }
 
@@ -108,14 +107,53 @@ class _OperatorPublishViewState extends State<OperatorPublishView> {
     super.dispose();
   }
 
-  // ✅ CARGAR SOLO OPCIONES ACTIVAS DESDE FIRESTORE
+  void _cargarOperadorId() async {
+    final auth = Provider.of<AuthController>(context, listen: false);
+    final user = auth.usuarioActual;
+    
+    if (user != null) {
+      setState(() {
+        _operadorId = user.id;
+      });
+      
+      try {
+        final doc = await FirebaseFirestore.instance
+            .collection('operadores')
+            .doc(_operadorId)
+            .get();
+        
+        if (doc.exists && mounted) {
+          setState(() {
+            _operadorData = doc.data() as Map<String, dynamic>?;
+            _cargandoOperador = false;
+          });
+        } else {
+          setState(() {
+            _operadorData = {
+              'nombre': user.nombre,
+              'empresa': user.empresa ?? 'Operador',
+            };
+            _cargandoOperador = false;
+          });
+        }
+      } catch (e) {
+        setState(() {
+          _operadorData = {
+            'nombre': user.nombre,
+            'empresa': user.empresa ?? 'Operador',
+          };
+          _cargandoOperador = false;
+        });
+      }
+    }
+  }
+
   void _cargarOpcionesActivas() async {
     setState(() {
       _cargandoOpciones = true;
     });
 
     try {
-      // Cargar hospedajes activos
       final hospedajesSnapshot = await FirebaseFirestore.instance
           .collection('hospedajes')
           .where('activo', isEqualTo: true)
@@ -125,7 +163,6 @@ class _OperatorPublishViewState extends State<OperatorPublishView> {
           .map((doc) => doc.data()['categoria'] as String)
           .toList();
       
-      // Cargar transportes activos
       final transportesSnapshot = await FirebaseFirestore.instance
           .collection('transportes')
           .where('activo', isEqualTo: true)
@@ -162,7 +199,6 @@ class _OperatorPublishViewState extends State<OperatorPublishView> {
         _transporteSeleccionado = 'Error al cargar';
         _alojamientoSeleccionado = 'Error al cargar';
       });
-      print('Error cargando opciones activas: $e');
     }
   }
 
@@ -197,7 +233,6 @@ class _OperatorPublishViewState extends State<OperatorPublishView> {
       final tieneEstado = _estadosVenezuela.any((estado) =>
           texto.toLowerCase().contains(estado.toLowerCase()));
       if (!tieneEstado) {
-        // El error se muestra en el widget
       }
     });
   }
@@ -283,10 +318,8 @@ class _OperatorPublishViewState extends State<OperatorPublishView> {
   }
 
   Future<void> _publicarTour() async {
-    // Marcar todos los campos como tocados para mostrar validaciones
     _marcarTodosLosCampos();
 
-    // Validar todos los campos
     if (_tituloController.text.trim().isEmpty) {
       _mostrarMensaje('Por favor ingresa el título del tour');
       return;
@@ -329,10 +362,19 @@ class _OperatorPublishViewState extends State<OperatorPublishView> {
     });
 
     try {
-      final auth = Provider.of<AuthController>(context, listen: false);
-      final operadorId = auth.usuarioActual?.id ?? '';
-      final operadorNombre = auth.usuarioActual?.nombre ?? 'Operador';
-      final operadorEmpresa = auth.usuarioActual?.empresa ?? '';
+      String operadorId = _operadorId;
+      String operadorNombre = _operadorData?['nombre'] ?? 'Operador';
+      String operadorEmpresa = _operadorData?['empresa'] ?? '';
+
+      if (operadorId.isEmpty) {
+        final auth = Provider.of<AuthController>(context, listen: false);
+        final user = auth.usuarioActual;
+        if (user != null) {
+          operadorId = user.id;
+          operadorNombre = user.nombre;
+          operadorEmpresa = user.empresa ?? '';
+        }
+      }
 
       String portadaUrl = '';
       if (_portadaImagenBytes != null) {
@@ -549,8 +591,9 @@ class _OperatorPublishViewState extends State<OperatorPublishView> {
   }
 
   Widget _buildDrawer() {
-    final auth = Provider.of<AuthController>(context);
-    final user = auth.usuarioActual;
+    final String nombreDrawer = _operadorData?['nombre'] ?? 'Operador';
+    final String empresaDrawer = _operadorData?['empresa'] ?? '';
+    final String fotoBase64 = _operadorData?['fotoBase64'] ?? '';
 
     return Drawer(
       backgroundColor: Colors.white,
@@ -573,9 +616,9 @@ class _OperatorPublishViewState extends State<OperatorPublishView> {
                         border: Border.all(color: const Color(0xFFFC6707), width: 2),
                       ),
                       child: ClipOval(
-                        child: user?.fotoBase64 != null && user!.fotoBase64!.isNotEmpty
+                        child: fotoBase64.isNotEmpty
                             ? Image.memory(
-                                base64Decode(user.fotoBase64!),
+                                base64Decode(fotoBase64),
                                 width: 50,
                                 height: 50,
                                 fit: BoxFit.cover,
@@ -593,11 +636,11 @@ class _OperatorPublishViewState extends State<OperatorPublishView> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          user?.nombre ?? 'Operador',
+                          nombreDrawer,
                           style: GoogleFonts.outfit(fontSize: 16, fontWeight: FontWeight.bold, color: const Color(0xFF333333)),
                         ),
                         Text(
-                          user?.empresa ?? '',
+                          empresaDrawer,
                           style: GoogleFonts.outfit(fontSize: 14, color: const Color(0xFF666666)),
                         ),
                       ],
@@ -1051,7 +1094,6 @@ class _OperatorPublishViewState extends State<OperatorPublishView> {
     );
   }
 
-  // ✅ DROPDOWN DINÁMICO (desde Firestore)
   Widget _buildDropdownDinamico(String label, List<String> items, String value, Function(String?) onChanged) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -1084,7 +1126,6 @@ class _OperatorPublishViewState extends State<OperatorPublishView> {
     );
   }
 
-  // ✅ DROPDOWN ESTÁTICO (categorías)
   Widget _buildDropdownEstatico(String label, List<String> items, String value, Function(String?) onChanged) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -1117,7 +1158,6 @@ class _OperatorPublishViewState extends State<OperatorPublishView> {
     );
   }
 
-  // Método para campos con validación
   Widget _buildTextFieldWithValidation(
     String label,
     TextEditingController controller,

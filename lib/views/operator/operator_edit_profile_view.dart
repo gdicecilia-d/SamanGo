@@ -1,4 +1,3 @@
-// Pantalla de editar perfil del operador 
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -41,11 +40,14 @@ class _OperatorEditProfileViewState extends State<OperatorEditProfileView> {
   bool _isHoveringFoto = false;
   bool _isHoveringEliminar = false;
   bool _isLoading = false;
+  String _operadorId = '';
+  Map<String, dynamic>? _operadorData;
+  bool _cargandoOperador = true;
 
   @override
   void initState() {
     super.initState();
-    _cargarDatosUsuario();
+    _cargarOperadorId();
   }
 
   @override
@@ -59,33 +61,81 @@ class _OperatorEditProfileViewState extends State<OperatorEditProfileView> {
     super.dispose();
   }
 
-  Future<void> _cargarDatosUsuario() async {
+  void _cargarOperadorId() async {
     final auth = Provider.of<AuthController>(context, listen: false);
     final user = auth.usuarioActual;
+    
     if (user != null) {
       setState(() {
-        _empresaController.text = user.empresa ?? '';
-        _representanteController.text = user.nombre;
-        _rifController.text = user.rif ?? '';
-        _correoController.text = user.correo;
-        _servicioController.text = user.descripcion ?? '';
-        
-        if (user.telefono != null && user.telefono!.isNotEmpty) {
-          String telefono = user.telefono!;
-          telefono = telefono.replaceAll(RegExp(r'[^\d]'), '');
-          
-          if (telefono.length == 11) {
-            _selectedTelefonoPrefijo = telefono.substring(0, 4);
-            _telefonoNumeroController.text = telefono.substring(4, 11);
-          } else if (telefono.length == 10) {
-            _selectedTelefonoPrefijo = '0${telefono.substring(0, 3)}';
-            _telefonoNumeroController.text = telefono.substring(3, 10);
-          } else if (telefono.length == 7) {
-            _telefonoNumeroController.text = telefono;
-          }
-        }
+        _operadorId = user.id;
       });
+      
+      try {
+        final doc = await FirebaseFirestore.instance
+            .collection('operadores')
+            .doc(_operadorId)
+            .get();
+        
+        if (doc.exists && mounted) {
+          final data = doc.data() as Map<String, dynamic>;
+          setState(() {
+            _operadorData = data;
+            _cargandoOperador = false;
+          });
+          _cargarDatosDesdeMap(data);
+        } else {
+          setState(() {
+            _operadorData = {
+              'nombre': user.nombre,
+              'empresa': user.empresa ?? '',
+              'rif': user.rif ?? '',
+              'correo': user.correo,
+              'descripcion': user.descripcion ?? '',
+              'telefono': user.telefono ?? '',
+            };
+            _cargandoOperador = false;
+          });
+          _cargarDatosDesdeMap(_operadorData!);
+        }
+      } catch (e) {
+        setState(() {
+          _operadorData = {
+            'nombre': user.nombre,
+            'empresa': user.empresa ?? '',
+            'rif': user.rif ?? '',
+            'correo': user.correo,
+            'descripcion': user.descripcion ?? '',
+            'telefono': user.telefono ?? '',
+          };
+          _cargandoOperador = false;
+        });
+        _cargarDatosDesdeMap(_operadorData!);
+      }
     }
+  }
+
+  void _cargarDatosDesdeMap(Map<String, dynamic> data) {
+    setState(() {
+      _empresaController.text = data['empresa'] ?? '';
+      _representanteController.text = data['nombre'] ?? '';
+      _rifController.text = data['rif'] ?? '';
+      _correoController.text = data['correo'] ?? '';
+      _servicioController.text = data['descripcion'] ?? '';
+      
+      String telefono = data['telefono'] ?? '';
+      if (telefono.isNotEmpty) {
+        telefono = telefono.replaceAll(RegExp(r'[^\d]'), '');
+        if (telefono.length == 11) {
+          _selectedTelefonoPrefijo = telefono.substring(0, 4);
+          _telefonoNumeroController.text = telefono.substring(4, 11);
+        } else if (telefono.length == 10) {
+          _selectedTelefonoPrefijo = '0${telefono.substring(0, 3)}';
+          _telefonoNumeroController.text = telefono.substring(3, 10);
+        } else if (telefono.length == 7) {
+          _telefonoNumeroController.text = telefono;
+        }
+      }
+    });
   }
 
   void _mostrarMensaje(String mensaje) {
@@ -109,9 +159,6 @@ class _OperatorEditProfileViewState extends State<OperatorEditProfileView> {
     if (confirmar == true) {
       setState(() => _isLoading = true);
       
-      final auth = Provider.of<AuthController>(context, listen: false);
-      final userId = auth.usuarioActual?.id ?? '';
-      
       final telefonoCompleto = _telefonoNumeroController.text.isNotEmpty 
           ? '$_selectedTelefonoPrefijo${_telefonoNumeroController.text}'
           : '';
@@ -124,9 +171,7 @@ class _OperatorEditProfileViewState extends State<OperatorEditProfileView> {
           updates['telefono'] = telefonoCompleto;
         }
         
-        await FirebaseFirestore.instance.collection('operadores').doc(userId).update(updates);
-        
-        await auth.reloadUser();
+        await FirebaseFirestore.instance.collection('operadores').doc(_operadorId).update(updates);
         
         _mostrarMensaje('Perfil actualizado correctamente');
         if (!mounted) return;
@@ -151,17 +196,15 @@ class _OperatorEditProfileViewState extends State<OperatorEditProfileView> {
       if (ext == 'jpg' || ext == 'jpeg' || ext == 'png') {
         setState(() => _isLoading = true);
         final bytes = await image.readAsBytes();
-        final auth = Provider.of<AuthController>(context, listen: false);
-        final userId = auth.usuarioActual?.id ?? '';
-        
         final base64Image = _storageService.imageToBase64(bytes);
-        final success = await auth.updateProfileImage(userId, base64Image);
         
-        if (success) {
-          await auth.reloadUser();
-          await _cargarDatosUsuario();
+        try {
+          await FirebaseFirestore.instance.collection('operadores').doc(_operadorId).update({
+            'fotoBase64': base64Image
+          });
           _mostrarMensaje('Logo actualizado exitosamente');
-        } else {
+          _cargarOperadorId();
+        } catch (e) {
           _mostrarMensaje('Error al actualizar el logo');
         }
         setState(() => _isLoading = false);
@@ -181,16 +224,14 @@ class _OperatorEditProfileViewState extends State<OperatorEditProfileView> {
 
     if (confirmar == true) {
       setState(() => _isLoading = true);
-      final auth = Provider.of<AuthController>(context, listen: false);
-      final userId = auth.usuarioActual?.id ?? '';
       
-      final success = await auth.updateProfileImage(userId, '');
-      
-      if (success) {
-        await auth.reloadUser();
-        await _cargarDatosUsuario();
+      try {
+        await FirebaseFirestore.instance.collection('operadores').doc(_operadorId).update({
+          'fotoBase64': ''
+        });
         _mostrarMensaje('Logo eliminado exitosamente');
-      } else {
+        _cargarOperadorId();
+      } catch (e) {
         _mostrarMensaje('Error al eliminar el logo');
       }
       setState(() => _isLoading = false);
@@ -245,23 +286,38 @@ class _OperatorEditProfileViewState extends State<OperatorEditProfileView> {
     final screenWidth = MediaQuery.of(context).size.width;
     final isMobile = screenWidth < 850;
     final isLandscape = MediaQuery.of(context).orientation == Orientation.landscape;
-    final auth = Provider.of<AuthController>(context);
-    final user = auth.usuarioActual;
 
-    if (user == null) {
+    if (_cargandoOperador) {
       return const Scaffold(
         body: Center(child: CircularProgressIndicator()),
       );
     }
 
+    final String nombre = _operadorData?['nombre'] ?? 'Operador';
+    final String empresa = _operadorData?['empresa'] ?? '';
+    final String rif = _operadorData?['rif'] ?? '';
+    final String correo = _operadorData?['correo'] ?? '';
+    final String fotoBase64 = _operadorData?['fotoBase64'] ?? '';
+
+    final usuario = Usuario(
+      id: _operadorId,
+      nombre: nombre,
+      correo: correo,
+      rol: 'operador',
+      empresa: empresa,
+      rif: rif,
+      descripcion: _operadorData?['descripcion'] ?? '',
+      telefono: _operadorData?['telefono'] ?? '',
+      fotoBase64: fotoBase64,
+    );
+
     if (isMobile) {
-      return _buildMobileLayout(user, isLandscape);
+      return _buildMobileLayout(usuario, isLandscape);
     }
 
-    return _buildDesktopLayout(user);
+    return _buildDesktopLayout(usuario);
   }
 
-  // MÓVIL
   Widget _buildMobileLayout(Usuario user, bool isLandscape) {
     return Scaffold(
       key: _scaffoldKey,
@@ -298,6 +354,7 @@ class _OperatorEditProfileViewState extends State<OperatorEditProfileView> {
   }
 
   Widget _buildAvatarSectionMobile(Usuario user) {
+    final String foto = user.fotoBase64 ?? '';
     return Column(
       children: [
         GestureDetector(
@@ -310,9 +367,9 @@ class _OperatorEditProfileViewState extends State<OperatorEditProfileView> {
               border: Border.all(color: const Color(0xFFFC6707), width: 3),
             ),
             child: ClipOval(
-              child: user.fotoBase64 != null && user.fotoBase64!.isNotEmpty
+              child: foto.isNotEmpty
                   ? Image.memory(
-                      base64Decode(user.fotoBase64!),
+                      base64Decode(foto),
                       width: 100,
                       height: 100,
                       fit: BoxFit.cover,
@@ -528,7 +585,6 @@ class _OperatorEditProfileViewState extends State<OperatorEditProfileView> {
     );
   }
 
-  // ESCRITORIO
   Widget _buildDesktopLayout(Usuario user) {
     final screenWidth = MediaQuery.of(context).size.width;
     final isLargeScreen = screenWidth > 1400;
@@ -597,6 +653,7 @@ class _OperatorEditProfileViewState extends State<OperatorEditProfileView> {
   }
 
   Widget _buildAvatarSectionDesktop(Usuario user) {
+    final String foto = user.fotoBase64 ?? '';
     return Column(
       children: [
         GestureDetector(
@@ -606,8 +663,8 @@ class _OperatorEditProfileViewState extends State<OperatorEditProfileView> {
             height: 120,
             decoration: BoxDecoration(shape: BoxShape.circle, border: Border.all(color: const Color(0xFFFC6707), width: 3)),
             child: ClipOval(
-              child: user.fotoBase64 != null && user.fotoBase64!.isNotEmpty
-                  ? Image.memory(base64Decode(user.fotoBase64!), width: 120, height: 120, fit: BoxFit.cover, gaplessPlayback: true)
+              child: foto.isNotEmpty
+                  ? Image.memory(base64Decode(foto), width: 120, height: 120, fit: BoxFit.cover, gaplessPlayback: true)
                   : Container(color: const Color(0xFFFDDBB3), child: const Icon(Icons.business_center, color: Color(0xFFFC6707), size: 60)),
             ),
           ),
@@ -796,11 +853,11 @@ class _OperatorEditProfileViewState extends State<OperatorEditProfileView> {
     );
   }
 
-  // DRAWER
   Widget _buildDrawer() {
-    final auth = Provider.of<AuthController>(context);
-    final user = auth.usuarioActual;
-    
+    final String nombreDrawer = _operadorData?['nombre'] ?? 'Operador';
+    final String empresaDrawer = _operadorData?['empresa'] ?? '';
+    final String fotoBase64 = _operadorData?['fotoBase64'] ?? '';
+
     return Drawer(
       backgroundColor: Colors.white,
       width: 280,
@@ -813,7 +870,7 @@ class _OperatorEditProfileViewState extends State<OperatorEditProfileView> {
               child: Row(
                 children: [
                   GestureDetector(
-                    onTap: _handleEditProfile, 
+                    onTap: _handleEditProfile,
                     child: Container(
                       width: 50,
                       height: 50,
@@ -822,9 +879,9 @@ class _OperatorEditProfileViewState extends State<OperatorEditProfileView> {
                         border: Border.all(color: const Color(0xFFFC6707), width: 2),
                       ),
                       child: ClipOval(
-                        child: user?.fotoBase64 != null && user!.fotoBase64!.isNotEmpty
+                        child: fotoBase64.isNotEmpty
                             ? Image.memory(
-                                base64Decode(user.fotoBase64!),
+                                base64Decode(fotoBase64),
                                 width: 50,
                                 height: 50,
                                 fit: BoxFit.cover,
@@ -842,11 +899,11 @@ class _OperatorEditProfileViewState extends State<OperatorEditProfileView> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          user?.nombre ?? 'Operador',
+                          nombreDrawer,
                           style: GoogleFonts.outfit(fontSize: 16, fontWeight: FontWeight.bold, color: const Color(0xFF333333)),
                         ),
                         Text(
-                          user?.empresa ?? '',
+                          empresaDrawer,
                           style: GoogleFonts.outfit(fontSize: 14, color: const Color(0xFF666666)),
                         ),
                       ],

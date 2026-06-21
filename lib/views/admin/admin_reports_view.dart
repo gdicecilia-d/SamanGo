@@ -1,4 +1,3 @@
-// Pantalla de reportes (Administrador)
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
@@ -10,6 +9,8 @@ import '../auth/login_view.dart';
 import 'admin_home_view.dart';
 import 'admin_management_view.dart';
 import 'admin_users_view.dart';
+import 'admin_edit_profile_view.dart';
+import 'dart:convert';
 
 class AdminReportsView extends StatefulWidget {
   const AdminReportsView({super.key});
@@ -42,7 +43,12 @@ class _AdminReportsViewState extends State<AdminReportsView> {
     }
   }
 
-  void _handleEditProfile() {}
+  void _handleEditProfile() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (_) => const AdminEditProfileView()),
+    );
+  }
 
   void _handleLogout() {
     CustomConfirmDialog.show(
@@ -75,10 +81,6 @@ class _AdminReportsViewState extends State<AdminReportsView> {
 
   void _openDrawer() {
     _scaffoldKey.currentState?.openEndDrawer();
-  }
-
-  void _volver() {
-    Navigator.pop(context);
   }
 
   Future<void> _actualizarEstadoReporte(String reporteId, String nuevoEstado) async {
@@ -114,7 +116,6 @@ class _AdminReportsViewState extends State<AdminReportsView> {
     }
   }
 
-  // ✅ MOSTRAR DETALLE DEL REPORTE EN UN DIÁLOGO
   void _mostrarDetalleReporte(Map<String, dynamic> data) {
     final mensaje = data['mensaje'] ?? 'Sin mensaje adicional';
     final comentarios = data['comentarios'] ?? '';
@@ -130,27 +131,33 @@ class _AdminReportsViewState extends State<AdminReportsView> {
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(20),
         ),
-        title: Row(
-          children: [
-            Icon(
-              Icons.report_problem,
-              color: const Color(0xFFFC6707),
-            ),
-            const SizedBox(width: 10),
-            Text(
-              'Detalle del Reporte',
-              style: GoogleFonts.outfit(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-          ],
-        ),
+        elevation: 4,
+        backgroundColor: Colors.white,
+        contentPadding: const EdgeInsets.all(24),
         content: SingleChildScrollView(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             mainAxisSize: MainAxisSize.min,
             children: [
+              Row(
+                children: [
+                  Icon(
+                    Icons.report_problem,
+                    color: const Color(0xFFFC6707),
+                    size: 28,
+                  ),
+                  const SizedBox(width: 12),
+                  Text(
+                    'Detalle del Reporte',
+                    style: GoogleFonts.outfit(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                      color: const Color(0xFF333333),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 16),
               _buildDetalleRow('Estudiante:', data['estudiante'] ?? 'Sin nombre'),
               const SizedBox(height: 8),
               _buildDetalleRow('Correo:', correo),
@@ -163,7 +170,7 @@ class _AdminReportsViewState extends State<AdminReportsView> {
               const SizedBox(height: 8),
               _buildDetalleRow('Fecha:', '${fecha.day}/${fecha.month}/${fecha.year} ${fecha.hour}:${fecha.minute.toString().padLeft(2, '0')}'),
               const SizedBox(height: 12),
-              const Divider(),
+              const Divider(color: Color(0xFFE0E0E0)),
               const SizedBox(height: 8),
               Text(
                 '📝 Mensaje del estudiante:',
@@ -214,21 +221,33 @@ class _AdminReportsViewState extends State<AdminReportsView> {
                   ),
                 ),
               ],
+              const SizedBox(height: 20),
+              Center(
+                child: SizedBox(
+                  width: 120,
+                  child: ElevatedButton(
+                    onPressed: () => Navigator.pop(context),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFFFC6707),
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(vertical: 10),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(30),
+                      ),
+                    ),
+                    child: Text(
+                      'Cerrar',
+                      style: GoogleFonts.outfit(
+                        fontSize: 14,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
             ],
           ),
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: Text(
-              'Cerrar',
-              style: GoogleFonts.outfit(
-                color: const Color(0xFFFC6707),
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-          ),
-        ],
       ),
     );
   }
@@ -270,62 +289,19 @@ class _AdminReportsViewState extends State<AdminReportsView> {
       key: _scaffoldKey,
       backgroundColor: Colors.white,
       endDrawer: isMobile ? _buildDrawer() : null,
-      body: Stack(
+      body: Column(
         children: [
-          Column(
-            children: [
-              AppHeader(
-                activeMenu: _activeMenu,
-                onMenuSelected: _handleMenuSelected,
-                onEditProfile: _handleEditProfile,
-                onLogout: _handleLogout,
-                menuItems: _menuItems,
-                isMobile: isMobile,
-                onMenuTap: isMobile ? _openDrawer : null,
-              ),
-              Expanded(
-                child: isMobile ? _buildMobileLayout() : _buildDesktopLayout(),
-              ),
-            ],
+          AppHeader(
+            activeMenu: _activeMenu,
+            onMenuSelected: _handleMenuSelected,
+            onEditProfile: _handleEditProfile,
+            onLogout: _handleLogout,
+            menuItems: _menuItems,
+            isMobile: isMobile,
+            onMenuTap: isMobile ? _openDrawer : null,
           ),
-          Positioned(
-            top: isMobile ? 80 : 100,
-            right: 24,
-            child: MouseRegion(
-              cursor: SystemMouseCursors.click,
-              child: GestureDetector(
-                onTap: _volver,
-                child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(30),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withValues(alpha: 0.1),
-                        blurRadius: 8,
-                        offset: const Offset(0, 2),
-                      ),
-                    ],
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(Icons.arrow_back, color: const Color(0xFFFC6707), size: 16),
-                      const SizedBox(width: 4),
-                      Text(
-                        'Volver',
-                        style: GoogleFonts.outfit(
-                          fontSize: 16,
-                          color: const Color(0xFFFC6707),
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ),
+          Expanded(
+            child: isMobile ? _buildMobileLayout() : _buildDesktopLayout(),
           ),
         ],
       ),
@@ -347,16 +323,28 @@ class _AdminReportsViewState extends State<AdminReportsView> {
               padding: const EdgeInsets.symmetric(horizontal: 24),
               child: Row(
                 children: [
-                  Container(
-                    width: 50,
-                    height: 50,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      border: Border.all(color: const Color(0xFFFC6707), width: 2),
-                    ),
-                    child: const CircleAvatar(
-                      backgroundColor: Color(0xFFFDDBB3),
-                      child: Icon(Icons.admin_panel_settings, color: Color(0xFFFC6707), size: 28),
+                  GestureDetector(
+                    onTap: _handleEditProfile,
+                    child: Container(
+                      width: 50,
+                      height: 50,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        border: Border.all(color: const Color(0xFFFC6707), width: 2),
+                      ),
+                      child: ClipOval(
+                        child: user?.fotoBase64 != null && user!.fotoBase64!.isNotEmpty
+                            ? Image.memory(
+                                base64Decode(user.fotoBase64!),
+                                width: 50,
+                                height: 50,
+                                fit: BoxFit.cover,
+                              )
+                            : const CircleAvatar(
+                                backgroundColor: Color(0xFFFDDBB3),
+                                child: Icon(Icons.admin_panel_settings, color: Color(0xFFFC6707), size: 28),
+                              ),
+                      ),
                     ),
                   ),
                   const SizedBox(width: 12),
@@ -425,35 +413,55 @@ class _AdminReportsViewState extends State<AdminReportsView> {
   }
 
   Widget _buildMobileLayout() {
-    return SingleChildScrollView(
+    return Container(
       padding: const EdgeInsets.all(16),
-      child: _buildContent(isMobile: true),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const SizedBox(height: 8),
+          Text(
+            'Bandeja de Reportes',
+            style: GoogleFonts.outfit(
+              fontSize: 24,
+              fontWeight: FontWeight.bold,
+              color: const Color(0xFF333333),
+            ),
+          ),
+          const SizedBox(height: 16),
+          Expanded(
+            child: SingleChildScrollView(
+              physics: const BouncingScrollPhysics(),
+              child: _buildReportsList(true),
+            ),
+          ),
+        ],
+      ),
     );
   }
 
   Widget _buildDesktopLayout() {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
-      child: _buildContent(isMobile: false),
-    );
-  }
-
-  Widget _buildContent({required bool isMobile}) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const SizedBox(height: 16),
-        Text(
-          'Bandeja de Reportes',
-          style: GoogleFonts.outfit(
-            fontSize: isMobile ? 24 : 28,
-            fontWeight: FontWeight.bold,
-            color: const Color(0xFF333333),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Bandeja de Reportes',
+            style: GoogleFonts.outfit(
+              fontSize: 28,
+              fontWeight: FontWeight.bold,
+              color: const Color(0xFF333333),
+            ),
           ),
-        ),
-        const SizedBox(height: 24),
-        _buildReportsList(isMobile),
-      ],
+          const SizedBox(height: 16),
+          Expanded(
+            child: SingleChildScrollView(
+              physics: const BouncingScrollPhysics(),
+              child: _buildReportsList(false),
+            ),
+          ),
+        ],
+      ),
     );
   }
 
@@ -474,37 +482,36 @@ class _AdminReportsViewState extends State<AdminReportsView> {
         }
 
         if (snapshot.hasError) {
-          return Center(child: Text('Error: ${snapshot.error}'));
+          return Center(
+            child: Text(
+              'Error: ${snapshot.error}',
+              style: GoogleFonts.outfit(color: Colors.red),
+            ),
+          );
         }
 
         final docs = snapshot.data?.docs ?? [];
 
         if (docs.isEmpty) {
-          return Container(
-            padding: const EdgeInsets.all(48),
-            decoration: BoxDecoration(
-              color: const Color(0xFFF8F8F8),
-              borderRadius: BorderRadius.circular(16),
-            ),
-            child: Center(
-              child: Column(
-                children: [
-                  Icon(
-                    Icons.inbox_outlined,
-                    size: 64,
-                    color: const Color(0xFFCCCCCC),
+          return Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(
+                  Icons.inbox_outlined,
+                  size: 64,
+                  color: const Color(0xFFCCCCCC),
+                ),
+                const SizedBox(height: 16),
+                Text(
+                  'No hay reportes registrados',
+                  style: GoogleFonts.outfit(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w500,
+                    color: const Color(0xFF999999),
                   ),
-                  const SizedBox(height: 16),
-                  Text(
-                    'No hay reportes registrados en este momento',
-                    style: GoogleFonts.outfit(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w500,
-                      color: const Color(0xFF999999),
-                    ),
-                  ),
-                ],
-              ),
+                ),
+              ],
             ),
           );
         }
@@ -520,59 +527,45 @@ class _AdminReportsViewState extends State<AdminReportsView> {
             child: DataTable(
               columnSpacing: isMobile ? 12 : 20,
               horizontalMargin: isMobile ? 12 : 16,
-              columns: [
+              headingRowColor: MaterialStateProperty.all(
+                const Color(0xFFF5F5F5),
+              ),
+              dividerThickness: 1,
+              columns: const [
                 DataColumn(
                   label: Text(
                     'ID',
-                    style: GoogleFonts.outfit(
-                      fontWeight: FontWeight.bold,
-                      color: const Color(0xFF333333),
-                    ),
+                    style: TextStyle(fontWeight: FontWeight.bold),
                   ),
                 ),
                 DataColumn(
                   label: Text(
                     'Estudiante',
-                    style: GoogleFonts.outfit(
-                      fontWeight: FontWeight.bold,
-                      color: const Color(0xFF333333),
-                    ),
+                    style: TextStyle(fontWeight: FontWeight.bold),
                   ),
                 ),
                 DataColumn(
                   label: Text(
                     'Tour',
-                    style: GoogleFonts.outfit(
-                      fontWeight: FontWeight.bold,
-                      color: const Color(0xFF333333),
-                    ),
+                    style: TextStyle(fontWeight: FontWeight.bold),
                   ),
                 ),
                 DataColumn(
                   label: Text(
-                    'Tipo de Alerta',
-                    style: GoogleFonts.outfit(
-                      fontWeight: FontWeight.bold,
-                      color: const Color(0xFF333333),
-                    ),
+                    'Tipo',
+                    style: TextStyle(fontWeight: FontWeight.bold),
                   ),
                 ),
                 DataColumn(
                   label: Text(
                     'Estado',
-                    style: GoogleFonts.outfit(
-                      fontWeight: FontWeight.bold,
-                      color: const Color(0xFF333333),
-                    ),
+                    style: TextStyle(fontWeight: FontWeight.bold),
                   ),
                 ),
                 DataColumn(
                   label: Text(
                     'Acción',
-                    style: GoogleFonts.outfit(
-                      fontWeight: FontWeight.bold,
-                      color: const Color(0xFF333333),
-                    ),
+                    style: TextStyle(fontWeight: FontWeight.bold),
                   ),
                 ),
               ],
@@ -585,7 +578,6 @@ class _AdminReportsViewState extends State<AdminReportsView> {
                 final tour = data['tour'] ?? 'Sin tour';
                 final tipoAlerta = data['tipo_alerta'] ?? 'Sin tipo';
                 final estado = data['estado'] ?? 'amarillo';
-                final mensaje = data['mensaje'] ?? '';
 
                 return DataRow(
                   cells: [
@@ -635,7 +627,7 @@ class _AdminReportsViewState extends State<AdminReportsView> {
                       Container(
                         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                         decoration: BoxDecoration(
-                          color: _getEstadoColor(estado).withValues(alpha: 0.1),
+                          color: _getEstadoColor(estado).withOpacity(0.1),
                           borderRadius: BorderRadius.circular(12),
                         ),
                         child: Text(
@@ -689,12 +681,16 @@ class _AdminReportsViewState extends State<AdminReportsView> {
                         icon: Icon(
                           Icons.arrow_drop_down,
                           color: _getEstadoColor(estado),
+                          size: 20,
                         ),
                         style: GoogleFonts.outfit(
                           fontSize: 13,
                           color: _getEstadoColor(estado),
                           fontWeight: FontWeight.w500,
                         ),
+                        elevation: 0,
+                        dropdownColor: Colors.white,
+                        focusColor: Colors.transparent,
                       ),
                     ),
                   ],

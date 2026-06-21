@@ -28,6 +28,8 @@ class DestinationDetailView extends StatefulWidget {
 class _DestinationDetailViewState extends State<DestinationDetailView> {
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
   late Future<DocumentSnapshot> _destinoFuture;
+  bool _isOffer = false;
+  Color _primaryColor = const Color(0xFFFC6707);
 
   @override
   void initState() {
@@ -39,7 +41,18 @@ class _DestinationDetailViewState extends State<DestinationDetailView> {
     _destinoFuture = FirebaseFirestore.instance
         .collection('destinos')
         .doc(widget.destinoId)
-        .get();
+        .get()
+        .then((doc) {
+          if (doc.exists) {
+            final data = doc.data() as Map<String, dynamic>;
+            final isOffer = data['isOffer'] ?? false;
+            setState(() {
+              _isOffer = isOffer;
+              _primaryColor = isOffer ? const Color(0xFF9C27B0) : const Color(0xFFFC6707);
+            });
+          }
+          return doc;
+        });
   }
 
   Future<void> _toggleFavorito(String docId) async {
@@ -50,20 +63,22 @@ class _DestinationDetailViewState extends State<DestinationDetailView> {
       
       if (mounted) {
         final esFavorito = favoritosController.esFavorito(docId);
+        final color = _isOffer ? const Color(0xFF9C27B0) : const Color(0xFFFC6707);
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(esFavorito ? 'Añadido a favoritos' : 'Eliminado de favoritos'),
-            backgroundColor: const Color(0xFFFC6707),
+            backgroundColor: color,
             duration: const Duration(seconds: 1),
           ),
         );
       }
     } catch (e) {
       if (mounted) {
+        final color = _isOffer ? const Color(0xFF9C27B0) : const Color(0xFFFC6707);
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
+          SnackBar(
             content: Text('Error al actualizar favoritos'),
-            backgroundColor: Color(0xFFFC6707),
+            backgroundColor: color,
           ),
         );
       }
@@ -240,6 +255,7 @@ class _DestinationDetailViewState extends State<DestinationDetailView> {
                             data,
                             calificacionPromedio,
                             totalResenas,
+                            isOffer,
                           )
                         : _buildDesktopLayout(
                             widget.destinoId,
@@ -271,6 +287,7 @@ class _DestinationDetailViewState extends State<DestinationDetailView> {
                             data,
                             calificacionPromedio,
                             totalResenas,
+                            isOffer,
                           ),
                   ),
                 ],
@@ -478,6 +495,7 @@ class _DestinationDetailViewState extends State<DestinationDetailView> {
     Map<String, dynamic> destinoData,
     double calificacionPromedio,
     int totalResenas,
+    bool isOffer,
   ) {
     return SingleChildScrollView(
       padding: EdgeInsets.all(paddingHorizontal),
@@ -509,6 +527,7 @@ class _DestinationDetailViewState extends State<DestinationDetailView> {
             isMobile: true,
             calificacionPromedio: calificacionPromedio,
             totalResenas: totalResenas,
+            isOffer: isOffer,
           ),
           const SizedBox(height: 16),
           _buildConversionCard(
@@ -520,6 +539,7 @@ class _DestinationDetailViewState extends State<DestinationDetailView> {
             buttonPaddingVertical,
             false,
             destinoData,
+            isOffer,
           ),
           const SizedBox(height: 80),
         ],
@@ -557,6 +577,7 @@ class _DestinationDetailViewState extends State<DestinationDetailView> {
     Map<String, dynamic> destinoData,
     double calificacionPromedio,
     int totalResenas,
+    bool isOffer,
   ) {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -591,6 +612,7 @@ class _DestinationDetailViewState extends State<DestinationDetailView> {
               isMobile: false,
               calificacionPromedio: calificacionPromedio,
               totalResenas: totalResenas,
+              isOffer: isOffer,
             ),
           ),
         ),
@@ -607,6 +629,7 @@ class _DestinationDetailViewState extends State<DestinationDetailView> {
               buttonPaddingVertical,
               isLargeScreen,
               destinoData,
+              isOffer,
             ),
           ),
         ),
@@ -640,6 +663,7 @@ class _DestinationDetailViewState extends State<DestinationDetailView> {
     required bool isMobile,
     required double calificacionPromedio,
     required int totalResenas,
+    required bool isOffer,
   }) {
     return Container(
       decoration: BoxDecoration(
@@ -779,10 +803,10 @@ class _DestinationDetailViewState extends State<DestinationDetailView> {
                   ),
                 ),
                 const SizedBox(height: 12),
-                _buildBulletPoint('Transporte:', transporte, subtitleFontSize),
-                _buildBulletPoint('Alojamiento:', alojamiento, subtitleFontSize),
+                _buildBulletPoint('Transporte:', transporte, subtitleFontSize, primaryColor),
+                _buildBulletPoint('Alojamiento:', alojamiento, subtitleFontSize, primaryColor),
                 if (incluye.isNotEmpty && incluye != 'No especificado')
-                  _buildBulletPoint('Servicios:', incluye, subtitleFontSize),
+                  _buildBulletPoint('Servicios:', incluye, subtitleFontSize, primaryColor),
               ],
             ),
           ),
@@ -804,11 +828,11 @@ class _DestinationDetailViewState extends State<DestinationDetailView> {
                 ),
                 const SizedBox(height: 12),
                 if (descripcion.isNotEmpty)
-                  _buildBulletPoint('Descripción:', descripcion, subtitleFontSize, isLongText: true),
+                  _buildBulletPoint('Descripción:', descripcion, subtitleFontSize, primaryColor, isLongText: true),
                 if (requisitos.isNotEmpty)
-                  _buildBulletPoint('Requisitos:', requisitos, subtitleFontSize),
+                  _buildBulletPoint('Requisitos:', requisitos, subtitleFontSize, primaryColor),
                 if (noIncluye.isNotEmpty)
-                  _buildBulletPoint('No incluye:', noIncluye, subtitleFontSize),
+                  _buildBulletPoint('No incluye:', noIncluye, subtitleFontSize, primaryColor),
                 const SizedBox(height: 16),
                 Container(
                   padding: const EdgeInsets.all(12),
@@ -938,7 +962,7 @@ class _DestinationDetailViewState extends State<DestinationDetailView> {
     );
   }
 
-  Widget _buildBulletPoint(String label, String value, double fontSize, {bool isLongText = false}) {
+  Widget _buildBulletPoint(String label, String value, double fontSize, Color primaryColor, {bool isLongText = false}) {
     if (value.isEmpty) return const SizedBox.shrink();
     
     return Padding(
@@ -951,7 +975,7 @@ class _DestinationDetailViewState extends State<DestinationDetailView> {
             style: GoogleFonts.outfit(
               fontSize: fontSize - 2,
               fontWeight: FontWeight.bold,
-              color: const Color(0xFFFC6707),
+              color: primaryColor,
             ),
           ),
           Expanded(
@@ -985,6 +1009,7 @@ class _DestinationDetailViewState extends State<DestinationDetailView> {
     double buttonPaddingVertical,
     bool isLargeScreen,
     Map<String, dynamic> destinoData,
+    bool isOffer,
   ) {
     return Container(
       constraints: BoxConstraints(
@@ -1030,7 +1055,7 @@ class _DestinationDetailViewState extends State<DestinationDetailView> {
             const SizedBox(height: 24),
             const Divider(height: 1, thickness: 1, color: Color(0xFFE0E0E0)),
             const SizedBox(height: 24),
-            _buildActionButton(primaryColor, buttonFontSize, buttonPaddingVertical, destinoData),
+            _buildActionButton(primaryColor, buttonFontSize, buttonPaddingVertical, destinoData, isOffer),
           ],
         ),
       ),
@@ -1054,7 +1079,6 @@ class _DestinationDetailViewState extends State<DestinationDetailView> {
         }
 
         if (snapshot.hasError) {
-          print('Error en StreamBuilder de reseñas: ${snapshot.error}');
           return Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -1435,7 +1459,7 @@ class _DestinationDetailViewState extends State<DestinationDetailView> {
     );
   }
 
-  Widget _buildActionButton(Color primaryColor, double fontSize, double paddingVertical, Map<String, dynamic>? destinoData) {
+  Widget _buildActionButton(Color primaryColor, double fontSize, double paddingVertical, Map<String, dynamic>? destinoData, bool isOffer) {
     return SizedBox(
       width: double.infinity,
       child: ElevatedButton(

@@ -1,4 +1,3 @@
-// Pantalla de gestión de estudiantes (Administrador)
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
@@ -10,6 +9,8 @@ import '../auth/login_view.dart';
 import 'admin_home_view.dart';
 import 'admin_management_view.dart';
 import 'admin_reports_view.dart';
+import 'admin_edit_profile_view.dart';
+import 'dart:convert';
 
 class AdminStudentsView extends StatefulWidget {
   const AdminStudentsView({super.key});
@@ -22,7 +23,7 @@ class _AdminStudentsViewState extends State<AdminStudentsView> {
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
   final String _activeMenu = 'Usuarios';
   final List<String> _menuItems = ['Dashboard', 'Gestión', 'Usuarios', 'Reportes'];
-  int _selectedTab = 0; // 0: Activos, 1: Inhabilitados
+  int _selectedTab = 0;
 
   void _handleMenuSelected(String menu) {
     if (menu == 'Dashboard') {
@@ -31,19 +32,24 @@ class _AdminStudentsViewState extends State<AdminStudentsView> {
         MaterialPageRoute(builder: (_) => const AdminHomeView()),
       );
     } else if (menu == 'Gestión') {
-      Navigator.push(
+      Navigator.pushReplacement(
         context,
         MaterialPageRoute(builder: (_) => const AdminManagementView()),
       );
     } else if (menu == 'Reportes') {
-      Navigator.push(
+      Navigator.pushReplacement(
         context,
         MaterialPageRoute(builder: (_) => const AdminReportsView()),
       );
     }
   }
 
-  void _handleEditProfile() {}
+  void _handleEditProfile() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (_) => const AdminEditProfileView()),
+    );
+  }
 
   void _handleLogout() {
     CustomConfirmDialog.show(
@@ -110,20 +116,20 @@ class _AdminStudentsViewState extends State<AdminStudentsView> {
             ],
           ),
           Positioned(
-            top: isMobile ? 80 : 100,
-            right: 24,
+            top: isMobile ? 130 : 100,
+            right: 16,
             child: MouseRegion(
               cursor: SystemMouseCursors.click,
               child: GestureDetector(
                 onTap: _volver,
                 child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
                   decoration: BoxDecoration(
                     color: Colors.white,
                     borderRadius: BorderRadius.circular(30),
                     boxShadow: [
                       BoxShadow(
-                        color: Colors.black.withValues(alpha: 0.1),
+                        color: Colors.black.withOpacity(0.1),
                         blurRadius: 8,
                         offset: const Offset(0, 2),
                       ),
@@ -168,16 +174,28 @@ class _AdminStudentsViewState extends State<AdminStudentsView> {
               padding: const EdgeInsets.symmetric(horizontal: 24),
               child: Row(
                 children: [
-                  Container(
-                    width: 50,
-                    height: 50,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      border: Border.all(color: const Color(0xFFFC6707), width: 2),
-                    ),
-                    child: const CircleAvatar(
-                      backgroundColor: Color(0xFFFDDBB3),
-                      child: Icon(Icons.admin_panel_settings, color: Color(0xFFFC6707), size: 28),
+                  GestureDetector(
+                    onTap: _handleEditProfile,
+                    child: Container(
+                      width: 50,
+                      height: 50,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        border: Border.all(color: const Color(0xFFFC6707), width: 2),
+                      ),
+                      child: ClipOval(
+                        child: user?.fotoBase64 != null && user!.fotoBase64!.isNotEmpty
+                            ? Image.memory(
+                                base64Decode(user.fotoBase64!),
+                                width: 50,
+                                height: 50,
+                                fit: BoxFit.cover,
+                              )
+                            : const CircleAvatar(
+                                backgroundColor: Color(0xFFFDDBB3),
+                                child: Icon(Icons.admin_panel_settings, color: Color(0xFFFC6707), size: 28),
+                              ),
+                      ),
                     ),
                   ),
                   const SizedBox(width: 12),
@@ -246,58 +264,75 @@ class _AdminStudentsViewState extends State<AdminStudentsView> {
   }
 
   Widget _buildMobileLayout() {
-    return Column(
-      children: [
-        Expanded(
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.all(16),
-            physics: const BouncingScrollPhysics(),
-            child: _buildContent(isMobile: true),
+    return Container(
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const SizedBox(height: 8),
+          Text(
+            'Administrar Estudiantes',
+            style: GoogleFonts.outfit(
+              fontSize: 24,
+              fontWeight: FontWeight.bold,
+              color: const Color(0xFF333333),
+            ),
           ),
-        ),
-      ],
+          const SizedBox(height: 16),
+          Container(
+            decoration: BoxDecoration(
+              color: const Color(0xFFF5F5F5),
+              borderRadius: BorderRadius.circular(30),
+            ),
+            child: Row(
+              children: [
+                _buildTab('Activos', 0, true),
+                _buildTab('Inhabilitados', 1, true),
+              ],
+            ),
+          ),
+          const SizedBox(height: 16),
+          Expanded(
+            child: _buildStudentsList(true),
+          ),
+        ],
+      ),
     );
   }
 
   Widget _buildDesktopLayout() {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
-      child: _buildContent(isMobile: false),
-    );
-  }
-
-  Widget _buildContent({required bool isMobile}) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const SizedBox(height: 16),
-        Text(
-          'Administrar Estudiantes',
-          style: GoogleFonts.outfit(
-            fontSize: isMobile ? 24 : 28,
-            fontWeight: FontWeight.bold,
-            color: const Color(0xFF333333),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Administrar Estudiantes',
+            style: GoogleFonts.outfit(
+              fontSize: 28,
+              fontWeight: FontWeight.bold,
+              color: const Color(0xFF333333),
+            ),
           ),
-        ),
-        const SizedBox(height: 16),
-        Container(
-          decoration: BoxDecoration(
-            color: const Color(0xFFF5F5F5),
-            borderRadius: BorderRadius.circular(30),
+          const SizedBox(height: 16),
+          Container(
+            decoration: BoxDecoration(
+              color: const Color(0xFFF5F5F5),
+              borderRadius: BorderRadius.circular(30),
+            ),
+            child: Row(
+              children: [
+                _buildTab('Activos', 0, false),
+                _buildTab('Inhabilitados', 1, false),
+              ],
+            ),
           ),
-          child: Row(
-            children: [
-              _buildTab('Activos', 0, isMobile),
-              _buildTab('Inhabilitados', 1, isMobile),
-            ],
+          const SizedBox(height: 16),
+          Expanded(
+            child: _buildStudentsList(false),
           ),
-        ),
-        const SizedBox(height: 24),
-        // La lista de estudiantes con scroll
-        Expanded(
-          child: _buildStudentsList(isMobile),
-        ),
-      ],
+        ],
+      ),
     );
   }
 
@@ -305,28 +340,25 @@ class _AdminStudentsViewState extends State<AdminStudentsView> {
     final isSelected = _selectedTab == index;
     
     return Expanded(
-      child: MouseRegion(
-        cursor: SystemMouseCursors.click,
-        child: GestureDetector(
-          onTap: () {
-            setState(() {
-              _selectedTab = index;
-            });
-          },
-          child: Container(
-            padding: EdgeInsets.symmetric(vertical: isMobile ? 10 : 12),
-            decoration: BoxDecoration(
-              color: isSelected ? const Color(0xFFFC6707) : Colors.transparent,
-              borderRadius: BorderRadius.circular(30),
-            ),
-            child: Center(
-              child: Text(
-                title,
-                style: GoogleFonts.outfit(
-                  fontSize: isMobile ? 14 : 16,
-                  fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
-                  color: isSelected ? Colors.white : const Color(0xFF666666),
-                ),
+      child: GestureDetector(
+        onTap: () {
+          setState(() {
+            _selectedTab = index;
+          });
+        },
+        child: Container(
+          padding: EdgeInsets.symmetric(vertical: isMobile ? 10 : 12),
+          decoration: BoxDecoration(
+            color: isSelected ? const Color(0xFFFC6707) : Colors.transparent,
+            borderRadius: BorderRadius.circular(30),
+          ),
+          child: Center(
+            child: Text(
+              title,
+              style: GoogleFonts.outfit(
+                fontSize: isMobile ? 14 : 16,
+                fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
+                color: isSelected ? Colors.white : const Color(0xFF666666),
               ),
             ),
           ),
@@ -345,15 +377,17 @@ class _AdminStudentsViewState extends State<AdminStudentsView> {
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
           return const Center(
-            child: Padding(
-              padding: EdgeInsets.all(32.0),
-              child: CircularProgressIndicator(color: Color(0xFFFC6707)),
-            ),
+            child: CircularProgressIndicator(color: Color(0xFFFC6707)),
           );
         }
 
         if (snapshot.hasError) {
-          return Center(child: Text('Error: ${snapshot.error}'));
+          return Center(
+            child: Text(
+              'Error: ${snapshot.error}',
+              style: GoogleFonts.outfit(color: Colors.red),
+            ),
+          );
         }
 
         final docs = snapshot.data?.docs ?? [];
@@ -365,39 +399,31 @@ class _AdminStudentsViewState extends State<AdminStudentsView> {
         }).toList();
 
         if (estudiantesFiltrados.isEmpty) {
-          return Container(
-            padding: const EdgeInsets.all(32),
-            decoration: BoxDecoration(
-              color: const Color(0xFFF8F8F8),
-              borderRadius: BorderRadius.circular(16),
-            ),
-            child: Center(
-              child: Column(
-                children: [
-                  Icon(
-                    activos ? Icons.people_outline : Icons.block,
-                    size: 48,
-                    color: const Color(0xFFCCCCCC),
+          return Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(
+                  activos ? Icons.people_outline : Icons.block,
+                  size: 48,
+                  color: const Color(0xFFCCCCCC),
+                ),
+                const SizedBox(height: 12),
+                Text(
+                  activos ? 'No hay estudiantes activos' : 'No hay estudiantes inhabilitados',
+                  style: GoogleFonts.outfit(
+                    fontSize: 14,
+                    color: const Color(0xFF999999),
                   ),
-                  const SizedBox(height: 12),
-                  Text(
-                    activos ? 'No hay estudiantes activos' : 'No hay estudiantes inhabilitados',
-                    style: GoogleFonts.outfit(
-                      fontSize: 14,
-                      color: const Color(0xFF999999),
-                    ),
-                  ),
-                ],
-              ),
+                ),
+              ],
             ),
           );
         }
 
-        return ListView.separated(
-          shrinkWrap: true,
+        return ListView.builder(
           physics: const BouncingScrollPhysics(),
           itemCount: estudiantesFiltrados.length,
-          separatorBuilder: (_, __) => const SizedBox(height: 12),
           itemBuilder: (context, index) {
             final doc = estudiantesFiltrados[index];
             final data = doc.data() as Map<String, dynamic>;
@@ -435,6 +461,7 @@ class _AdminStudentsViewState extends State<AdminStudentsView> {
     final nombreCompleto = '$nombre $apellido'.trim();
 
     return Container(
+      margin: const EdgeInsets.only(bottom: 12),
       padding: EdgeInsets.all(isMobile ? 12 : 16),
       decoration: BoxDecoration(
         color: Colors.white,
@@ -446,9 +473,9 @@ class _AdminStudentsViewState extends State<AdminStudentsView> {
           Container(
             width: 45,
             height: 45,
-            decoration: BoxDecoration(
+            decoration: const BoxDecoration(
               shape: BoxShape.circle,
-              color: const Color(0xFFFDDBB3),
+              color: Color(0xFFFDDBB3),
             ),
             child: Center(
               child: Text(
@@ -494,7 +521,7 @@ class _AdminStudentsViewState extends State<AdminStudentsView> {
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
             decoration: BoxDecoration(
-              color: activo ? const Color(0xFF4CAF50).withValues(alpha: 0.1) : const Color(0xFFF44336).withValues(alpha: 0.1),
+              color: activo ? const Color(0xFF4CAF50).withOpacity(0.1) : const Color(0xFFF44336).withOpacity(0.1),
               borderRadius: BorderRadius.circular(12),
             ),
             child: Text(
@@ -507,34 +534,43 @@ class _AdminStudentsViewState extends State<AdminStudentsView> {
             ),
           ),
           const SizedBox(width: 8),
-          PopupMenuButton<String>(
-            icon: Icon(Icons.more_vert, color: const Color(0xFF666666), size: isMobile ? 20 : 24),
-            onSelected: (value) => _handleStudentAction(value, id, nombreCompleto),
-            itemBuilder: (context) => [
-              const PopupMenuItem(
-                value: 'toggle',
-                child: Row(
-                  children: [
-                    Icon(Icons.person_outline, color: Color(0xFFFC6707), size: 18),
-                    SizedBox(width: 8),
-                    Text('Inhabilitar/Activar cuenta'),
-                  ],
-                ),
-              ),
-              const PopupMenuItem(
-                value: 'delete',
-                child: Row(
-                  children: [
-                    Icon(Icons.delete_outline, color: Colors.red, size: 18),
-                    SizedBox(width: 8),
-                    Text('Eliminar cuenta', style: TextStyle(color: Colors.red)),
-                  ],
-                ),
-              ),
-            ],
-          ),
+          _buildPopupMenuButton(id, nombreCompleto, isMobile),
         ],
       ),
+    );
+  }
+
+  Widget _buildPopupMenuButton(String studentId, String nombre, bool isMobile) {
+    return PopupMenuButton<String>(
+      icon: Icon(Icons.more_vert, color: const Color(0xFF666666), size: isMobile ? 20 : 24),
+      color: Colors.white,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+      ),
+      elevation: 4,
+      onSelected: (value) => _handleStudentAction(value, studentId, nombre),
+      itemBuilder: (context) => [
+        const PopupMenuItem(
+          value: 'toggle',
+          child: Row(
+            children: [
+              Icon(Icons.person_outline, color: Color(0xFFFC6707), size: 18),
+              SizedBox(width: 8),
+              Text('Inhabilitar/Activar cuenta'),
+            ],
+          ),
+        ),
+        const PopupMenuItem(
+          value: 'delete',
+          child: Row(
+            children: [
+              Icon(Icons.delete_outline, color: Color(0xFFF44336), size: 18),
+              SizedBox(width: 8),
+              Text('Eliminar cuenta', style: TextStyle(color: Color(0xFFF44336))),
+            ],
+          ),
+        ),
+      ],
     );
   }
 
@@ -598,8 +634,7 @@ class _AdminStudentsViewState extends State<AdminStudentsView> {
       
       if (tieneReservasActivas) {
         _mostrarMensaje(
-          'No se puede eliminar al estudiante porque tiene reservas activas. '
-          'Espere a que finalicen sus viajes.'
+          'No se puede eliminar al estudiante porque tiene reservas activas.'
         );
         return;
       }
@@ -607,7 +642,7 @@ class _AdminStudentsViewState extends State<AdminStudentsView> {
       final confirm = await CustomConfirmDialog.show(
         context: context,
         title: 'Eliminar cuenta',
-        message: '¿Estás seguro de que deseas eliminar permanentemente la cuenta de "$nombre"? Esta acción no se puede deshacer.',
+        message: '¿Estás seguro de que deseas eliminar permanentemente la cuenta de "$nombre"?',
         confirmText: 'Eliminar',
         icon: Icons.delete_forever,
       );

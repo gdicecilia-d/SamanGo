@@ -11,6 +11,7 @@ import '../admin/admin_home_view.dart';
 import '../../controllers/auth_controller.dart';
 import 'complete_google_profile_view.dart';
 import '../../utils/responsive.dart';
+import 'account_disabled_view.dart';
 
 class LoginView extends StatefulWidget {
   const LoginView({super.key});
@@ -155,7 +156,6 @@ class _LoginViewState extends State<LoginView> {
         _mostrarMensaje('Correo o contraseña incorrectos', isError: true);
       }
     } catch (e) {
-      // ✅ Capturar error de cuenta inhabilitada
       if (!mounted) return;
       setState(() {
         _isLoading = false;
@@ -163,7 +163,6 @@ class _LoginViewState extends State<LoginView> {
       });
       
       if (e.toString().contains('inhabilitada')) {
-        // ✅ Mostrar diálogo de cuenta inhabilitada
         _mostrarDialogoCuentaInhabilitada();
       } else {
         _mostrarMensaje(e.toString(), isError: true);
@@ -171,7 +170,6 @@ class _LoginViewState extends State<LoginView> {
     }
   }
 
-  // ✅ DIÁLOGO DE CUENTA INHABILITADA
   void _mostrarDialogoCuentaInhabilitada() {
     showDialog(
       context: context,
@@ -186,10 +184,18 @@ class _LoginViewState extends State<LoginView> {
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(
-              Icons.block,
-              color: const Color(0xFFF44336),
-              size: 60,
+            Container(
+              width: 60,
+              height: 60,
+              decoration: BoxDecoration(
+                color: const Color(0xFFFF9800).withOpacity(0.15),
+                shape: BoxShape.circle,
+              ),
+              child: Icon(
+                Icons.block,
+                color: const Color(0xFFFF9800),
+                size: 40,
+              ),
             ),
             const SizedBox(height: 16),
             Text(
@@ -220,7 +226,7 @@ class _LoginViewState extends State<LoginView> {
                   if (!mounted) return;
                   Navigator.pushReplacement(
                     context,
-                    MaterialPageRoute(builder: (_) => const LoginView()),
+                    MaterialPageRoute(builder: (_) => const AccountDisabledView()),
                   );
                 },
                 style: ElevatedButton.styleFrom(
@@ -232,10 +238,41 @@ class _LoginViewState extends State<LoginView> {
                   ),
                 ),
                 child: Text(
-                  'Entendido',
+                  'Apelar',
                   style: GoogleFonts.outfit(
                     fontSize: 16,
                     fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(height: 8),
+            SizedBox(
+              width: double.infinity,
+              child: OutlinedButton(
+                onPressed: () async {
+                  Navigator.pop(context);
+                  await Provider.of<AuthController>(context, listen: false).logout();
+                  if (!mounted) return;
+                  Navigator.pushReplacement(
+                    context,
+                    MaterialPageRoute(builder: (_) => const LoginView()),
+                  );
+                },
+                style: OutlinedButton.styleFrom(
+                  backgroundColor: Colors.white,
+                  foregroundColor: const Color(0xFF666666),
+                  padding: const EdgeInsets.symmetric(vertical: 12),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(30),
+                  ),
+                  side: const BorderSide(color: Color(0xFFE0E0E0)),
+                ),
+                child: Text(
+                  'Entendido',
+                  style: GoogleFonts.outfit(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w500,
                   ),
                 ),
               ),

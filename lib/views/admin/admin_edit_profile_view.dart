@@ -12,6 +12,9 @@ import '../../controllers/auth_controller.dart';
 import '../../services/storage_service.dart';
 import '../auth/login_view.dart';
 import 'admin_home_view.dart';
+import 'admin_management_view.dart';
+import 'admin_users_view.dart';
+import 'admin_reports_view.dart';
 import '../../models/usuario.dart';
 
 class AdminEditProfileView extends StatefulWidget {
@@ -35,6 +38,13 @@ class _AdminEditProfileViewState extends State<AdminEditProfileView> {
   void initState() {
     super.initState();
     _cargarDatosUsuario();
+  }
+
+  @override
+  void dispose() {
+    _nombreController.dispose();
+    _correoController.dispose();
+    super.dispose();
   }
 
   Future<void> _cargarDatosUsuario() async {
@@ -139,18 +149,27 @@ class _AdminEditProfileViewState extends State<AdminEditProfileView> {
     });
   }
 
-  void _handleMenuSelected(String menu, BuildContext context) {
+  void _handleMenuSelected(String menu) {
     if (menu == 'Dashboard') {
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(builder: (_) => const AdminHomeView()),
       );
     } else if (menu == 'Gestión') {
-      _mostrarMensaje('Gestión - Próximamente');
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (_) => const AdminManagementView()),
+      );
     } else if (menu == 'Usuarios') {
-      _mostrarMensaje('Usuarios - Próximamente');
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (_) => const AdminUsersView()),
+      );
     } else if (menu == 'Reportes') {
-      _mostrarMensaje('Reportes - Próximamente');
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (_) => const AdminReportsView()),
+      );
     }
   }
 
@@ -172,28 +191,235 @@ class _AdminEditProfileViewState extends State<AdminEditProfileView> {
       );
     }
 
+    if (isMobile) {
+      return _buildMobileLayout(user, isLandscape);
+    }
+
+    return _buildDesktopLayout(user);
+  }
+
+  Widget _buildMobileLayout(Usuario user, bool isLandscape) {
     return Scaffold(
       key: _scaffoldKey,
       backgroundColor: Colors.white,
-      endDrawer: isMobile ? _buildDrawer(context) : null,
+      endDrawer: _buildDrawer(),
       body: Column(
         children: [
           AppHeader(
             activeMenu: 'Perfil',
-            onMenuSelected: (menu) => _handleMenuSelected(menu, context),
+            onMenuSelected: _handleMenuSelected,
             onEditProfile: () {},
             onLogout: _handleCerrarSesion,
             menuItems: const ['Dashboard', 'Gestión', 'Usuarios', 'Reportes'],
-            isMobile: isMobile,
-            onMenuTap: isMobile ? _openDrawer : null,
+            isMobile: true,
+            onMenuTap: _openDrawer,
           ),
           Expanded(
             child: SingleChildScrollView(
-              padding: EdgeInsets.symmetric(horizontal: isMobile ? 16 : 40, vertical: 24),
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
+              child: Column(
+                children: [
+                  _buildAvatarSectionMobile(user),
+                  const SizedBox(height: 24),
+                  _buildFormSectionMobile(user),
+                  const SizedBox(height: 32),
+                  _buildButtonsSectionMobile(),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildAvatarSectionMobile(Usuario user) {
+    return Column(
+      children: [
+        GestureDetector(
+          onTap: _actualizarFoto,
+          child: Container(
+            width: 100,
+            height: 100,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              border: Border.all(color: const Color(0xFFFC6707), width: 3),
+            ),
+            child: ClipOval(
+              child: user.fotoBase64 != null && user.fotoBase64!.isNotEmpty
+                  ? Image.memory(
+                      base64Decode(user.fotoBase64!),
+                      width: 100,
+                      height: 100,
+                      fit: BoxFit.cover,
+                      gaplessPlayback: true,
+                    )
+                  : Container(
+                      color: const Color(0xFFFDDBB3),
+                      child: const Icon(Icons.admin_panel_settings, color: Color(0xFFFC6707), size: 50),
+                    ),
+            ),
+          ),
+        ),
+        const SizedBox(height: 12),
+        MouseRegion(
+          cursor: SystemMouseCursors.click,
+          onEnter: (_) => setState(() => _isHoveringFoto = true),
+          onExit: (_) => setState(() => _isHoveringFoto = false),
+          child: GestureDetector(
+            onTap: _actualizarFoto,
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(20),
+                color: _isHoveringFoto ? const Color(0xFFFC6707).withOpacity(0.1) : Colors.transparent,
+              ),
+              child: Text(
+                'Actualizar foto',
+                style: GoogleFonts.outfit(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w500,
+                  color: const Color(0xFFFC6707),
+                ),
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildFormSectionMobile(Usuario user) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: const Color(0xFFE0E0E0), width: 1),
+      ),
+      child: Column(
+        children: [
+          _buildDisabledFieldMobile('Nombre Completo', value: user.nombre),
+          const SizedBox(height: 16),
+          _buildDisabledFieldMobile('Rol', value: 'Administrador'),
+          const SizedBox(height: 16),
+          _buildDisabledFieldMobile('Correo Electrónico', value: user.correo),
+          const SizedBox(height: 16),
+          _buildEditableFieldMobile('Nombre Completo (editable)', _nombreController),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildDisabledFieldMobile(String label, {required String value}) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(label, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500, color: Color(0xFF666666))),
+        const SizedBox(height: 4),
+        Container(
+          width: double.infinity,
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          decoration: BoxDecoration(
+            color: const Color(0xFFF8F8F8),
+            borderRadius: BorderRadius.circular(30),
+            border: Border.all(color: const Color(0xFFE0E0E0), width: 1),
+          ),
+          child: Text(value.isEmpty ? '---' : value, style: const TextStyle(fontSize: 14, color: Color(0xFF333333))),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildEditableFieldMobile(String label, TextEditingController controller, {int maxLines = 1}) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(label, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500, color: Color(0xFF666666))),
+        const SizedBox(height: 4),
+        TextField(
+          controller: controller,
+          maxLines: maxLines,
+          style: const TextStyle(fontSize: 14),
+          decoration: InputDecoration(
+            hintText: 'Ingrese $label',
+            hintStyle: const TextStyle(fontSize: 14, color: Color(0xFF999999)),
+            border: OutlineInputBorder(borderRadius: BorderRadius.circular(30), borderSide: const BorderSide(color: Color(0xFFE0E0E0))),
+            enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(30), borderSide: const BorderSide(color: Color(0xFFE0E0E0))),
+            focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(30), borderSide: const BorderSide(color: Color(0xFFFC6707), width: 1.5)),
+            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildButtonsSectionMobile() {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        SizedBox(
+          width: 130,
+          child: ElevatedButton(
+            onPressed: _isLoading ? null : _guardarCambios,
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFFFC6707),
+              foregroundColor: Colors.white,
+              padding: const EdgeInsets.symmetric(vertical: 10),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
+            ),
+            child: _isLoading
+                ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                : const Text('Actualizar', style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold)),
+          ),
+        ),
+        const SizedBox(width: 12),
+        SizedBox(
+          width: 130,
+          child: ElevatedButton(
+            onPressed: () => Navigator.pop(context),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFFFDDBB3),
+              foregroundColor: const Color(0xFFFC6707),
+              padding: const EdgeInsets.symmetric(vertical: 10),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
+              elevation: 0,
+            ),
+            child: const Text('Descartar', style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold)),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildDesktopLayout(Usuario user) {
+    final screenWidth = MediaQuery.of(context).size.width;
+    final isLargeScreen = screenWidth > 1400;
+    final double containerWidth = isLargeScreen ? 1000 : 800;
+
+    return Scaffold(
+      key: _scaffoldKey,
+      backgroundColor: Colors.white,
+      endDrawer: null,
+      body: Column(
+        children: [
+          AppHeader(
+            activeMenu: 'Perfil',
+            onMenuSelected: _handleMenuSelected,
+            onEditProfile: () {},
+            onLogout: _handleCerrarSesion,
+            menuItems: const ['Dashboard', 'Gestión', 'Usuarios', 'Reportes'],
+            isMobile: false,
+            onMenuTap: null,
+          ),
+          Expanded(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 24),
               child: Center(
                 child: Container(
-                  width: isMobile ? double.infinity : 900,
-                  padding: EdgeInsets.all(isMobile ? (isLandscape ? 16 : 20) : 32),
+                  width: containerWidth,
+                  padding: const EdgeInsets.all(32),
                   decoration: BoxDecoration(
                     color: Colors.white,
                     borderRadius: BorderRadius.circular(24),
@@ -205,33 +431,24 @@ class _AdminEditProfileViewState extends State<AdminEditProfileView> {
                       Text(
                         'Editar Perfil',
                         style: GoogleFonts.outfit(
-                          fontSize: isMobile ? 22 : 24,
+                          fontSize: isLargeScreen ? 28 : 24,
                           fontWeight: FontWeight.bold,
                           color: const Color(0xFF333333),
                         ),
                       ),
                       const SizedBox(height: 24),
-                      if (isMobile)
-                        Column(
-                          children: [
-                            _buildAvatarSection(user),
-                            const SizedBox(height: 24),
-                            _buildFormSection(),
-                          ],
-                        )
-                      else
-                        Row(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            _buildAvatarSection(user),
-                            const SizedBox(width: 48),
-                            Expanded(child: _buildFormSection()),
-                          ],
-                        ),
+                      Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          _buildAvatarSectionDesktop(user),
+                          const SizedBox(width: 48),
+                          Expanded(child: _buildFormSectionDesktop(user)),
+                        ],
+                      ),
                       const SizedBox(height: 32),
                       const Divider(color: Color(0xFFE0E0E0)),
                       const SizedBox(height: 24),
-                      _buildButtonsSection(isMobile),
+                      _buildButtonsSectionDesktop(),
                     ],
                   ),
                 ),
@@ -243,7 +460,146 @@ class _AdminEditProfileViewState extends State<AdminEditProfileView> {
     );
   }
 
-  Widget _buildDrawer(BuildContext context) {
+  Widget _buildAvatarSectionDesktop(Usuario user) {
+    return Column(
+      children: [
+        GestureDetector(
+          onTap: _actualizarFoto,
+          child: Container(
+            width: 120,
+            height: 120,
+            decoration: BoxDecoration(shape: BoxShape.circle, border: Border.all(color: const Color(0xFFFC6707), width: 3)),
+            child: ClipOval(
+              child: user.fotoBase64 != null && user.fotoBase64!.isNotEmpty
+                  ? Image.memory(base64Decode(user.fotoBase64!), width: 120, height: 120, fit: BoxFit.cover, gaplessPlayback: true)
+                  : Container(color: const Color(0xFFFDDBB3), child: const Icon(Icons.admin_panel_settings, color: Color(0xFFFC6707), size: 60)),
+            ),
+          ),
+        ),
+        const SizedBox(height: 12),
+        MouseRegion(
+          cursor: SystemMouseCursors.click,
+          onEnter: (_) => setState(() => _isHoveringFoto = true),
+          onExit: (_) => setState(() => _isHoveringFoto = false),
+          child: GestureDetector(
+            onTap: _actualizarFoto,
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+              decoration: BoxDecoration(borderRadius: BorderRadius.circular(20), color: _isHoveringFoto ? const Color(0xFFFC6707).withOpacity(0.1) : Colors.transparent),
+              child: Text('Actualizar foto', style: GoogleFonts.outfit(fontSize: 14, fontWeight: FontWeight.w500, color: const Color(0xFFFC6707))),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildFormSectionDesktop(Usuario user) {
+    return Column(
+      children: [
+        Row(
+          children: [
+            Expanded(child: _buildDisabledFieldDesktop('Nombre Completo', value: user.nombre)),
+            const SizedBox(width: 16),
+            Expanded(child: _buildDisabledFieldDesktop('Rol', value: 'Administrador')),
+          ],
+        ),
+        const SizedBox(height: 16),
+        Row(
+          children: [
+            Expanded(child: _buildDisabledFieldDesktop('Correo Electrónico', value: user.correo)),
+            const SizedBox(width: 16),
+            Expanded(child: _buildEditableFieldDesktop('Nombre (editable)', _nombreController)),
+          ],
+        ),
+      ],
+    );
+  }
+
+  Widget _buildDisabledFieldDesktop(String label, {required String value}) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(label, style: GoogleFonts.outfit(fontSize: 12, fontWeight: FontWeight.w500, color: const Color(0xFF666666))),
+        const SizedBox(height: 4),
+        Container(
+          width: double.infinity,
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          decoration: BoxDecoration(color: const Color(0xFFF8F8F8), borderRadius: BorderRadius.circular(30), border: Border.all(color: const Color(0xFFE0E0E0), width: 1)),
+          child: Text(value.isEmpty ? '---' : value, style: GoogleFonts.outfit(fontSize: 14, color: const Color(0xFF333333))),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildEditableFieldDesktop(String label, TextEditingController controller, {int maxLines = 1}) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(label, style: GoogleFonts.outfit(fontSize: 12, fontWeight: FontWeight.w500, color: const Color(0xFF666666))),
+        const SizedBox(height: 4),
+        TextField(
+          controller: controller,
+          maxLines: maxLines,
+          style: GoogleFonts.outfit(fontSize: 14),
+          decoration: InputDecoration(
+            hintText: 'Ingrese $label',
+            hintStyle: GoogleFonts.outfit(fontSize: 14, color: const Color(0xFF999999)),
+            border: OutlineInputBorder(borderRadius: BorderRadius.circular(30), borderSide: const BorderSide(color: Color(0xFFE0E0E0))),
+            enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(30), borderSide: const BorderSide(color: Color(0xFFE0E0E0))),
+            focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(30), borderSide: const BorderSide(color: Color(0xFFFC6707), width: 1.5)),
+            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildButtonsSectionDesktop() {
+    final screenWidth = MediaQuery.of(context).size.width;
+    final isLargeScreen = screenWidth > 1400;
+    final double buttonWidth = isLargeScreen ? 220 : 180;
+    final double fontSize = isLargeScreen ? 18 : 16;
+    final double paddingVertical = isLargeScreen ? 16 : 14;
+
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        SizedBox(
+          width: buttonWidth,
+          child: ElevatedButton(
+            onPressed: _isLoading ? null : _guardarCambios,
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFFFC6707),
+              foregroundColor: Colors.white,
+              padding: EdgeInsets.symmetric(vertical: paddingVertical),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
+            ),
+            child: _isLoading
+                ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                : Text('Actualizar', style: GoogleFonts.outfit(fontSize: fontSize, fontWeight: FontWeight.bold)),
+          ),
+        ),
+        const SizedBox(width: 16),
+        SizedBox(
+          width: buttonWidth,
+          child: ElevatedButton(
+            onPressed: () => Navigator.pop(context),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFFFDDBB3),
+              foregroundColor: const Color(0xFFFC6707),
+              padding: EdgeInsets.symmetric(vertical: paddingVertical),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
+              elevation: 0,
+            ),
+            child: Text('Descartar', style: GoogleFonts.outfit(fontSize: fontSize, fontWeight: FontWeight.bold)),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildDrawer() {
     final auth = Provider.of<AuthController>(context);
     final user = auth.usuarioActual;
     
@@ -258,30 +614,33 @@ class _AdminEditProfileViewState extends State<AdminEditProfileView> {
               padding: const EdgeInsets.symmetric(horizontal: 24),
               child: Row(
                 children: [
-                  Container(
-                    width: 50,
-                    height: 50,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      border: Border.all(color: const Color(0xFFFC6707), width: 2),
-                    ),
-                    child: ClipOval(
-                      child: (user?.fotoBase64 != null && user!.fotoBase64!.isNotEmpty)
-                          ? Image.memory(
-                              base64Decode(user.fotoBase64!),
-                              width: 50,
-                              height: 50,
-                              fit: BoxFit.cover,
-                              gaplessPlayback: true,
-                              errorBuilder: (_, __, ___) => Container(
-                                color: const Color(0xFFFDDBB3),
-                                child: const Icon(Icons.admin_panel_settings, color: Color(0xFFFC6707), size: 28),
+                  GestureDetector(
+                    onTap: () {
+                      Navigator.pushReplacement(
+                        context,
+                        MaterialPageRoute(builder: (_) => const AdminHomeView()),
+                      );
+                    },
+                    child: Container(
+                      width: 50,
+                      height: 50,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        border: Border.all(color: const Color(0xFFFC6707), width: 2),
+                      ),
+                      child: ClipOval(
+                        child: user?.fotoBase64 != null && user!.fotoBase64!.isNotEmpty
+                            ? Image.memory(
+                                base64Decode(user.fotoBase64!),
+                                width: 50,
+                                height: 50,
+                                fit: BoxFit.cover,
+                              )
+                            : const CircleAvatar(
+                                backgroundColor: Color(0xFFFDDBB3),
+                                child: Icon(Icons.admin_panel_settings, color: Color(0xFFFC6707), size: 28),
                               ),
-                            )
-                          : Container(
-                              color: const Color(0xFFFDDBB3),
-                              child: const Icon(Icons.admin_panel_settings, color: Color(0xFFFC6707), size: 28),
-                            ),
+                      ),
                     ),
                   ),
                   const SizedBox(width: 12),
@@ -305,29 +664,40 @@ class _AdminEditProfileViewState extends State<AdminEditProfileView> {
             ),
             const SizedBox(height: 16),
             const Divider(height: 1, thickness: 1, color: Color(0xFFE0E0E0)),
-            _buildDrawerItem('Dashboard', Icons.dashboard_outlined, () {
-              Navigator.pop(context);
-              _handleMenuSelected('Dashboard', context);
-            }),
-            _buildDrawerItem('Gestión', Icons.settings_outlined, () {
-              Navigator.pop(context);
-              _handleMenuSelected('Gestión', context);
-            }),
-            _buildDrawerItem('Usuarios', Icons.people_outline, () {
-              Navigator.pop(context);
-              _handleMenuSelected('Usuarios', context);
-            }),
-            _buildDrawerItem('Reportes', Icons.bar_chart_outlined, () {
-              Navigator.pop(context);
-              _handleMenuSelected('Reportes', context);
-            }),
-            const Spacer(),
-            const Divider(height: 1, thickness: 1, color: Color(0xFFE0E0E0)),
-            _buildDrawerItem('Cerrar Sesión', Icons.logout_outlined, () {
-              Navigator.pop(context);
-              _handleCerrarSesion();
-            }),
-            const SizedBox(height: 24),
+            Expanded(
+              child: SingleChildScrollView(
+                child: Column(
+                  children: [
+                    _buildDrawerItem('Dashboard', Icons.dashboard_outlined, () {
+                      Navigator.pop(context);
+                      _handleMenuSelected('Dashboard');
+                    }),
+                    _buildDrawerItem('Gestión', Icons.settings_outlined, () {
+                      Navigator.pop(context);
+                      _handleMenuSelected('Gestión');
+                    }),
+                    _buildDrawerItem('Usuarios', Icons.people_outline, () {
+                      Navigator.pop(context);
+                      _handleMenuSelected('Usuarios');
+                    }),
+                    _buildDrawerItem('Reportes', Icons.bar_chart_outlined, () {
+                      Navigator.pop(context);
+                      _handleMenuSelected('Reportes');
+                    }),
+                    const SizedBox(height: 16),
+                  ],
+                ),
+              ),
+            ),
+            Column(
+              children: [
+                const Divider(height: 1, thickness: 1, color: Color(0xFFE0E0E0)),
+                _buildDrawerItem('Cerrar Sesión', Icons.logout_outlined, () {
+                  Navigator.pop(context);
+                  _handleCerrarSesion();
+                }),
+              ],
+            ),
           ],
         ),
       ),
@@ -335,215 +705,18 @@ class _AdminEditProfileViewState extends State<AdminEditProfileView> {
   }
 
   Widget _buildDrawerItem(String title, IconData icon, VoidCallback onTap) {
+    final isActive = title == 'Perfil';
     return ListTile(
       leading: Icon(icon, color: const Color(0xFFFC6707)),
       title: Text(
         title,
-        style: GoogleFonts.outfit(fontSize: 16, fontWeight: FontWeight.w500, color: const Color(0xFF333333)),
+        style: GoogleFonts.outfit(
+          fontSize: 16,
+          fontWeight: isActive ? FontWeight.bold : FontWeight.w500,
+          color: isActive ? const Color(0xFFFC6707) : const Color(0xFF333333),
+        ),
       ),
       onTap: onTap,
-    );
-  }
-
-  Widget _buildAvatarSection(Usuario user) {
-    return Column(
-      children: [
-        GestureDetector(
-          onTap: _actualizarFoto,
-          child: Container(
-            width: 100,
-            height: 100,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              border: Border.all(color: const Color(0xFFFC6707), width: 3),
-            ),
-            child: ClipOval(
-              child: (user.fotoBase64 != null && user.fotoBase64!.isNotEmpty)
-                  ? Image.memory(
-                      base64Decode(user.fotoBase64!),
-                      width: 100,
-                      height: 100,
-                      fit: BoxFit.cover,
-                      gaplessPlayback: true,
-                      errorBuilder: (_, __, ___) => Container(
-                        color: const Color(0xFFFDDBB3),
-                        child: const Icon(Icons.admin_panel_settings, color: Color(0xFFFC6707), size: 50),
-                      ),
-                    )
-                  : Container(
-                      color: const Color(0xFFFDDBB3),
-                      child: const Icon(Icons.admin_panel_settings, color: Color(0xFFFC6707), size: 50),
-                    ),
-            ),
-          ),
-        ),
-        const SizedBox(height: 12),
-        MouseRegion(
-          cursor: SystemMouseCursors.click,
-          onEnter: (_) => setState(() => _isHoveringFoto = true),
-          onExit: (_) => setState(() => _isHoveringFoto = false),
-          child: GestureDetector(
-            onTap: _actualizarFoto,
-            child: AnimatedContainer(
-              duration: const Duration(milliseconds: 150),
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(20),
-                color: _isHoveringFoto ? const Color(0xFFFC6707).withOpacity(0.1) : Colors.transparent,
-              ),
-              child: Text(
-                'Actualizar foto',
-                style: GoogleFonts.outfit(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w500,
-                  color: const Color(0xFFFC6707),
-                ),
-              ),
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildFormSection() {
-    return Column(
-      children: [
-        Row(
-          children: [
-            Expanded(child: _buildEditableField('Nombre Completo', _nombreController)),
-            const SizedBox(width: 16),
-            Expanded(child: _buildDisabledField('Rol', 'Administrador')),
-          ],
-        ),
-        const SizedBox(height: 16),
-        Row(
-          children: [
-            Expanded(child: _buildDisabledField('Correo Electrónico', _correoController.text)),
-            const SizedBox(width: 16),
-            Expanded(child: Container()),
-          ],
-        ),
-      ],
-    );
-  }
-
-  Widget _buildDisabledField(String label, String value) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          label,
-          style: GoogleFonts.outfit(
-            fontSize: 12,
-            fontWeight: FontWeight.w500,
-            color: const Color(0xFF666666),
-          ),
-        ),
-        const SizedBox(height: 4),
-        Container(
-          width: double.infinity,
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-          decoration: BoxDecoration(
-            color: const Color(0xFFF8F8F8),
-            borderRadius: BorderRadius.circular(30),
-            border: Border.all(color: const Color(0xFFE0E0E0), width: 1),
-          ),
-          child: Text(
-            value.isEmpty ? 'No registrado' : value,
-            style: GoogleFonts.outfit(
-              fontSize: 14,
-              color: const Color(0xFF333333),
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildEditableField(String label, TextEditingController controller) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          label,
-          style: GoogleFonts.outfit(
-            fontSize: 12,
-            fontWeight: FontWeight.w500,
-            color: const Color(0xFF666666),
-          ),
-        ),
-        const SizedBox(height: 4),
-        TextField(
-          controller: controller,
-          style: GoogleFonts.outfit(fontSize: 14),
-          decoration: InputDecoration(
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(30),
-              borderSide: const BorderSide(color: Color(0xFFE0E0E0)),
-            ),
-            enabledBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(30),
-              borderSide: const BorderSide(color: Color(0xFFE0E0E0)),
-            ),
-            focusedBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(30),
-              borderSide: const BorderSide(color: Color(0xFFFC6707), width: 1.5),
-            ),
-            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildButtonsSection(bool isMobile) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: [
-        SizedBox(
-          width: isMobile ? 140 : 180,
-          child: ElevatedButton(
-            onPressed: _isLoading ? null : _guardarCambios,
-            style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFFFC6707),
-              foregroundColor: Colors.white,
-              padding: EdgeInsets.symmetric(vertical: isMobile ? 10 : 14),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
-            ),
-            child: _isLoading
-                ? const SizedBox(
-                    width: 20,
-                    height: 20,
-                    child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
-                  )
-                : Text(
-                    'Actualizar',
-                    style: GoogleFonts.outfit(fontSize: isMobile ? 14 : 16, fontWeight: FontWeight.bold),
-                  ),
-          ),
-        ),
-        const SizedBox(width: 16),
-        SizedBox(
-          width: isMobile ? 140 : 180,
-          child: ElevatedButton(
-            onPressed: () {
-              Navigator.pop(context);
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFFFDDBB3),
-              foregroundColor: const Color(0xFFFC6707),
-              padding: EdgeInsets.symmetric(vertical: isMobile ? 10 : 14),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
-              elevation: 0,
-            ),
-            child: Text(
-              'Descartar',
-              style: GoogleFonts.outfit(fontSize: isMobile ? 14 : 16, fontWeight: FontWeight.bold),
-            ),
-          ),
-        ),
-      ],
     );
   }
 }

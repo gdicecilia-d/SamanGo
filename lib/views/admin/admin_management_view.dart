@@ -1,4 +1,3 @@
-// Pantalla de gestión de tablas maestras (Administrador)
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
@@ -10,6 +9,8 @@ import '../auth/login_view.dart';
 import 'admin_home_view.dart';
 import 'admin_users_view.dart';
 import 'admin_reports_view.dart';
+import 'admin_edit_profile_view.dart';
+import 'dart:convert';
 
 class AdminManagementView extends StatefulWidget {
   const AdminManagementView({super.key});
@@ -46,7 +47,12 @@ class _AdminManagementViewState extends State<AdminManagementView> {
     }
   }
 
-  void _handleEditProfile() {}
+  void _handleEditProfile() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (_) => const AdminEditProfileView()),
+    );
+  }
 
   void _handleLogout() {
     CustomConfirmDialog.show(
@@ -80,70 +86,6 @@ class _AdminManagementViewState extends State<AdminManagementView> {
   void _openDrawer() {
     _scaffoldKey.currentState?.openEndDrawer();
   }
-
-  void _volver() {
-    Navigator.pop(context);
-  }
-
-  // ✅ CARGAR DATOS POR DEFECTO EN FIRESTORE
-  Future<void> _cargarDatosPorDefecto() async {
-    try {
-      final db = FirebaseFirestore.instance;
-
-      // ---------- HOSPEDAJES ----------
-      final hospedajesData = [
-        {'categoria': 'Hotel', 'activo': true},
-        {'categoria': 'Posada', 'activo': true},
-        {'categoria': 'Camping', 'activo': true},
-        {'categoria': 'Eco lodge', 'activo': true},
-        {'categoria': 'No incluye', 'activo': true},
-      ];
-
-      for (final data in hospedajesData) {
-        final existing = await db
-            .collection('hospedajes')
-            .where('categoria', isEqualTo: data['categoria'])
-            .get();
-        
-        if (existing.docs.isEmpty) {
-          await db.collection('hospedajes').add({
-            ...data,
-            'fechaCreacion': FieldValue.serverTimestamp(),
-          });
-        }
-      }
-
-      // ---------- TRANSPORTES ----------
-      final transportesData = [
-        {'categoria': 'Bus', 'capacidad': 40, 'activo': true},
-        {'categoria': 'Avión', 'capacidad': 150, 'activo': true},
-        {'categoria': 'Barco', 'capacidad': 80, 'activo': true},
-        {'categoria': '4x4', 'capacidad': 6, 'activo': true},
-        {'categoria': 'Todos', 'capacidad': 0, 'activo': true},
-      ];
-
-      for (final data in transportesData) {
-        final existing = await db
-            .collection('transportes')
-            .where('categoria', isEqualTo: data['categoria'])
-            .get();
-        
-        if (existing.docs.isEmpty) {
-          await db.collection('transportes').add({
-            ...data,
-            'fechaCreacion': FieldValue.serverTimestamp(),
-          });
-        }
-      }
-
-      _mostrarMensaje('✅ Datos cargados correctamente');
-      setState(() {});
-    } catch (e) {
-      _mostrarMensaje('❌ Error al cargar datos: $e');
-    }
-  }
-
-  // -------- HOSPEDAJES --------
 
   Future<void> _agregarHospedaje() async {
     final categoria = _categoriaController.text.trim();
@@ -184,49 +126,175 @@ class _AdminManagementViewState extends State<AdminManagementView> {
 
     await showDialog(
       context: context,
-      barrierDismissible: false,
-      builder: (context) => _buildDialog(
-        titulo: 'Editar Hospedaje',
-        onConfirm: () async {
-          final nuevaCategoria = _categoriaController.text.trim();
-          if (nuevaCategoria.isEmpty) {
-            _mostrarMensaje('Ingresa una categoría');
-            return;
-          }
+      barrierDismissible: true,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setStateDialog) {
+          return AlertDialog(
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(20),
+            ),
+            elevation: 4,
+            backgroundColor: Colors.white,
+            contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
+            content: SizedBox(
+              width: 320,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Icon(
+                    Icons.edit,
+                    color: Color(0xFFFC6707),
+                    size: 40,
+                  ),
+                  const SizedBox(height: 12),
+                  Text(
+                    'Editar Hospedaje',
+                    style: GoogleFonts.outfit(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                      color: const Color(0xFF333333),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  TextField(
+                    controller: _categoriaController,
+                    onChanged: (_) => setStateDialog(() {}),
+                    decoration: InputDecoration(
+                      labelText: 'Categoría',
+                      hintText: 'Ej: Hotel, Posada, etc.',
+                      labelStyle: GoogleFonts.outfit(fontSize: 14, color: const Color(0xFF666666)),
+                      hintStyle: GoogleFonts.outfit(fontSize: 14, color: const Color(0xFF999999)),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: const BorderSide(color: Color(0xFFE0E0E0)),
+                      ),
+                      enabledBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: const BorderSide(color: Color(0xFFE0E0E0)),
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: const BorderSide(color: Color(0xFFFC6707), width: 1.5),
+                      ),
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                    ),
+                    style: GoogleFonts.outfit(fontSize: 14),
+                  ),
+                  const SizedBox(height: 16),
+                  Row(
+                    children: [
+                      Text(
+                        'Activo',
+                        style: GoogleFonts.outfit(
+                          fontSize: 16,
+                          color: const Color(0xFF333333),
+                        ),
+                      ),
+                      const Spacer(),
+                      Switch(
+                        value: _activoSwitch,
+                        onChanged: (value) {
+                          setStateDialog(() {
+                            _activoSwitch = value;
+                          });
+                        },
+                        activeColor: const Color(0xFFFC6707),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 20),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      SizedBox(
+                        width: 100,
+                        child: ElevatedButton(
+                          onPressed: () async {
+                            final nuevaCategoria = _categoriaController.text.trim();
+                            if (nuevaCategoria.isEmpty) {
+                              _mostrarMensaje('Ingresa una categoría');
+                              return;
+                            }
 
-          try {
-            final existing = await FirebaseFirestore.instance
-                .collection('hospedajes')
-                .where('categoria', isEqualTo: nuevaCategoria)
-                .get();
+                            try {
+                              final existing = await FirebaseFirestore.instance
+                                  .collection('hospedajes')
+                                  .where('categoria', isEqualTo: nuevaCategoria)
+                                  .get();
 
-            if (existing.docs.any((doc) => doc.id != id)) {
-              _mostrarMensaje('La categoría "$nuevaCategoria" ya existe');
-              return;
-            }
+                              if (existing.docs.any((doc) => doc.id != id)) {
+                                _mostrarMensaje('La categoría "$nuevaCategoria" ya existe');
+                                return;
+                              }
 
-            await FirebaseFirestore.instance
-                .collection('hospedajes')
-                .doc(id)
-                .update({
-              'categoria': nuevaCategoria,
-              'activo': _activoSwitch,
-            });
+                              await FirebaseFirestore.instance
+                                  .collection('hospedajes')
+                                  .doc(id)
+                                  .update({
+                                'categoria': nuevaCategoria,
+                                'activo': _activoSwitch,
+                              });
 
-            _mostrarMensaje('Hospedaje actualizado correctamente');
-            _categoriaController.clear();
-            _activoSwitch = true;
-            Navigator.pop(context);
-          } catch (e) {
-            _mostrarMensaje('Error al actualizar: $e');
-          }
+                              _mostrarMensaje('Hospedaje actualizado correctamente');
+                              _categoriaController.clear();
+                              _activoSwitch = true;
+                              Navigator.pop(context);
+                              setState(() {});
+                            } catch (e) {
+                              _mostrarMensaje('Error al actualizar: $e');
+                            }
+                          },
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: const Color(0xFFFC6707),
+                            foregroundColor: Colors.white,
+                            padding: const EdgeInsets.symmetric(vertical: 10),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(30),
+                            ),
+                          ),
+                          child: Text(
+                            'Actualizar',
+                            style: GoogleFonts.outfit(
+                              fontSize: 13,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      SizedBox(
+                        width: 100,
+                        child: OutlinedButton(
+                          onPressed: () {
+                            _categoriaController.clear();
+                            _activoSwitch = true;
+                            Navigator.pop(context);
+                          },
+                          style: OutlinedButton.styleFrom(
+                            backgroundColor: const Color(0xFFF5F5F5),
+                            foregroundColor: const Color(0xFF666666),
+                            padding: const EdgeInsets.symmetric(vertical: 10),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(30),
+                            ),
+                            side: BorderSide.none,
+                          ),
+                          child: Text(
+                            'Cancelar',
+                            style: GoogleFonts.outfit(
+                              fontSize: 13,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          );
         },
-        onCancel: () {
-          _categoriaController.clear();
-          _activoSwitch = true;
-          Navigator.pop(context);
-        },
-        esEdicion: true,
       ),
     );
   }
@@ -279,8 +347,6 @@ class _AdminManagementViewState extends State<AdminManagementView> {
     }
   }
 
-  // -------- TRANSPORTES --------
-
   Future<void> _agregarTransporte() async {
     final categoria = _categoriaController.text.trim();
     final capacidad = int.tryParse(_capacidadController.text.trim());
@@ -329,59 +395,210 @@ class _AdminManagementViewState extends State<AdminManagementView> {
 
     await showDialog(
       context: context,
-      barrierDismissible: false,
-      builder: (context) => _buildDialog(
-        titulo: 'Editar Transporte',
-        onConfirm: () async {
-          final nuevaCategoria = _categoriaController.text.trim();
-          final nuevaCapacidad = int.tryParse(_capacidadController.text.trim());
+      barrierDismissible: true,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setStateDialog) {
+          return AlertDialog(
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(20),
+            ),
+            elevation: 4,
+            backgroundColor: Colors.white,
+            contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
+            content: SizedBox(
+              width: 320,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Icon(
+                    Icons.edit,
+                    color: Color(0xFFFC6707),
+                    size: 40,
+                  ),
+                  const SizedBox(height: 12),
+                  Text(
+                    'Editar Transporte',
+                    style: GoogleFonts.outfit(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                      color: const Color(0xFF333333),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  TextField(
+                    controller: _categoriaController,
+                    onChanged: (_) => setStateDialog(() {}),
+                    decoration: InputDecoration(
+                      labelText: 'Categoría',
+                      hintText: 'Ej: Bus, Avión, etc.',
+                      labelStyle: GoogleFonts.outfit(fontSize: 14, color: const Color(0xFF666666)),
+                      hintStyle: GoogleFonts.outfit(fontSize: 14, color: const Color(0xFF999999)),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: const BorderSide(color: Color(0xFFE0E0E0)),
+                      ),
+                      enabledBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: const BorderSide(color: Color(0xFFE0E0E0)),
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: const BorderSide(color: Color(0xFFFC6707), width: 1.5),
+                      ),
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                    ),
+                    style: GoogleFonts.outfit(fontSize: 14),
+                  ),
+                  const SizedBox(height: 16),
+                  TextField(
+                    controller: _capacidadController,
+                    onChanged: (_) => setStateDialog(() {}),
+                    decoration: InputDecoration(
+                      labelText: 'Capacidad',
+                      hintText: 'Ej: 40',
+                      labelStyle: GoogleFonts.outfit(fontSize: 14, color: const Color(0xFF666666)),
+                      hintStyle: GoogleFonts.outfit(fontSize: 14, color: const Color(0xFF999999)),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: const BorderSide(color: Color(0xFFE0E0E0)),
+                      ),
+                      enabledBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: const BorderSide(color: Color(0xFFE0E0E0)),
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: const BorderSide(color: Color(0xFFFC6707), width: 1.5),
+                      ),
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                    ),
+                    keyboardType: TextInputType.number,
+                    style: GoogleFonts.outfit(fontSize: 14),
+                  ),
+                  const SizedBox(height: 16),
+                  Row(
+                    children: [
+                      Text(
+                        'Activo',
+                        style: GoogleFonts.outfit(
+                          fontSize: 16,
+                          color: const Color(0xFF333333),
+                        ),
+                      ),
+                      const Spacer(),
+                      Switch(
+                        value: _activoSwitch,
+                        onChanged: (value) {
+                          setStateDialog(() {
+                            _activoSwitch = value;
+                          });
+                        },
+                        activeColor: const Color(0xFFFC6707),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 20),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      SizedBox(
+                        width: 100,
+                        child: ElevatedButton(
+                          onPressed: () async {
+                            final nuevaCategoria = _categoriaController.text.trim();
+                            final nuevaCapacidad = int.tryParse(_capacidadController.text.trim());
 
-          if (nuevaCategoria.isEmpty) {
-            _mostrarMensaje('Ingresa una categoría');
-            return;
-          }
-          if (nuevaCapacidad == null) {
-            _mostrarMensaje('Ingresa una capacidad válida');
-            return;
-          }
+                            if (nuevaCategoria.isEmpty) {
+                              _mostrarMensaje('Ingresa una categoría');
+                              return;
+                            }
+                            if (nuevaCapacidad == null || nuevaCapacidad <= 0) {
+                              _mostrarMensaje('Ingresa una capacidad válida mayor a 0');
+                              return;
+                            }
 
-          try {
-            final existing = await FirebaseFirestore.instance
-                .collection('transportes')
-                .where('categoria', isEqualTo: nuevaCategoria)
-                .get();
+                            try {
+                              final existing = await FirebaseFirestore.instance
+                                  .collection('transportes')
+                                  .where('categoria', isEqualTo: nuevaCategoria)
+                                  .get();
 
-            if (existing.docs.any((doc) => doc.id != id)) {
-              _mostrarMensaje('La categoría "$nuevaCategoria" ya existe');
-              return;
-            }
+                              if (existing.docs.any((doc) => doc.id != id)) {
+                                _mostrarMensaje('La categoría "$nuevaCategoria" ya existe');
+                                return;
+                              }
 
-            await FirebaseFirestore.instance
-                .collection('transportes')
-                .doc(id)
-                .update({
-              'categoria': nuevaCategoria,
-              'capacidad': nuevaCapacidad,
-              'activo': _activoSwitch,
-            });
+                              await FirebaseFirestore.instance
+                                  .collection('transportes')
+                                  .doc(id)
+                                  .update({
+                                'categoria': nuevaCategoria,
+                                'capacidad': nuevaCapacidad,
+                                'activo': _activoSwitch,
+                              });
 
-            _mostrarMensaje('Transporte actualizado correctamente');
-            _categoriaController.clear();
-            _capacidadController.clear();
-            _activoSwitch = true;
-            Navigator.pop(context);
-          } catch (e) {
-            _mostrarMensaje('Error al actualizar: $e');
-          }
+                              _mostrarMensaje('Transporte actualizado correctamente');
+                              _categoriaController.clear();
+                              _capacidadController.clear();
+                              _activoSwitch = true;
+                              Navigator.pop(context);
+                              setState(() {});
+                            } catch (e) {
+                              _mostrarMensaje('Error al actualizar: $e');
+                            }
+                          },
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: const Color(0xFFFC6707),
+                            foregroundColor: Colors.white,
+                            padding: const EdgeInsets.symmetric(vertical: 10),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(30),
+                            ),
+                          ),
+                          child: Text(
+                            'Actualizar',
+                            style: GoogleFonts.outfit(
+                              fontSize: 13,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      SizedBox(
+                        width: 100,
+                        child: OutlinedButton(
+                          onPressed: () {
+                            _categoriaController.clear();
+                            _capacidadController.clear();
+                            _activoSwitch = true;
+                            Navigator.pop(context);
+                          },
+                          style: OutlinedButton.styleFrom(
+                            backgroundColor: const Color(0xFFF5F5F5),
+                            foregroundColor: const Color(0xFF666666),
+                            padding: const EdgeInsets.symmetric(vertical: 10),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(30),
+                            ),
+                            side: BorderSide.none,
+                          ),
+                          child: Text(
+                            'Cancelar',
+                            style: GoogleFonts.outfit(
+                              fontSize: 13,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          );
         },
-        onCancel: () {
-          _categoriaController.clear();
-          _capacidadController.clear();
-          _activoSwitch = true;
-          Navigator.pop(context);
-        },
-        esEdicion: true,
-        mostrarCapacidad: true,
       ),
     );
   }
@@ -434,100 +651,306 @@ class _AdminManagementViewState extends State<AdminManagementView> {
     }
   }
 
-  // -------- DIÁLOGO --------
+  Widget _buildAgregarHospedajeDialog() {
+    return StatefulBuilder(
+      builder: (context, setStateDialog) {
+        return AlertDialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+          ),
+          elevation: 4,
+          backgroundColor: Colors.white,
+          contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
+          content: SizedBox(
+            width: 320,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Icon(
+                  Icons.add_circle,
+                  color: Color(0xFFFC6707),
+                  size: 40,
+                ),
+                const SizedBox(height: 12),
+                Text(
+                  'Agregar Hospedaje',
+                  style: GoogleFonts.outfit(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: const Color(0xFF333333),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                TextField(
+                  controller: _categoriaController,
+                  onChanged: (_) => setStateDialog(() {}),
+                  decoration: InputDecoration(
+                    labelText: 'Categoría',
+                    hintText: 'Ej: Hotel, Posada, etc.',
+                    labelStyle: GoogleFonts.outfit(fontSize: 14, color: const Color(0xFF666666)),
+                    hintStyle: GoogleFonts.outfit(fontSize: 14, color: const Color(0xFF999999)),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: const BorderSide(color: Color(0xFFE0E0E0)),
+                    ),
+                    enabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: const BorderSide(color: Color(0xFFE0E0E0)),
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: const BorderSide(color: Color(0xFFFC6707), width: 1.5),
+                    ),
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                  ),
+                  style: GoogleFonts.outfit(fontSize: 14),
+                ),
+                const SizedBox(height: 16),
+                Row(
+                  children: [
+                    Text(
+                      'Activo',
+                      style: GoogleFonts.outfit(
+                        fontSize: 16,
+                        color: const Color(0xFF333333),
+                      ),
+                    ),
+                    const Spacer(),
+                    Switch(
+                      value: _activoSwitch,
+                      onChanged: (value) {
+                        setStateDialog(() {
+                          _activoSwitch = value;
+                        });
+                      },
+                      activeColor: const Color(0xFFFC6707),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 20),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    SizedBox(
+                      width: 100,
+                      child: ElevatedButton(
+                        onPressed: _agregarHospedaje,
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFFFC6707),
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(vertical: 10),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(30),
+                          ),
+                        ),
+                        child: Text(
+                          'Agregar',
+                          style: GoogleFonts.outfit(
+                            fontSize: 13,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    SizedBox(
+                      width: 100,
+                      child: OutlinedButton(
+                        onPressed: () {
+                          _categoriaController.clear();
+                          _activoSwitch = true;
+                          Navigator.pop(context);
+                        },
+                        style: OutlinedButton.styleFrom(
+                          backgroundColor: const Color(0xFFF5F5F5),
+                          foregroundColor: const Color(0xFF666666),
+                          padding: const EdgeInsets.symmetric(vertical: 10),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(30),
+                          ),
+                          side: BorderSide.none,
+                        ),
+                        child: Text(
+                          'Cancelar',
+                          style: GoogleFonts.outfit(
+                            fontSize: 13,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
 
-  Widget _buildDialog({
-    required String titulo,
-    required VoidCallback onConfirm,
-    required VoidCallback onCancel,
-    bool esEdicion = false,
-    bool mostrarCapacidad = false,
-  }) {
-    return AlertDialog(
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-      title: Text(
-        titulo,
-        style: GoogleFonts.outfit(
-          fontSize: 20,
-          fontWeight: FontWeight.bold,
-          color: const Color(0xFF333333),
-        ),
-      ),
-      content: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          TextField(
-            controller: _categoriaController,
-            decoration: InputDecoration(
-              labelText: 'Categoría',
-              hintText: 'Ej: Hotel, Bus, etc.',
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
-              ),
-            ),
+  Widget _buildAgregarTransporteDialog() {
+    return StatefulBuilder(
+      builder: (context, setStateDialog) {
+        return AlertDialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
           ),
-          if (mostrarCapacidad) ...[
-            const SizedBox(height: 16),
-            TextField(
-              controller: _capacidadController,
-              decoration: InputDecoration(
-                labelText: 'Capacidad',
-                hintText: 'Ej: 40',
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
+          elevation: 4,
+          backgroundColor: Colors.white,
+          contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
+          content: SizedBox(
+            width: 320,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Icon(
+                  Icons.add_circle,
+                  color: Color(0xFFFC6707),
+                  size: 40,
                 ),
-              ),
-              keyboardType: TextInputType.number,
-            ),
-          ],
-          const SizedBox(height: 16),
-          Row(
-            children: [
-              Text(
-                'Activo',
-                style: GoogleFonts.outfit(
-                  fontSize: 16,
-                  color: const Color(0xFF333333),
+                const SizedBox(height: 12),
+                Text(
+                  'Agregar Transporte',
+                  style: GoogleFonts.outfit(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: const Color(0xFF333333),
+                  ),
                 ),
-              ),
-              const Spacer(),
-              Switch(
-                value: _activoSwitch,
-                onChanged: (value) {
-                  setState(() {
-                    _activoSwitch = value;
-                  });
-                },
-                activeColor: const Color(0xFFFC6707),
-              ),
-            ],
-          ),
-        ],
-      ),
-      actions: [
-        TextButton(
-          onPressed: onCancel,
-          child: Text(
-            'Cancelar',
-            style: GoogleFonts.outfit(
-              color: const Color(0xFF666666),
+                const SizedBox(height: 16),
+                TextField(
+                  controller: _categoriaController,
+                  onChanged: (_) => setStateDialog(() {}),
+                  decoration: InputDecoration(
+                    labelText: 'Categoría',
+                    hintText: 'Ej: Bus, Avión, etc.',
+                    labelStyle: GoogleFonts.outfit(fontSize: 14, color: const Color(0xFF666666)),
+                    hintStyle: GoogleFonts.outfit(fontSize: 14, color: const Color(0xFF999999)),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: const BorderSide(color: Color(0xFFE0E0E0)),
+                    ),
+                    enabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: const BorderSide(color: Color(0xFFE0E0E0)),
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: const BorderSide(color: Color(0xFFFC6707), width: 1.5),
+                    ),
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                  ),
+                  style: GoogleFonts.outfit(fontSize: 14),
+                ),
+                const SizedBox(height: 16),
+                TextField(
+                  controller: _capacidadController,
+                  onChanged: (_) => setStateDialog(() {}),
+                  decoration: InputDecoration(
+                    labelText: 'Capacidad',
+                    hintText: 'Ej: 40',
+                    labelStyle: GoogleFonts.outfit(fontSize: 14, color: const Color(0xFF666666)),
+                    hintStyle: GoogleFonts.outfit(fontSize: 14, color: const Color(0xFF999999)),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: const BorderSide(color: Color(0xFFE0E0E0)),
+                    ),
+                    enabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: const BorderSide(color: Color(0xFFE0E0E0)),
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: const BorderSide(color: Color(0xFFFC6707), width: 1.5),
+                    ),
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                  ),
+                  keyboardType: TextInputType.number,
+                  style: GoogleFonts.outfit(fontSize: 14),
+                ),
+                const SizedBox(height: 16),
+                Row(
+                  children: [
+                    Text(
+                      'Activo',
+                      style: GoogleFonts.outfit(
+                        fontSize: 16,
+                        color: const Color(0xFF333333),
+                      ),
+                    ),
+                    const Spacer(),
+                    Switch(
+                      value: _activoSwitch,
+                      onChanged: (value) {
+                        setStateDialog(() {
+                          _activoSwitch = value;
+                        });
+                      },
+                      activeColor: const Color(0xFFFC6707),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 20),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    SizedBox(
+                      width: 100,
+                      child: ElevatedButton(
+                        onPressed: _agregarTransporte,
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFFFC6707),
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(vertical: 10),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(30),
+                          ),
+                        ),
+                        child: Text(
+                          'Agregar',
+                          style: GoogleFonts.outfit(
+                            fontSize: 13,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    SizedBox(
+                      width: 100,
+                      child: OutlinedButton(
+                        onPressed: () {
+                          _categoriaController.clear();
+                          _capacidadController.clear();
+                          _activoSwitch = true;
+                          Navigator.pop(context);
+                        },
+                        style: OutlinedButton.styleFrom(
+                          backgroundColor: const Color(0xFFF5F5F5),
+                          foregroundColor: const Color(0xFF666666),
+                          padding: const EdgeInsets.symmetric(vertical: 10),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(30),
+                          ),
+                          side: BorderSide.none,
+                        ),
+                        child: Text(
+                          'Cancelar',
+                          style: GoogleFonts.outfit(
+                            fontSize: 13,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
             ),
           ),
-        ),
-        ElevatedButton(
-          onPressed: onConfirm,
-          style: ElevatedButton.styleFrom(
-            backgroundColor: const Color(0xFFFC6707),
-            foregroundColor: Colors.white,
-          ),
-          child: Text(
-            esEdicion ? 'Actualizar' : 'Agregar',
-            style: GoogleFonts.outfit(
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-        ),
-      ],
+        );
+      },
     );
   }
 
@@ -540,62 +963,19 @@ class _AdminManagementViewState extends State<AdminManagementView> {
       key: _scaffoldKey,
       backgroundColor: Colors.white,
       endDrawer: isMobile ? _buildDrawer() : null,
-      body: Stack(
+      body: Column(
         children: [
-          Column(
-            children: [
-              AppHeader(
-                activeMenu: _activeMenu,
-                onMenuSelected: _handleMenuSelected,
-                onEditProfile: _handleEditProfile,
-                onLogout: _handleLogout,
-                menuItems: _menuItems,
-                isMobile: isMobile,
-                onMenuTap: isMobile ? _openDrawer : null,
-              ),
-              Expanded(
-                child: isMobile ? _buildMobileLayout() : _buildDesktopLayout(),
-              ),
-            ],
+          AppHeader(
+            activeMenu: _activeMenu,
+            onMenuSelected: _handleMenuSelected,
+            onEditProfile: _handleEditProfile,
+            onLogout: _handleLogout,
+            menuItems: _menuItems,
+            isMobile: isMobile,
+            onMenuTap: isMobile ? _openDrawer : null,
           ),
-          Positioned(
-            top: isMobile ? 80 : 100,
-            right: 24,
-            child: MouseRegion(
-              cursor: SystemMouseCursors.click,
-              child: GestureDetector(
-                onTap: _volver,
-                child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(30),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withValues(alpha: 0.1),
-                        blurRadius: 8,
-                        offset: const Offset(0, 2),
-                      ),
-                    ],
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(Icons.arrow_back, color: const Color(0xFFFC6707), size: 16),
-                      const SizedBox(width: 4),
-                      Text(
-                        'Volver',
-                        style: GoogleFonts.outfit(
-                          fontSize: 16,
-                          color: const Color(0xFFFC6707),
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ),
+          Expanded(
+            child: isMobile ? _buildMobileLayout() : _buildDesktopLayout(),
           ),
         ],
       ),
@@ -617,16 +997,28 @@ class _AdminManagementViewState extends State<AdminManagementView> {
               padding: const EdgeInsets.symmetric(horizontal: 24),
               child: Row(
                 children: [
-                  Container(
-                    width: 50,
-                    height: 50,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      border: Border.all(color: const Color(0xFFFC6707), width: 2),
-                    ),
-                    child: const CircleAvatar(
-                      backgroundColor: Color(0xFFFDDBB3),
-                      child: Icon(Icons.admin_panel_settings, color: Color(0xFFFC6707), size: 28),
+                  GestureDetector(
+                    onTap: _handleEditProfile,
+                    child: Container(
+                      width: 50,
+                      height: 50,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        border: Border.all(color: const Color(0xFFFC6707), width: 2),
+                      ),
+                      child: ClipOval(
+                        child: user?.fotoBase64 != null && user!.fotoBase64!.isNotEmpty
+                            ? Image.memory(
+                                base64Decode(user.fotoBase64!),
+                                width: 50,
+                                height: 50,
+                                fit: BoxFit.cover,
+                              )
+                            : const CircleAvatar(
+                                backgroundColor: Color(0xFFFDDBB3),
+                                child: Icon(Icons.admin_panel_settings, color: Color(0xFFFC6707), size: 28),
+                              ),
+                      ),
                     ),
                   ),
                   const SizedBox(width: 12),
@@ -694,68 +1086,66 @@ class _AdminManagementViewState extends State<AdminManagementView> {
     );
   }
 
-  // ✅ MÓVIL - CON SCROLL
   Widget _buildMobileLayout() {
-    return SingleChildScrollView(
-      physics: const BouncingScrollPhysics(),
+    return Container(
       padding: const EdgeInsets.all(16),
-      child: _buildContent(isMobile: true),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const SizedBox(height: 8),
+          Text(
+            'Gestión de Tablas',
+            style: GoogleFonts.outfit(
+              fontSize: 24,
+              fontWeight: FontWeight.bold,
+              color: const Color(0xFF333333),
+            ),
+          ),
+          const SizedBox(height: 24),
+          Expanded(
+            child: SingleChildScrollView(
+              physics: const BouncingScrollPhysics(),
+              child: Column(
+                children: [
+                  _buildTablaHospedajes(true),
+                  const SizedBox(height: 32),
+                  _buildTablaTransportes(true),
+                  const SizedBox(height: 40),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 
-  // ✅ ESCRITORIO - CON SCROLL
   Widget _buildDesktopLayout() {
-    return SingleChildScrollView(
-      physics: const BouncingScrollPhysics(),
+    return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
-      child: _buildContent(isMobile: false),
-    );
-  }
-
-  Widget _buildContent({required bool isMobile}) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        // ✅ TÍTULO CON BOTÓN PARA CARGAR DATOS
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      child: SingleChildScrollView(
+        physics: const BouncingScrollPhysics(),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
               'Gestión de Tablas',
               style: GoogleFonts.outfit(
-                fontSize: isMobile ? 24 : 28,
+                fontSize: 28,
                 fontWeight: FontWeight.bold,
                 color: const Color(0xFF333333),
               ),
             ),
-            // ✅ BOTÓN PARA CARGAR DATOS POR DEFECTO
-            ElevatedButton.icon(
-              onPressed: _cargarDatosPorDefecto,
-              icon: const Icon(Icons.download, size: 18),
-              label: const Text('Cargar datos por defecto'),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFFFC6707),
-                foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(30),
-                ),
-              ),
-            ),
+            const SizedBox(height: 24),
+            _buildTablaHospedajes(false),
+            const SizedBox(height: 32),
+            _buildTablaTransportes(false),
+            const SizedBox(height: 40),
           ],
         ),
-        const SizedBox(height: 24),
-        // ✅ HOSPEDAJES
-        _buildTablaHospedajes(isMobile),
-        const SizedBox(height: 32),
-        // ✅ TRANSPORTES
-        _buildTablaTransportes(isMobile),
-        const SizedBox(height: 40),
-      ],
+      ),
     );
   }
-
-  // -------- TABLA HOSPEDAJES --------
 
   Widget _buildTablaHospedajes(bool isMobile) {
     return Container(
@@ -768,14 +1158,14 @@ class _AdminManagementViewState extends State<AdminManagementView> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Padding(
-            padding: const EdgeInsets.all(16),
+            padding: EdgeInsets.all(isMobile ? 12 : 16),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Text(
                   'Tipos de Hospedaje',
                   style: GoogleFonts.outfit(
-                    fontSize: isMobile ? 18 : 20,
+                    fontSize: isMobile ? 16 : 20,
                     fontWeight: FontWeight.bold,
                     color: const Color(0xFF333333),
                   ),
@@ -786,23 +1176,25 @@ class _AdminManagementViewState extends State<AdminManagementView> {
                     _activoSwitch = true;
                     showDialog(
                       context: context,
-                      barrierDismissible: false,
-                      builder: (context) => _buildDialog(
-                        titulo: 'Agregar Hospedaje',
-                        onConfirm: _agregarHospedaje,
-                        onCancel: () {
-                          _categoriaController.clear();
-                          _activoSwitch = true;
-                          Navigator.pop(context);
-                        },
-                      ),
+                      barrierDismissible: true,
+                      builder: (_) => _buildAgregarHospedajeDialog(),
                     );
                   },
                   style: ElevatedButton.styleFrom(
                     backgroundColor: const Color(0xFFFC6707),
                     foregroundColor: Colors.white,
+                    padding: isMobile ? const EdgeInsets.symmetric(horizontal: 12, vertical: 8) : const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(30),
+                    ),
                   ),
-                  child: const Text('+ Añadir'),
+                  child: Text(
+                    '+ Añadir',
+                    style: GoogleFonts.outfit(
+                      fontSize: isMobile ? 12 : 14,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
                 ),
               ],
             ),
@@ -844,14 +1236,6 @@ class _AdminManagementViewState extends State<AdminManagementView> {
                             color: const Color(0xFF999999),
                           ),
                         ),
-                        const SizedBox(height: 8),
-                        Text(
-                          'Presiona "Cargar datos por defecto" para crear los iniciales',
-                          style: GoogleFonts.outfit(
-                            fontSize: 12,
-                            color: const Color(0xFFCCCCCC),
-                          ),
-                        ),
                       ],
                     ),
                   ),
@@ -870,7 +1254,7 @@ class _AdminManagementViewState extends State<AdminManagementView> {
                   final activo = data['activo'] as bool? ?? true;
 
                   return Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                    padding: EdgeInsets.symmetric(horizontal: isMobile ? 12 : 16, vertical: isMobile ? 8 : 12),
                     child: Row(
                       children: [
                         Text(
@@ -878,42 +1262,44 @@ class _AdminManagementViewState extends State<AdminManagementView> {
                           style: GoogleFonts.outfit(
                             fontWeight: FontWeight.w500,
                             color: const Color(0xFF666666),
+                            fontSize: isMobile ? 12 : 14,
                           ),
                         ),
-                        const SizedBox(width: 16),
+                        SizedBox(width: isMobile ? 8 : 16),
                         Expanded(
                           child: Text(
                             categoria,
                             style: GoogleFonts.outfit(
                               fontWeight: FontWeight.w500,
                               color: const Color(0xFF333333),
+                              fontSize: isMobile ? 13 : 14,
                             ),
                           ),
                         ),
                         GestureDetector(
                           onTap: () => _toggleHospedaje(doc.id, categoria, activo),
                           child: Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
                             decoration: BoxDecoration(
-                              color: activo ? const Color(0xFF4CAF50).withValues(alpha: 0.15) : const Color(0xFFF44336).withValues(alpha: 0.15),
-                              borderRadius: BorderRadius.circular(12),
+                              color: activo ? const Color(0xFF4CAF50).withOpacity(0.15) : const Color(0xFFF44336).withOpacity(0.15),
+                              borderRadius: BorderRadius.circular(10),
                             ),
                             child: Row(
                               mainAxisSize: MainAxisSize.min,
                               children: [
                                 Container(
-                                  width: 8,
-                                  height: 8,
+                                  width: 6,
+                                  height: 6,
                                   decoration: BoxDecoration(
                                     shape: BoxShape.circle,
                                     color: activo ? const Color(0xFF4CAF50) : const Color(0xFFF44336),
                                   ),
                                 ),
-                                const SizedBox(width: 4),
+                                SizedBox(width: isMobile ? 2 : 4),
                                 Text(
                                   activo ? 'Activo' : 'Inactivo',
                                   style: GoogleFonts.outfit(
-                                    fontSize: 11,
+                                    fontSize: isMobile ? 9 : 11,
                                     fontWeight: FontWeight.w500,
                                     color: activo ? const Color(0xFF4CAF50) : const Color(0xFFF44336),
                                   ),
@@ -922,17 +1308,17 @@ class _AdminManagementViewState extends State<AdminManagementView> {
                             ),
                           ),
                         ),
-                        const SizedBox(width: 8),
+                        SizedBox(width: isMobile ? 4 : 8),
                         IconButton(
                           onPressed: () => _editarHospedaje(doc.id, categoria, activo),
-                          icon: const Icon(Icons.edit, color: Color(0xFFFC6707), size: 18),
+                          icon: Icon(Icons.edit, color: const Color(0xFFFC6707), size: isMobile ? 16 : 18),
                           tooltip: 'Editar',
                           padding: EdgeInsets.zero,
                           constraints: const BoxConstraints(),
                         ),
                         IconButton(
                           onPressed: () => _eliminarHospedaje(doc.id, categoria),
-                          icon: const Icon(Icons.delete, color: Color(0xFFF44336), size: 18),
+                          icon: Icon(Icons.delete, color: const Color(0xFFF44336), size: isMobile ? 16 : 18),
                           tooltip: 'Eliminar',
                           padding: EdgeInsets.zero,
                           constraints: const BoxConstraints(),
@@ -949,8 +1335,6 @@ class _AdminManagementViewState extends State<AdminManagementView> {
     );
   }
 
-  // -------- TABLA TRANSPORTES --------
-
   Widget _buildTablaTransportes(bool isMobile) {
     return Container(
       decoration: BoxDecoration(
@@ -962,14 +1346,14 @@ class _AdminManagementViewState extends State<AdminManagementView> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Padding(
-            padding: const EdgeInsets.all(16),
+            padding: EdgeInsets.all(isMobile ? 12 : 16),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Text(
                   'Tipos de Transporte',
                   style: GoogleFonts.outfit(
-                    fontSize: isMobile ? 18 : 20,
+                    fontSize: isMobile ? 16 : 20,
                     fontWeight: FontWeight.bold,
                     color: const Color(0xFF333333),
                   ),
@@ -981,25 +1365,25 @@ class _AdminManagementViewState extends State<AdminManagementView> {
                     _activoSwitch = true;
                     showDialog(
                       context: context,
-                      barrierDismissible: false,
-                      builder: (context) => _buildDialog(
-                        titulo: 'Agregar Transporte',
-                        onConfirm: _agregarTransporte,
-                        onCancel: () {
-                          _categoriaController.clear();
-                          _capacidadController.clear();
-                          _activoSwitch = true;
-                          Navigator.pop(context);
-                        },
-                        mostrarCapacidad: true,
-                      ),
+                      barrierDismissible: true,
+                      builder: (_) => _buildAgregarTransporteDialog(),
                     );
                   },
                   style: ElevatedButton.styleFrom(
                     backgroundColor: const Color(0xFFFC6707),
                     foregroundColor: Colors.white,
+                    padding: isMobile ? const EdgeInsets.symmetric(horizontal: 12, vertical: 8) : const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(30),
+                    ),
                   ),
-                  child: const Text('+ Añadir'),
+                  child: Text(
+                    '+ Añadir',
+                    style: GoogleFonts.outfit(
+                      fontSize: isMobile ? 12 : 14,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
                 ),
               ],
             ),
@@ -1041,14 +1425,6 @@ class _AdminManagementViewState extends State<AdminManagementView> {
                             color: const Color(0xFF999999),
                           ),
                         ),
-                        const SizedBox(height: 8),
-                        Text(
-                          'Presiona "Cargar datos por defecto" para crear los iniciales',
-                          style: GoogleFonts.outfit(
-                            fontSize: 12,
-                            color: const Color(0xFFCCCCCC),
-                          ),
-                        ),
                       ],
                     ),
                   ),
@@ -1068,7 +1444,7 @@ class _AdminManagementViewState extends State<AdminManagementView> {
                   final activo = data['activo'] as bool? ?? true;
 
                   return Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                    padding: EdgeInsets.symmetric(horizontal: isMobile ? 12 : 16, vertical: isMobile ? 8 : 12),
                     child: Row(
                       children: [
                         Text(
@@ -1076,9 +1452,10 @@ class _AdminManagementViewState extends State<AdminManagementView> {
                           style: GoogleFonts.outfit(
                             fontWeight: FontWeight.w500,
                             color: const Color(0xFF666666),
+                            fontSize: isMobile ? 12 : 14,
                           ),
                         ),
-                        const SizedBox(width: 16),
+                        SizedBox(width: isMobile ? 8 : 16),
                         Expanded(
                           flex: 2,
                           child: Text(
@@ -1086,6 +1463,7 @@ class _AdminManagementViewState extends State<AdminManagementView> {
                             style: GoogleFonts.outfit(
                               fontWeight: FontWeight.w500,
                               color: const Color(0xFF333333),
+                              fontSize: isMobile ? 13 : 14,
                             ),
                           ),
                         ),
@@ -1096,33 +1474,34 @@ class _AdminManagementViewState extends State<AdminManagementView> {
                             style: GoogleFonts.outfit(
                               fontWeight: FontWeight.w500,
                               color: const Color(0xFF333333),
+                              fontSize: isMobile ? 13 : 14,
                             ),
                           ),
                         ),
                         GestureDetector(
                           onTap: () => _toggleTransporte(doc.id, categoria, activo),
                           child: Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
                             decoration: BoxDecoration(
-                              color: activo ? const Color(0xFF4CAF50).withValues(alpha: 0.15) : const Color(0xFFF44336).withValues(alpha: 0.15),
-                              borderRadius: BorderRadius.circular(12),
+                              color: activo ? const Color(0xFF4CAF50).withOpacity(0.15) : const Color(0xFFF44336).withOpacity(0.15),
+                              borderRadius: BorderRadius.circular(10),
                             ),
                             child: Row(
                               mainAxisSize: MainAxisSize.min,
                               children: [
                                 Container(
-                                  width: 8,
-                                  height: 8,
+                                  width: 6,
+                                  height: 6,
                                   decoration: BoxDecoration(
                                     shape: BoxShape.circle,
                                     color: activo ? const Color(0xFF4CAF50) : const Color(0xFFF44336),
                                   ),
                                 ),
-                                const SizedBox(width: 4),
+                                SizedBox(width: isMobile ? 2 : 4),
                                 Text(
                                   activo ? 'Activo' : 'Inactivo',
                                   style: GoogleFonts.outfit(
-                                    fontSize: 11,
+                                    fontSize: isMobile ? 9 : 11,
                                     fontWeight: FontWeight.w500,
                                     color: activo ? const Color(0xFF4CAF50) : const Color(0xFFF44336),
                                   ),
@@ -1131,17 +1510,17 @@ class _AdminManagementViewState extends State<AdminManagementView> {
                             ),
                           ),
                         ),
-                        const SizedBox(width: 8),
+                        SizedBox(width: isMobile ? 4 : 8),
                         IconButton(
                           onPressed: () => _editarTransporte(doc.id, categoria, capacidad, activo),
-                          icon: const Icon(Icons.edit, color: Color(0xFFFC6707), size: 18),
+                          icon: Icon(Icons.edit, color: const Color(0xFFFC6707), size: isMobile ? 16 : 18),
                           tooltip: 'Editar',
                           padding: EdgeInsets.zero,
                           constraints: const BoxConstraints(),
                         ),
                         IconButton(
                           onPressed: () => _eliminarTransporte(doc.id, categoria),
-                          icon: const Icon(Icons.delete, color: Color(0xFFF44336), size: 18),
+                          icon: Icon(Icons.delete, color: const Color(0xFFF44336), size: isMobile ? 16 : 18),
                           tooltip: 'Eliminar',
                           padding: EdgeInsets.zero,
                           constraints: const BoxConstraints(),

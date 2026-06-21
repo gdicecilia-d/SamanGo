@@ -1,4 +1,3 @@
-// Pantalla principal del operador 
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -35,6 +34,9 @@ class _OperatorHomeViewState extends State<OperatorHomeView> {
   double _calificacionPromedio = 0;
   int _totalResenas = 0;
   bool _cargandoMetricas = true;
+  Map<String, dynamic>? _operadorData;
+  bool _cargandoOperador = true;
+  String _operadorId = '';
 
   @override
   void initState() {
@@ -44,28 +46,76 @@ class _OperatorHomeViewState extends State<OperatorHomeView> {
       final auth = Provider.of<AuthController>(context, listen: false);
       final notifCtrl = Provider.of<NotificacionController>(context, listen: false);
       if (auth.usuarioActual != null) {
+        _operadorId = auth.usuarioActual!.id;
         notifCtrl.listenToNotificaciones(
-          auth.usuarioActual!.id,
+          _operadorId,
           collectionName: 'operadores',
         );
-        _cargarMetricasOperador(auth.usuarioActual!.id);
+        _cargarDatosOperador(_operadorId);
+        _cargarMetricasOperador(_operadorId);
       }
     });
   }
 
+  Future<void> _cargarDatosOperador(String operadorId) async {
+    try {
+      final doc = await FirebaseFirestore.instance
+          .collection('operadores')
+          .doc(operadorId)
+          .get();
+      
+      if (doc.exists && mounted) {
+        setState(() {
+          _operadorData = doc.data() as Map<String, dynamic>?;
+          _cargandoOperador = false;
+        });
+      } else {
+        final auth = Provider.of<AuthController>(context, listen: false);
+        final user = auth.usuarioActual;
+        if (user != null && mounted) {
+          setState(() {
+            _operadorData = {
+              'nombre': user.nombre,
+              'empresa': user.empresa ?? 'Operador',
+              'correo': user.correo,
+            };
+            _cargandoOperador = false;
+          });
+        } else {
+          setState(() {
+            _cargandoOperador = false;
+          });
+        }
+      }
+    } catch (e) {
+      setState(() {
+        _cargandoOperador = false;
+      });
+    }
+  }
+
   Future<void> _cargarMetricasOperador(String operadorId) async {
+    setState(() {
+      _cargandoMetricas = true;
+    });
+
     try {
       final db = FirebaseFirestore.instance;
 
-      final results = await Future.wait([
-        db.collection('destinos').where('operadorId', isEqualTo: operadorId).get(),
-        db.collection('reservas').where('operadorId', isEqualTo: operadorId).get(),
-        db.collection('usuarios').doc(operadorId).get(),
-      ]);
+      final destinosSnap = await db
+          .collection('destinos')
+          .where('operadorId', isEqualTo: operadorId)
+          .get();
 
-      final destinosSnap = results[0] as QuerySnapshot;
-      final reservasSnap = results[1] as QuerySnapshot;
-      final operadorDoc = results[2] as DocumentSnapshot;
+      final reservasSnap = await db
+          .collection('reservas')
+          .where('operadorId', isEqualTo: operadorId)
+          .get();
+
+      final operadorDoc = await db
+          .collection('operadores')
+          .doc(operadorId)
+          .get();
 
       final operadorData = operadorDoc.data() as Map<String, dynamic>? ?? {};
       final calificacion = (operadorData['calificacionPromedio'] as num? ?? 0).toDouble();
@@ -85,6 +135,14 @@ class _OperatorHomeViewState extends State<OperatorHomeView> {
     }
   }
 
+  Future<void> _refrescarMetricas() async {
+    if (_operadorId.isNotEmpty) {
+      await _cargarMetricasOperador(_operadorId);
+      setState(() => _refreshKey++);
+      _mostrarMensaje('Métricas actualizadas');
+    }
+  }
+
   void _handleMenuSelected(String menu) {
     if (menu == 'Publicar') {
       setState(() => _activeMenu = menu);
@@ -93,6 +151,7 @@ class _OperatorHomeViewState extends State<OperatorHomeView> {
           _activeMenu = 'Inicio';
           _refreshKey++;
         });
+        _cargarMetricasOperador(_operadorId);
       });
     } else if (menu == 'Solicitudes') {
       Navigator.push(context, MaterialPageRoute(builder: (_) => const OperatorRequestsView()));
@@ -162,6 +221,7 @@ class _OperatorHomeViewState extends State<OperatorHomeView> {
         await FirebaseFirestore.instance.collection('destinos').doc(id).delete();
         _mostrarMensaje('Publicación eliminada');
         setState(() => _refreshKey++);
+        _cargarMetricasOperador(_operadorId);
       }
     } catch (e) {
       _mostrarMensaje('Error al verificar o eliminar');
@@ -172,9 +232,9 @@ class _OperatorHomeViewState extends State<OperatorHomeView> {
   Widget build(BuildContext context) {
     final screenWidth = MediaQuery.of(context).size.width;
     final isMobile = screenWidth < 850;
-    final auth = Provider.of<AuthController>(context);
-    final operadorId = auth.usuarioActual?.id ?? '';
-    final empresa = auth.usuarioActual?.empresa ?? 'Operador';
+    
+    final String empresa = _operadorData?['empresa'] ?? 'Operador';
+    final String nombreOperador = _operadorData?['nombre'] ?? 'Operador';
 
     return Scaffold(
       key: _scaffoldKey,
@@ -193,19 +253,17 @@ class _OperatorHomeViewState extends State<OperatorHomeView> {
           ),
           Expanded(
             child: isMobile
-                ? _buildMobileLayout(operadorId, empresa)
-                : _buildDesktopLayout(operadorId, empresa),
+                ? _buildMobileLayout(_operadorId, empresa, nombreOperador)
+                : _buildDesktopLayout(_operadorId, empresa, nombreOperador),
           ),
         ],
       ),
     );
   }
 
-  // Layout para móvil con CustomScrollView
-  Widget _buildMobileLayout(String operadorId, String empresa) {
+  Widget _buildMobileLayout(String operadorId, String empresa, String nombreOperador) {
     return CustomScrollView(
       slivers: [
-        // Contenido principal
         SliverToBoxAdapter(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -222,7 +280,7 @@ class _OperatorHomeViewState extends State<OperatorHomeView> {
                     ),
                     children: [
                       const TextSpan(text: '¡Hola '),
-                      TextSpan(text: empresa, style: const TextStyle(color: Color(0xFFFC6707))),
+                      TextSpan(text: nombreOperador, style: const TextStyle(color: Color(0xFFFC6707))),
                       const TextSpan(text: '! Revisa el estado de tus servicios'),
                     ],
                   ),
@@ -238,8 +296,8 @@ class _OperatorHomeViewState extends State<OperatorHomeView> {
           hasScrollBody: false,
           child: Column(
             children: [
-              const Spacer(), 
-              _buildFooter(true), 
+              const Spacer(),
+              _buildFooter(true),
             ],
           ),
         ),
@@ -247,8 +305,7 @@ class _OperatorHomeViewState extends State<OperatorHomeView> {
     );
   }
 
-  // Layout para desktop con CustomScrollView en el panel izquierdo
-  Widget _buildDesktopLayout(String operadorId, String empresa) {
+  Widget _buildDesktopLayout(String operadorId, String empresa, String nombreOperador) {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -265,7 +322,6 @@ class _OperatorHomeViewState extends State<OperatorHomeView> {
             ),
             child: CustomScrollView(
               slivers: [
-                // Contenido principal
                 SliverToBoxAdapter(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -282,7 +338,7 @@ class _OperatorHomeViewState extends State<OperatorHomeView> {
                             ),
                             children: [
                               const TextSpan(text: '¡Hola '),
-                              TextSpan(text: empresa, style: const TextStyle(color: Color(0xFFFC6707))),
+                              TextSpan(text: nombreOperador, style: const TextStyle(color: Color(0xFFFC6707))),
                               const TextSpan(text: '! Revisa el estado de tus servicios'),
                             ],
                           ),
@@ -290,7 +346,6 @@ class _OperatorHomeViewState extends State<OperatorHomeView> {
                       ),
                       const SizedBox(height: 32),
                       _buildMainContent(isMobile: false, operadorId: operadorId),
-                      // Espacio extra para separación visual
                       const SizedBox(height: 16),
                     ],
                   ),
@@ -299,8 +354,8 @@ class _OperatorHomeViewState extends State<OperatorHomeView> {
                   hasScrollBody: false,
                   child: Column(
                     children: [
-                      const Spacer(), 
-                      _buildFooter(false), 
+                      const Spacer(),
+                      _buildFooter(false),
                     ],
                   ),
                 ),
@@ -308,7 +363,6 @@ class _OperatorHomeViewState extends State<OperatorHomeView> {
             ),
           ),
         ),
-        // Panel derecho de notificaciones (fijo)
         Container(
           width: 320,
           child: SingleChildScrollView(
@@ -327,8 +381,9 @@ class _OperatorHomeViewState extends State<OperatorHomeView> {
   }
 
   Widget _buildDrawer() {
-    final auth = Provider.of<AuthController>(context);
-    final user = auth.usuarioActual;
+    final String nombreDrawer = _operadorData?['nombre'] ?? 'Operador';
+    final String empresaDrawer = _operadorData?['empresa'] ?? '';
+    final String fotoBase64 = _operadorData?['fotoBase64'] ?? '';
 
     return Drawer(
       backgroundColor: Colors.white,
@@ -351,9 +406,9 @@ class _OperatorHomeViewState extends State<OperatorHomeView> {
                         border: Border.all(color: const Color(0xFFFC6707), width: 2),
                       ),
                       child: ClipOval(
-                        child: user?.fotoBase64 != null && user!.fotoBase64!.isNotEmpty
+                        child: fotoBase64.isNotEmpty
                             ? Image.memory(
-                                base64Decode(user.fotoBase64!),
+                                base64Decode(fotoBase64),
                                 width: 50,
                                 height: 50,
                                 fit: BoxFit.cover,
@@ -371,11 +426,11 @@ class _OperatorHomeViewState extends State<OperatorHomeView> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          user?.nombre ?? 'Operador',
+                          nombreDrawer,
                           style: GoogleFonts.outfit(fontSize: 16, fontWeight: FontWeight.bold, color: const Color(0xFF333333)),
                         ),
                         Text(
-                          user?.empresa ?? '',
+                          empresaDrawer,
                           style: GoogleFonts.outfit(fontSize: 14, color: const Color(0xFF666666)),
                         ),
                       ],
@@ -450,18 +505,27 @@ class _OperatorHomeViewState extends State<OperatorHomeView> {
       children: [
         Padding(
           padding: EdgeInsets.symmetric(horizontal: isMobile ? 16 : 24),
-          child: Text(
-            'Tu Resumen',
-            style: GoogleFonts.outfit(
-              fontSize: isMobile ? 24 : 30,
-              fontWeight: FontWeight.bold,
-              color: const Color(0xFF333333),
-            ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                'Tu Resumen',
+                style: GoogleFonts.outfit(
+                  fontSize: isMobile ? 24 : 30,
+                  fontWeight: FontWeight.bold,
+                  color: const Color(0xFF333333),
+                ),
+              ),
+              IconButton(
+                onPressed: _refrescarMetricas,
+                icon: const Icon(Icons.refresh, color: Color(0xFFFC6707)),
+                tooltip: 'Actualizar métricas',
+              ),
+            ],
           ),
         ),
         const SizedBox(height: 16),
 
-        // Métricas con scroll horizontal 
         SizedBox(
           height: isMobile ? 170 : 200,
           child: ListView.separated(
