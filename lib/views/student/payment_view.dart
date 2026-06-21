@@ -56,125 +56,6 @@ class _PaymentViewState extends State<PaymentView> {
   @override
   void initState() {
     super.initState();
-    _verificarRetornoPayPalWeb();
-  }
-
-  void _verificarRetornoPayPalWeb() {
-    if (!kIsWeb) return;
-    
-    try {
-      final url = html.window.location.href;
-      
-      if (url.contains('cancel') || url.contains('cancelled')) {
-        html.window.localStorage.remove('paypal_pending');
-        _mostrarMensaje('Pago cancelado. Puedes intentar nuevamente.');
-        return;
-      }
-      
-      if (url.contains('token=') && url.contains('PayerID=')) {
-        _procesarPagoExitosoWeb();
-      }
-    } catch (e) {
-      print('Error verificando retorno PayPal: $e');
-    }
-  }
-
-  void _procesarPagoExitosoWeb() async {
-    setState(() {
-      _procesando = true;
-    });
-
-    final auth = Provider.of<AuthController>(context, listen: false);
-    final reservaCtrl = Provider.of<ReservaController>(context, listen: false);
-
-    try {
-      final pendingData = html.window.localStorage['paypal_pending'];
-      html.window.localStorage.remove('paypal_pending');
-      
-      if (pendingData == null) {
-        setState(() {
-          _procesando = false;
-        });
-        return;
-      }
-
-      while (auth.isLoading) {
-        await Future.delayed(const Duration(milliseconds: 100));
-      }
-
-      await auth.reloadUser();
-      final usuarioActual = auth.usuarioActual;
-      
-      if (usuarioActual == null) {
-        setState(() {
-          _procesando = false;
-        });
-        _mostrarMensaje('Error: Usuario no autenticado');
-        return;
-      }
-
-      final doc = await FirebaseFirestore.instance.collection('reservas').doc(widget.reserva.id).get();
-      if (doc.exists) {
-        final data = doc.data();
-        if (data != null) {
-          final reserva = Reserva.fromMap(doc.id, data);
-          if (reserva.estadoActual.name == 'pagado') {
-            setState(() {
-              _procesando = false;
-              _pagoExitoso = true;
-            });
-            _mostrarExitoYRedirigir();
-            return;
-          }
-        }
-      }
-
-      final comprobanteUrl = 'paypal_${DateTime.now().millisecondsSinceEpoch}_${widget.reserva.id}';
-
-      final subio = await reservaCtrl.subirComprobanteYVerificar(
-        widget.reserva,
-        comprobanteUrl,
-        usuarioActual,
-      );
-
-      if (subio && mounted) {
-        final destinoDoc = await FirebaseFirestore.instance
-            .collection('destinos')
-            .doc(widget.reserva.paqueteId)
-            .get();
-        final destino = destinoDoc.data() as Map<String, dynamic>?;
-        final operadorId = destino?['operadorId'];
-
-        if (operadorId != null && usuarioActual != null) {
-          await NotificacionService().notificarPagoRecibido(
-            operadorId: operadorId,
-            estudianteNombre: usuarioActual.nombre,
-            estudianteApellido: usuarioActual.apellido ?? '',
-            estudianteCarnet: usuarioActual.carnet ?? '',
-            nombrePaquete: widget.destinoData['nombre'] ?? 'destino',
-          );
-        }
-        
-        html.window.history.replaceState(null, '', '/#/payment');
-
-        setState(() {
-          _pagoExitoso = true;
-          _procesando = false;
-        });
-
-        _mostrarExitoYRedirigir();
-      } else {
-        setState(() {
-          _procesando = false;
-        });
-        _mostrarMensaje('Error al verificar el pago');
-      }
-    } catch (e) {
-      setState(() {
-        _procesando = false;
-      });
-      _mostrarMensaje('Error al procesar el pago: ${e.toString()}');
-    }
   }
 
   Future<void> _realizarPago() async {
@@ -201,6 +82,12 @@ class _PaymentViewState extends State<PaymentView> {
       );
 
       if (kIsWeb) {
+        if (exito != true) {
+          setState(() {
+            _procesando = false;
+          });
+          _mostrarMensaje('Error al conectar con PayPal. Verifica tu conexión.');
+        }
         return;
       }
 

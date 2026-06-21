@@ -6,6 +6,7 @@ import '../../controllers/auth_controller.dart';
 import '../../controllers/reserva_controller.dart';
 import '../../models/reserva.dart';
 import 'my_trips_view.dart';
+import 'dart:html' as html;
 
 class PaymentReturnView extends StatefulWidget {
   const PaymentReturnView({super.key});
@@ -31,6 +32,7 @@ class _PaymentReturnViewState extends State<PaymentReturnView> {
       String action;
 
       if (kIsWeb) {
+        html.window.localStorage.remove('paypal_pending');
         final fragment = Uri.base.fragment;
         final uriStr = 'http://localhost$fragment';
         final uri = Uri.parse(uriStr);
