@@ -2,12 +2,16 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../controllers/auth_controller.dart';
 import '../shared/app_header.dart';
 import '../../views/shared/widgets/custom_dialog.dart';
 import '../auth/login_view.dart';
 import 'admin_home_view.dart';
 import 'admin_operators_view.dart';
+import 'admin_students_view.dart';
+import 'admin_management_view.dart';
+import 'admin_reports_view.dart';
 
 class AdminUsersView extends StatefulWidget {
   const AdminUsersView({super.key});
@@ -28,9 +32,15 @@ class _AdminUsersViewState extends State<AdminUsersView> {
         MaterialPageRoute(builder: (_) => const AdminHomeView()),
       );
     } else if (menu == 'Gestión') {
-      _mostrarMensaje('Gestión - Próximamente');
+      Navigator.push(
+        context,
+        MaterialPageRoute(builder: (_) => const AdminManagementView()),
+      );
     } else if (menu == 'Reportes') {
-      _mostrarMensaje('Reportes - Próximamente');
+      Navigator.push(
+        context,
+        MaterialPageRoute(builder: (_) => const AdminReportsView()),
+      );
     }
   }
 
@@ -46,7 +56,7 @@ class _AdminUsersViewState extends State<AdminUsersView> {
     ).then((confirm) async {
       if (confirm == true) {
         await Provider.of<AuthController>(context, listen: false).logout();
-        if (!context.mounted) return;
+        if (!mounted) return;
         Navigator.pushReplacement(
           context,
           MaterialPageRoute(builder: (_) => const LoginView()),
@@ -55,18 +65,12 @@ class _AdminUsersViewState extends State<AdminUsersView> {
     });
   }
 
-  void _mostrarMensaje(String mensaje) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(mensaje),
-        backgroundColor: const Color(0xFFFC6707),
-        duration: const Duration(seconds: 2),
-      ),
-    );
-  }
-
   void _openDrawer() {
     _scaffoldKey.currentState?.openEndDrawer();
+  }
+
+  void _volver() {
+    Navigator.pop(context);
   }
 
   @override
@@ -78,19 +82,62 @@ class _AdminUsersViewState extends State<AdminUsersView> {
       key: _scaffoldKey,
       backgroundColor: Colors.white,
       endDrawer: isMobile ? _buildDrawer() : null,
-      body: Column(
+      body: Stack(
         children: [
-          AppHeader(
-            activeMenu: _activeMenu,
-            onMenuSelected: _handleMenuSelected,
-            onEditProfile: _handleEditProfile,
-            onLogout: _handleLogout,
-            menuItems: _menuItems,
-            isMobile: isMobile,
-            onMenuTap: isMobile ? _openDrawer : null,
+          Column(
+            children: [
+              AppHeader(
+                activeMenu: _activeMenu,
+                onMenuSelected: _handleMenuSelected,
+                onEditProfile: _handleEditProfile,
+                onLogout: _handleLogout,
+                menuItems: _menuItems,
+                isMobile: isMobile,
+                onMenuTap: isMobile ? _openDrawer : null,
+              ),
+              Expanded(
+                child: isMobile ? _buildMobileLayout() : _buildDesktopLayout(),
+              ),
+            ],
           ),
-          Expanded(
-            child: isMobile ? _buildMobileLayout() : _buildDesktopLayout(),
+          Positioned(
+            top: isMobile ? 80 : 100,
+            right: 24,
+            child: MouseRegion(
+              cursor: SystemMouseCursors.click,
+              child: GestureDetector(
+                onTap: _volver,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(30),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withValues(alpha: 0.1),
+                        blurRadius: 8,
+                        offset: const Offset(0, 2),
+                      ),
+                    ],
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Icons.arrow_back, color: const Color(0xFFFC6707), size: 16),
+                      const SizedBox(width: 4),
+                      Text(
+                        'Volver',
+                        style: GoogleFonts.outfit(
+                          fontSize: 16,
+                          color: const Color(0xFFFC6707),
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
           ),
         ],
       ),
@@ -190,116 +237,48 @@ class _AdminUsersViewState extends State<AdminUsersView> {
   }
 
   Widget _buildMobileLayout() {
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        return SingleChildScrollView(
-          child: ConstrainedBox(
-            constraints: BoxConstraints(minHeight: constraints.maxHeight),
-            child: IntrinsicHeight(
-              child: Column(
-                children: [
-                  _buildUsersContent(isMobile: true),
-                  const Spacer(),
-                  _buildFooter(true),
-                ],
-              ),
-            ),
-          ),
-        );
-      },
-    );
-  }
-
-  Widget _buildDesktopLayout() {
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Expanded(
-          flex: 7,
-          child: LayoutBuilder(
-            builder: (context, constraints) {
-              return SingleChildScrollView(
-                child: ConstrainedBox(
-                  constraints: BoxConstraints(minHeight: constraints.maxHeight),
-                  child: IntrinsicHeight(
-                    child: Column(
-                      children: [
-                        _buildUsersContent(isMobile: false),
-                        const Spacer(),
-                        _buildFooter(false),
-                      ],
-                    ),
-                  ),
-                ),
-              );
-            },
-          ),
-        ),
-        Container(
-          width: 320,
-          decoration: BoxDecoration(
-            border: Border(
-              left: BorderSide(
-                color: Colors.grey.withOpacity(0.3),
-                width: 1.5,
-              ),
-            ),
-          ),
-          child: Image.asset(
-            'assets/images/campus_admin.png',
-            width: 320,
-            height: double.infinity,
-            fit: BoxFit.cover,
-            errorBuilder: (_, __, ___) => Container(
-              width: 320,
-              color: const Color(0xFFFDDBB3),
-              child: const Center(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(Icons.image, size: 48, color: Color(0xFFFC6707)),
-                    SizedBox(height: 8),
-                    Text('Imagen del Campus'),
-                  ],
-                ),
-              ),
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildUsersContent({required bool isMobile}) {
-    return Padding(
-      padding: EdgeInsets.symmetric(horizontal: isMobile ? 16 : 24),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const SizedBox(height: 16),
-          Text(
-            'Administrar Usuarios',
-            style: GoogleFonts.outfit(
-              fontSize: isMobile ? 24 : 28,
-              fontWeight: FontWeight.bold,
-              color: const Color(0xFF333333),
-            ),
-          ),
-          const SizedBox(height: 24),
-          Row(
-            children: [
-              Expanded(child: _buildUserCard('Administrar Estudiantes', 'assets/images/estudiante.png', 'estudiantes')),
-              const SizedBox(width: 24),
-              Expanded(child: _buildUserCard('Administrar Operadores', 'assets/images/operador.png', 'operadores')),
-            ],
-          ),
-          const SizedBox(height: 32),
-        ],
+    return SingleChildScrollView(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: _buildUsersContent(isMobile: true),
       ),
     );
   }
 
-  Widget _buildUserCard(String title, String imagePath, String tipo) {
+  Widget _buildDesktopLayout() {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+      child: _buildUsersContent(isMobile: false),
+    );
+  }
+
+  Widget _buildUsersContent({required bool isMobile}) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const SizedBox(height: 16),
+        Text(
+          'Administrar Usuarios',
+          style: GoogleFonts.outfit(
+            fontSize: isMobile ? 24 : 28,
+            fontWeight: FontWeight.bold,
+            color: const Color(0xFF333333),
+          ),
+        ),
+        const SizedBox(height: 24),
+        Row(
+          children: [
+            Expanded(child: _buildUserCard('Administrar Estudiantes', Icons.school, 'estudiantes', isMobile)),
+            const SizedBox(width: 24),
+            Expanded(child: _buildUserCard('Administrar Operadores', Icons.business_center, 'operadores', isMobile)),
+          ],
+        ),
+        const SizedBox(height: 32),
+      ],
+    );
+  }
+
+  Widget _buildUserCard(String title, IconData icon, String tipo, bool isMobile) {
     return MouseRegion(
       cursor: SystemMouseCursors.click,
       child: GestureDetector(
@@ -310,18 +289,21 @@ class _AdminUsersViewState extends State<AdminUsersView> {
               MaterialPageRoute(builder: (_) => const AdminOperatorsView()),
             );
           } else {
-            _mostrarMensaje('Gestión de estudiantes - Próximamente');
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const AdminStudentsView()),
+            );
           }
         },
         child: Container(
-          padding: const EdgeInsets.all(24),
+          padding: EdgeInsets.all(isMobile ? 20 : 32),
           decoration: BoxDecoration(
             color: Colors.white,
             borderRadius: BorderRadius.circular(16),
             border: Border.all(color: const Color(0xFFE0E0E0), width: 1),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withOpacity(0.05),
+                color: Colors.black.withValues(alpha: 0.05),
                 blurRadius: 8,
                 offset: const Offset(0, 2),
               ),
@@ -329,25 +311,19 @@ class _AdminUsersViewState extends State<AdminUsersView> {
           ),
           child: Column(
             children: [
-              ClipOval(
-                child: Image.asset(
-                  imagePath,
-                  width: 100,
-                  height: 100,
-                  fit: BoxFit.cover,
-                  errorBuilder: (_, __, ___) => Container(
-                    width: 100,
-                    height: 100,
-                    color: const Color(0xFFFDDBB3),
-                    child: Icon(Icons.person, size: 50, color: const Color(0xFFFC6707)),
-                  ),
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFFDDBB3),
+                  shape: BoxShape.circle,
                 ),
+                child: Icon(icon, color: const Color(0xFFFC6707), size: isMobile ? 40 : 56),
               ),
               const SizedBox(height: 16),
               Text(
                 title,
                 style: GoogleFonts.outfit(
-                  fontSize: 18,
+                  fontSize: isMobile ? 16 : 18,
                   fontWeight: FontWeight.w600,
                   color: const Color(0xFF333333),
                 ),
@@ -357,36 +333,11 @@ class _AdminUsersViewState extends State<AdminUsersView> {
               Text(
                 'Gestionar $tipo',
                 style: GoogleFonts.outfit(
-                  fontSize: 14,
+                  fontSize: isMobile ? 12 : 14,
                   color: const Color(0xFF888888),
                 ),
               ),
             ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildFooter(bool isMobile) {
-    return Container(
-      width: double.infinity,
-      padding: EdgeInsets.symmetric(vertical: isMobile ? 16 : 20),
-      decoration: const BoxDecoration(
-        color: Color(0xFFFC6707),
-        borderRadius: BorderRadius.only(
-          topLeft: Radius.circular(16),
-          topRight: Radius.circular(16),
-        ),
-      ),
-      child: Center(
-        child: Text(
-          '© 2026 SamanGo. Todos los derechos reservados. Comunidad UNIMET.',
-          textAlign: TextAlign.center,
-          style: GoogleFonts.outfit(
-            fontSize: isMobile ? 10 : 12,
-            color: Colors.white,
-            fontWeight: FontWeight.w500,
           ),
         ),
       ),

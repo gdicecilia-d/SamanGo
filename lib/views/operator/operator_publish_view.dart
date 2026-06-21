@@ -38,14 +38,17 @@ class _OperatorPublishViewState extends State<OperatorPublishView> {
   final TextEditingController _descripcionController = TextEditingController();
   final TextEditingController _nochesController = TextEditingController();
 
-  String _transporteSeleccionado = 'Bus';
-  String _alojamientoSeleccionado = 'Hotel';
+  // ✅ LISTAS MODIFICABLES (se cargan desde Firestore)
+  List<String> _transportes = ['Cargando...'];
+  List<String> _alojamientos = ['Cargando...'];
+  
+  String _transporteSeleccionado = '';
+  String _alojamientoSeleccionado = '';
   String _duracionSeleccionada = 'Full Day';
   String _selectedCategoria = 'Playas / Cayos';
   bool _isOffer = false;
 
-  final List<String> _transportes = ['Bus', 'Avión', 'Barco', '4x4', 'Todos'];
-  final List<String> _alojamientos = ['Hotel', 'Posada', 'Camping', 'Eco lodge', 'No incluye'];
+  // ✅ LISTAS ESTÁTICAS (no cambian)
   final List<String> _categorias = [
     'Playas / Cayos',
     'Montañas / Trekking',
@@ -84,6 +87,14 @@ class _OperatorPublishViewState extends State<OperatorPublishView> {
   bool _portadaTocado = false;
   bool _nochesTocado = false;
 
+  bool _cargandoOpciones = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _cargarOpcionesActivas();
+  }
+
   @override
   void dispose() {
     _tituloController.dispose();
@@ -95,6 +106,64 @@ class _OperatorPublishViewState extends State<OperatorPublishView> {
     _descripcionController.dispose();
     _nochesController.dispose();
     super.dispose();
+  }
+
+  // ✅ CARGAR SOLO OPCIONES ACTIVAS DESDE FIRESTORE
+  void _cargarOpcionesActivas() async {
+    setState(() {
+      _cargandoOpciones = true;
+    });
+
+    try {
+      // Cargar hospedajes activos
+      final hospedajesSnapshot = await FirebaseFirestore.instance
+          .collection('hospedajes')
+          .where('activo', isEqualTo: true)
+          .get();
+      
+      final hospedajesActivos = hospedajesSnapshot.docs
+          .map((doc) => doc.data()['categoria'] as String)
+          .toList();
+      
+      // Cargar transportes activos
+      final transportesSnapshot = await FirebaseFirestore.instance
+          .collection('transportes')
+          .where('activo', isEqualTo: true)
+          .get();
+      
+      final transportesActivos = transportesSnapshot.docs
+          .map((doc) => doc.data()['categoria'] as String)
+          .toList();
+
+      setState(() {
+        if (hospedajesActivos.isNotEmpty) {
+          _alojamientos = hospedajesActivos;
+          _alojamientoSeleccionado = _alojamientos.first;
+        } else {
+          _alojamientos = ['No hay opciones'];
+          _alojamientoSeleccionado = 'No hay opciones';
+        }
+
+        if (transportesActivos.isNotEmpty) {
+          _transportes = transportesActivos;
+          _transporteSeleccionado = _transportes.first;
+        } else {
+          _transportes = ['No hay opciones'];
+          _transporteSeleccionado = 'No hay opciones';
+        }
+
+        _cargandoOpciones = false;
+      });
+    } catch (e) {
+      setState(() {
+        _cargandoOpciones = false;
+        _transportes = ['Error al cargar'];
+        _alojamientos = ['Error al cargar'];
+        _transporteSeleccionado = 'Error al cargar';
+        _alojamientoSeleccionado = 'Error al cargar';
+      });
+      print('Error cargando opciones activas: $e');
+    }
   }
 
   bool get _isFormValid {
@@ -112,7 +181,11 @@ class _OperatorPublishViewState extends State<OperatorPublishView> {
         _precioController.text.trim().isNotEmpty &&
         cuposValidos &&
         _portadaImagenBytes != null &&
-        (_duracionSeleccionada != 'Varias Noches' || _nochesController.text.trim().isNotEmpty);
+        (_duracionSeleccionada != 'Varias Noches' || _nochesController.text.trim().isNotEmpty) &&
+        _transporteSeleccionado != 'No hay opciones' &&
+        _transporteSeleccionado != 'Error al cargar' &&
+        _alojamientoSeleccionado != 'No hay opciones' &&
+        _alojamientoSeleccionado != 'Error al cargar';
   }
 
   void _validarUbicacion() {
@@ -134,7 +207,6 @@ class _OperatorPublishViewState extends State<OperatorPublishView> {
     return extension == 'jpg' || extension == 'jpeg' || extension == 'png';
   }
 
-  // Método para verificar si un campo es válido
   bool _isFieldValid(String fieldKey) {
     switch (fieldKey) {
       case 'titulo':
@@ -157,7 +229,6 @@ class _OperatorPublishViewState extends State<OperatorPublishView> {
     }
   }
 
-  // Método para marcar todos los campos como tocados
   void _marcarTodosLosCampos() {
     setState(() {
       _tituloTocado = true;
@@ -429,7 +500,6 @@ class _OperatorPublishViewState extends State<OperatorPublishView> {
               ),
             ],
           ),
-          // Botón volver flotante 
           Positioned(
             top: backButtonTop,
             right: 24,
@@ -630,6 +700,21 @@ class _OperatorPublishViewState extends State<OperatorPublishView> {
     final screenWidth = MediaQuery.of(context).size.width;
     final isLargeScreen = screenWidth > 1400;
 
+    if (_cargandoOpciones) {
+      return Container(
+        padding: const EdgeInsets.all(40),
+        child: const Center(
+          child: Column(
+            children: [
+              CircularProgressIndicator(color: Color(0xFFFC6707)),
+              SizedBox(height: 16),
+              Text('Cargando opciones...'),
+            ],
+          ),
+        ),
+      );
+    }
+
     return Container(
       decoration: BoxDecoration(
         color: Colors.white,
@@ -665,7 +750,6 @@ class _OperatorPublishViewState extends State<OperatorPublishView> {
     final isLargeScreen = screenWidth > 1400;
     final double imageHeight = isMobile ? 180 : (isLargeScreen ? 260 : 220);
     
-    // Verificar si la portada es válida para mostrar el borde naranja
     bool portadaValida = _portadaImagenBytes != null;
     bool mostrarErrorPortada = _portadaTocado && !portadaValida;
 
@@ -882,12 +966,16 @@ class _OperatorPublishViewState extends State<OperatorPublishView> {
         const SizedBox(height: 16),
         Row(
           children: [
-            Expanded(child: _buildDropdown('Transporte', _transportes, _transporteSeleccionado, (value) {
-              setState(() => _transporteSeleccionado = value!);
+            Expanded(child: _buildDropdownDinamico('Transporte', _transportes, _transporteSeleccionado, (value) {
+              if (value != null && value != 'No hay opciones' && value != 'Error al cargar') {
+                setState(() => _transporteSeleccionado = value);
+              }
             })),
             const SizedBox(width: 16),
-            Expanded(child: _buildDropdown('Alojamiento', _alojamientos, _alojamientoSeleccionado, (value) {
-              setState(() => _alojamientoSeleccionado = value!);
+            Expanded(child: _buildDropdownDinamico('Alojamiento', _alojamientos, _alojamientoSeleccionado, (value) {
+              if (value != null && value != 'No hay opciones' && value != 'Error al cargar') {
+                setState(() => _alojamientoSeleccionado = value);
+              }
             })),
             const SizedBox(width: 16),
             Expanded(child: _buildTextFieldWithValidation('Precio (USD)', _precioController, 'Ej: 99', 'precio', isNumber: true)),
@@ -896,7 +984,7 @@ class _OperatorPublishViewState extends State<OperatorPublishView> {
         const SizedBox(height: 16),
         Row(
           children: [
-            Expanded(child: _buildDropdown('Categoría', _categorias, _selectedCategoria, (value) {
+            Expanded(child: _buildDropdownEstatico('Categoría', _categorias, _selectedCategoria, (value) {
               setState(() => _selectedCategoria = value!);
             })),
             const SizedBox(width: 16),
@@ -922,7 +1010,6 @@ class _OperatorPublishViewState extends State<OperatorPublishView> {
             _buildRadioButton('Varias Noches', 'Varias Noches', _duracionSeleccionada, (value) {
               setState(() {
                 _duracionSeleccionada = value;
-                // Si cambia a "Full Day", ocultamos el campo de noches
                 if (value == 'Full Day') {
                   _nochesTocado = false;
                 }
@@ -959,6 +1046,72 @@ class _OperatorPublishViewState extends State<OperatorPublishView> {
           children: [
             _buildCheckbox('Marcar como Oferta Especial', _isOffer, (value) => setState(() => _isOffer = value!)),
           ],
+        ),
+      ],
+    );
+  }
+
+  // ✅ DROPDOWN DINÁMICO (desde Firestore)
+  Widget _buildDropdownDinamico(String label, List<String> items, String value, Function(String?) onChanged) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          label,
+          style: GoogleFonts.outfit(fontSize: 12, fontWeight: FontWeight.w500, color: const Color(0xFF666666)),
+        ),
+        const SizedBox(height: 4),
+        Container(
+          decoration: BoxDecoration(
+            border: Border.all(color: const Color(0xFFE0E0E0)),
+            borderRadius: BorderRadius.circular(30),
+          ),
+          child: DropdownButtonFormField<String>(
+            value: items.contains(value) ? value : null,
+            items: items.map((item) {
+              return DropdownMenuItem(value: item, child: Text(item, style: GoogleFonts.outfit(fontSize: 14)));
+            }).toList(),
+            onChanged: onChanged,
+            decoration: const InputDecoration(
+              border: InputBorder.none,
+              contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+            ),
+            icon: const Icon(Icons.arrow_drop_down, color: Color(0xFFFC6707)),
+            isExpanded: true,
+          ),
+        ),
+      ],
+    );
+  }
+
+  // ✅ DROPDOWN ESTÁTICO (categorías)
+  Widget _buildDropdownEstatico(String label, List<String> items, String value, Function(String?) onChanged) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          label,
+          style: GoogleFonts.outfit(fontSize: 12, fontWeight: FontWeight.w500, color: const Color(0xFF666666)),
+        ),
+        const SizedBox(height: 4),
+        Container(
+          decoration: BoxDecoration(
+            border: Border.all(color: const Color(0xFFE0E0E0)),
+            borderRadius: BorderRadius.circular(30),
+          ),
+          child: DropdownButtonFormField<String>(
+            value: value,
+            items: items.map((item) {
+              return DropdownMenuItem(value: item, child: Text(item, style: GoogleFonts.outfit(fontSize: 14)));
+            }).toList(),
+            onChanged: onChanged,
+            decoration: const InputDecoration(
+              border: InputBorder.none,
+              contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+            ),
+            icon: const Icon(Icons.arrow_drop_down, color: Color(0xFFFC6707)),
+            isExpanded: true,
+          ),
         ),
       ],
     );
@@ -1014,7 +1167,6 @@ class _OperatorPublishViewState extends State<OperatorPublishView> {
           onChanged: (_) {
             onChanged?.call();
             setState(() {
-              // Marcar el campo como tocado cuando el usuario comienza a escribir
               switch (fieldKey) {
                 case 'titulo':
                   _tituloTocado = true;
@@ -1074,7 +1226,6 @@ class _OperatorPublishViewState extends State<OperatorPublishView> {
     );
   }
 
-  // Método para obtener el mensaje de error según el campo
   String _getErrorMessage(String fieldKey) {
     switch (fieldKey) {
       case 'titulo':
@@ -1167,38 +1318,6 @@ class _OperatorPublishViewState extends State<OperatorPublishView> {
               borderSide: const BorderSide(color: Color(0xFFFC6707), width: 1.5),
             ),
             contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildDropdown(String label, List<String> items, String value, Function(String?) onChanged) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          label,
-          style: GoogleFonts.outfit(fontSize: 12, fontWeight: FontWeight.w500, color: const Color(0xFF666666)),
-        ),
-        const SizedBox(height: 4),
-        Container(
-          decoration: BoxDecoration(
-            border: Border.all(color: const Color(0xFFE0E0E0)),
-            borderRadius: BorderRadius.circular(30),
-          ),
-          child: DropdownButtonFormField<String>(
-            value: value,
-            items: items.map((item) {
-              return DropdownMenuItem(value: item, child: Text(item, style: GoogleFonts.outfit(fontSize: 14)));
-            }).toList(),
-            onChanged: onChanged,
-            decoration: const InputDecoration(
-              border: InputBorder.none,
-              contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-            ),
-            icon: const Icon(Icons.arrow_drop_down, color: Color(0xFFFC6707)),
-            isExpanded: true,
           ),
         ),
       ],

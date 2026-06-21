@@ -270,6 +270,7 @@ class _ReviewViewState extends State<ReviewView> {
     );
   }
 
+  // ✅ GUARDAR RESEÑA Y SI "NO COINCIDIÓ" CREAR REPORTE
   Future<void> _publicarResena() async {
     // Validaciones
     if (_rating == 0) {
@@ -290,7 +291,6 @@ class _ReviewViewState extends State<ReviewView> {
       // Obtener el operadorId del destino
       String operadorId = widget.destinoData['operadorId'] ?? '';
       
-      // Si no tiene operadorId, intentar obtenerlo de la coleccion destinos
       if (operadorId.isEmpty) {
         try {
           final destinoDoc = await db
@@ -323,9 +323,28 @@ class _ReviewViewState extends State<ReviewView> {
         'fechaPublicacion': FieldValue.serverTimestamp(),
       };
 
-      print('Guardando resena: $resenaData');
-      
       await db.collection('resenas').add(resenaData);
+
+      // ✅ Si NO coincidió con lo prometido, crear un REPORTE
+      if (_coincidioServicio == false) {
+        final reporteData = {
+          'estudiante': widget.reserva.nombreEstudiante.isNotEmpty 
+              ? '${widget.reserva.nombreEstudiante} ${widget.reserva.apellidoEstudiante}' 
+              : (usuario?.nombre ?? 'Usuario'),
+          'tour': widget.destinoData['nombre'] ?? 'Destino',
+          'tipo_alerta': 'Queja - Servicio no coincidió',
+          'estado': 'amarillo', // Por defecto "En revisión"
+          'mensaje': _detalleProblemaController.text.trim(),
+          'fecha': FieldValue.serverTimestamp(),
+          'usuarioId': widget.reserva.estudianteId,
+          'correo': usuario?.correo ?? '',
+          'calificacion': _rating,
+          'comentarios': _comentariosController.text.trim(),
+        };
+        
+        await db.collection('reportes').add(reporteData);
+        print('✅ Reporte creado por servicio no coincidido');
+      }
 
       // Actualizar la puntuación del paquete 
       await _actualizarCalificacionDestino(widget.reserva.paqueteId);
@@ -356,7 +375,6 @@ class _ReviewViewState extends State<ReviewView> {
     try {
       final db = FirebaseFirestore.instance;
       
-      // Obtener todas las resenas de este paquete
       final resenas = await db
           .collection('resenas')
           .where('paqueteId', isEqualTo: paqueteId)
@@ -364,14 +382,12 @@ class _ReviewViewState extends State<ReviewView> {
 
       if (resenas.docs.isEmpty) return;
 
-      // Calcular promedio
       int total = 0;
       for (final doc in resenas.docs) {
         total += (doc['calificacion'] as num?)?.toInt() ?? 0;
       }
       final promedio = total / resenas.docs.length;
 
-      // Actualizar el destino
       await db.collection('destinos').doc(paqueteId).update({
         'calificacionPromedio': double.parse(promedio.toStringAsFixed(1)),
         'totalResenas': resenas.docs.length,
@@ -387,7 +403,6 @@ class _ReviewViewState extends State<ReviewView> {
     try {
       final db = FirebaseFirestore.instance;
 
-      // Obtener todas las resenas del operador
       final resenas = await db
           .collection('resenas')
           .where('operadorId', isEqualTo: operadorId)
@@ -395,20 +410,17 @@ class _ReviewViewState extends State<ReviewView> {
 
       if (resenas.docs.isEmpty) return;
 
-      // Calcular promedio
       int total = 0;
       for (final doc in resenas.docs) {
         total += (doc['calificacion'] as num?)?.toInt() ?? 0;
       }
       final promedio = total / resenas.docs.length;
 
-      // Actualizar en la coleccion de usuarios
       await db.collection('usuarios').doc(operadorId).set({
         'calificacionPromedio': double.parse(promedio.toStringAsFixed(1)),
         'totalResenas': resenas.docs.length,
       }, SetOptions(merge: true));
       
-      // Tambien actualizar en operadores si existe
       final operadorDoc = await db.collection('operadores').doc(operadorId).get();
       if (operadorDoc.exists) {
         await db.collection('operadores').doc(operadorId).update({
@@ -448,8 +460,8 @@ class _ReviewViewState extends State<ReviewView> {
   void _handleLogout() {
     CustomConfirmDialog.show(
       context: context,
-      title: 'Cerrar Sesion',
-      message: '¿Estas seguro de que deseas cerrar sesion?',
+      title: 'Cerrar Sesión',
+      message: '¿Estás seguro de que deseas cerrar sesión?',
       confirmText: 'Salir',
       icon: Icons.logout,
     ).then((confirm) async {
@@ -473,7 +485,6 @@ class _ReviewViewState extends State<ReviewView> {
     final double backButtonTop = isMobile ? 80 : 100;
     final double backButtonSize = isLargeScreen ? 20 : 16;
     
-    // Tamanos responsivos
     double cardWidth;
     double titleFontSize;
     double sectionFontSize;
@@ -518,7 +529,6 @@ class _ReviewViewState extends State<ReviewView> {
       endDrawer: isMobile ? _buildDrawer() : null,
       body: Stack(
         children: [
-          // Fondo con imagen del destino semitransparente
           Container(
             decoration: BoxDecoration(
               image: _getBackgroundImage(),
@@ -559,7 +569,6 @@ class _ReviewViewState extends State<ReviewView> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          // Titulo 
                           Padding(
                             padding: EdgeInsets.all(paddingSize),
                             child: Column(
@@ -667,7 +676,6 @@ class _ReviewViewState extends State<ReviewView> {
                               ),
                             )
                           else if (!_yaResenado)
-                            // Formulario
                             Padding(
                               padding: EdgeInsets.all(paddingSize),
                               child: Column(
@@ -706,7 +714,7 @@ class _ReviewViewState extends State<ReviewView> {
                                   Row(
                                     children: [
                                       ServiceCheckboxWidget(
-                                        label: 'Si',
+                                        label: 'Sí',
                                         initialValue: _coincidioServicio == true,
                                         onChanged: (value) {
                                           setState(() {
@@ -817,7 +825,6 @@ class _ReviewViewState extends State<ReviewView> {
               ),
             ],
           ),
-          // Boton volver flotante
           Positioned(
             top: backButtonTop,
             right: 24,
@@ -939,7 +946,7 @@ class _ReviewViewState extends State<ReviewView> {
             Column(
               children: [
                 const Divider(height: 1, thickness: 1, color: Color(0xFFE0E0E0)),
-                _buildDrawerItem('Cerrar Sesion', Icons.logout_outlined, () {
+                _buildDrawerItem('Cerrar Sesión', Icons.logout_outlined, () {
                   Navigator.pop(context);
                   _handleLogout();
                 }),

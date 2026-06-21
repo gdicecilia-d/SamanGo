@@ -16,8 +16,6 @@ class AuthService {
   final GoogleSignIn _googleSignIn = GoogleSignIn();
 
   Future<User?> getCurrentFirebaseUser() async {
-    // En Flutter Web, la sesión tarda unos milisegundos en cargarse desde IndexedDB.
-    // 'first' devolvería null casi siempre. Debemos esperar a que emita un usuario válido o usar un timeout.
     try {
       final user = await _auth.authStateChanges().firstWhere((u) => u != null).timeout(const Duration(seconds: 2));
       return user;
@@ -102,7 +100,7 @@ class AuthService {
     return usuario;
   }
 
-  // Inicia sesión con email y contraseña
+  // ✅ Inicia sesión con email y contraseña (CON VERIFICACIÓN DE ACTIVO)
   Future<Usuario?> loginWithEmail(String email, String password) async {
     try {
       final credential = await _auth.signInWithEmailAndPassword(
@@ -110,7 +108,43 @@ class AuthService {
         password: password,
       );
       final uid = credential.user!.uid;
-      return await cargarUsuarioDeFirestore(uid);
+      
+      final usuario = await cargarUsuarioDeFirestore(uid);
+      
+      // ✅ VERIFICAR SI LA CUENTA ESTÁ ACTIVA
+      if (usuario != null) {
+        bool puedeIniciarSesion = true;
+        
+        // Verificar en estudiantes
+        final docEstudiante = await _db.collection('estudiantes').doc(uid).get();
+        if (docEstudiante.exists) {
+          final data = docEstudiante.data() as Map<String, dynamic>?;
+          // Si no existe 'activo', lo creamos como true
+          if (data != null && !data.containsKey('activo')) {
+            await _db.collection('estudiantes').doc(uid).update({'activo': true});
+          }
+          puedeIniciarSesion = data?['activo'] as bool? ?? true;
+        } else {
+          // Verificar en operadores
+          final docOperador = await _db.collection('operadores').doc(uid).get();
+          if (docOperador.exists) {
+            final data = docOperador.data() as Map<String, dynamic>?;
+            // Si no existe 'activo', lo creamos como true
+            if (data != null && !data.containsKey('activo')) {
+              await _db.collection('operadores').doc(uid).update({'activo': true});
+            }
+            puedeIniciarSesion = data?['activo'] as bool? ?? true;
+          }
+        }
+        
+        // Si la cuenta está inhabilitada, cerrar sesión y lanzar error
+        if (!puedeIniciarSesion) {
+          await _auth.signOut();
+          throw Exception('Tu cuenta ha sido inhabilitada por un administrador.');
+        }
+      }
+      
+      return usuario;
     } on FirebaseAuthException catch (e) {
       print('Error de login: ${e.code}');
       return null;
@@ -152,7 +186,7 @@ class AuthService {
     }
   }
 
-  // Registra un nuevo operador (Solo base de datos) 
+  // Registra un nuevo operador
   Future<Usuario> registerOperator({
     required String email,
     required String nombre,
@@ -224,6 +258,7 @@ class AuthService {
       await _db.collection('operadores').doc(operador.id).update({
         'estado': 'aprobado',
         'authId': authUid,
+        'activo': true,
       });
 
       await _sendEmail(
@@ -386,7 +421,6 @@ class AuthService {
   // Cierra sesión
   Future<void> logout() async {
     await _auth.signOut();
-    // Solo llamar a googleSignOut si no estamos en web o si hay usuario de Google
     if (!kIsWeb) {
       await _googleSignIn.signOut();
     }

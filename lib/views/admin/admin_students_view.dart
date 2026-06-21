@@ -1,31 +1,28 @@
-// Pantalla de gestión de operadores (Administrador)
+// Pantalla de gestión de estudiantes (Administrador)
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import '../../models/usuario.dart';
 import '../../controllers/auth_controller.dart';
 import '../shared/app_header.dart';
 import '../../views/shared/widgets/custom_dialog.dart';
 import '../auth/login_view.dart';
 import 'admin_home_view.dart';
-import 'admin_users_view.dart';
 import 'admin_management_view.dart';
 import 'admin_reports_view.dart';
 
-class AdminOperatorsView extends StatefulWidget {
-  const AdminOperatorsView({super.key});
+class AdminStudentsView extends StatefulWidget {
+  const AdminStudentsView({super.key});
 
   @override
-  State<AdminOperatorsView> createState() => _AdminOperatorsViewState();
+  State<AdminStudentsView> createState() => _AdminStudentsViewState();
 }
 
-class _AdminOperatorsViewState extends State<AdminOperatorsView> {
+class _AdminStudentsViewState extends State<AdminStudentsView> {
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
   final String _activeMenu = 'Usuarios';
   final List<String> _menuItems = ['Dashboard', 'Gestión', 'Usuarios', 'Reportes'];
-  
-  int _selectedTab = 0;
+  int _selectedTab = 0; // 0: Activos, 1: Inhabilitados
 
   void _handleMenuSelected(String menu) {
     if (menu == 'Dashboard') {
@@ -83,46 +80,6 @@ class _AdminOperatorsViewState extends State<AdminOperatorsView> {
 
   void _volver() {
     Navigator.pop(context);
-  }
-
-  // ✅ MÉTODO PARA INHABILITAR/HABILITAR OPERADOR
-  Future<void> _toggleOperatorStatus(Usuario operador, String nombre) async {
-    try {
-      final doc = await FirebaseFirestore.instance
-          .collection('operadores')
-          .doc(operador.id)
-          .get();
-      
-      if (!doc.exists) return;
-      
-      final data = doc.data() as Map<String, dynamic>;
-      final activo = data['activo'] as bool? ?? true;
-      final nuevoEstado = !activo;
-      
-      final actionText = nuevoEstado ? 'habilitar' : 'inhabilitar';
-      
-      final confirm = await CustomConfirmDialog.show(
-        context: context,
-        title: '${nuevoEstado ? 'Habilitar' : 'Inhabilitar'} operador',
-        message: '¿Estás seguro de que deseas $actionText al operador "$nombre"?',
-        confirmText: 'Confirmar',
-        icon: nuevoEstado ? Icons.check_circle : Icons.block,
-      );
-      
-      if (confirm == true) {
-        await FirebaseFirestore.instance
-            .collection('operadores')
-            .doc(operador.id)
-            .update({'activo': nuevoEstado});
-        
-        if (!mounted) return;
-        _mostrarMensaje('Operador ${nuevoEstado ? 'habilitado' : 'inhabilitado'} correctamente');
-        setState(() {});
-      }
-    } catch (e) {
-      if (!mounted) return;
-      _mostrarMensaje('Error al cambiar el estado: $e');
-    }
   }
 
   @override
@@ -314,32 +271,13 @@ class _AdminOperatorsViewState extends State<AdminOperatorsView> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         const SizedBox(height: 16),
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Text(
-              'Administrar Operadores',
-              style: GoogleFonts.outfit(
-                fontSize: isMobile ? 24 : 28,
-                fontWeight: FontWeight.bold,
-                color: const Color(0xFF333333),
-              ),
-            ),
-            MouseRegion(
-              cursor: SystemMouseCursors.click,
-              child: GestureDetector(
-                onTap: _volver,
-                child: Text(
-                  'Volver',
-                  style: GoogleFonts.outfit(
-                    fontSize: 14,
-                    color: const Color(0xFFFC6707),
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
-              ),
-            ),
-          ],
+        Text(
+          'Administrar Estudiantes',
+          style: GoogleFonts.outfit(
+            fontSize: isMobile ? 24 : 28,
+            fontWeight: FontWeight.bold,
+            color: const Color(0xFF333333),
+          ),
         ),
         const SizedBox(height: 16),
         Container(
@@ -349,15 +287,15 @@ class _AdminOperatorsViewState extends State<AdminOperatorsView> {
           ),
           child: Row(
             children: [
-              _buildTab('Pendientes', 0, isMobile),
-              _buildTab('Aprobados', 1, isMobile),
-              _buildTab('Rechazados', 2, isMobile),
+              _buildTab('Activos', 0, isMobile),
+              _buildTab('Inhabilitados', 1, isMobile),
             ],
           ),
         ),
         const SizedBox(height: 24),
+        // La lista de estudiantes con scroll
         Expanded(
-          child: _buildOperatorsList(isMobile),
+          child: _buildStudentsList(isMobile),
         ),
       ],
     );
@@ -397,19 +335,13 @@ class _AdminOperatorsViewState extends State<AdminOperatorsView> {
     );
   }
 
-  Widget _buildOperatorsList(bool isMobile) {
-    String filtroEstado;
-    if (_selectedTab == 0) {
-      filtroEstado = 'pendiente';
-    } else if (_selectedTab == 1) {
-      filtroEstado = 'aprobado';
-    } else {
-      filtroEstado = 'rechazado';
-    }
+  Widget _buildStudentsList(bool isMobile) {
+    final bool activos = _selectedTab == 0;
 
     return StreamBuilder<QuerySnapshot>(
-      key: ValueKey('operators_list_$_selectedTab'),
-      stream: FirebaseFirestore.instance.collection('operadores').snapshots(),
+      stream: FirebaseFirestore.instance
+          .collection('estudiantes')
+          .snapshots(),
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
           return const Center(
@@ -426,12 +358,13 @@ class _AdminOperatorsViewState extends State<AdminOperatorsView> {
 
         final docs = snapshot.data?.docs ?? [];
         
-        final operadoresFiltrados = docs.where((doc) {
+        final estudiantesFiltrados = docs.where((doc) {
           final data = doc.data() as Map<String, dynamic>;
-          return data['estado'] == filtroEstado;
+          final activo = data['activo'] as bool? ?? true;
+          return activo == activos;
         }).toList();
 
-        if (operadoresFiltrados.isEmpty) {
+        if (estudiantesFiltrados.isEmpty) {
           return Container(
             padding: const EdgeInsets.all(32),
             decoration: BoxDecoration(
@@ -442,13 +375,13 @@ class _AdminOperatorsViewState extends State<AdminOperatorsView> {
               child: Column(
                 children: [
                   Icon(
-                    _selectedTab == 0 ? Icons.pending_actions : (_selectedTab == 1 ? Icons.check_circle : Icons.cancel),
+                    activos ? Icons.people_outline : Icons.block,
                     size: 48,
                     color: const Color(0xFFCCCCCC),
                   ),
                   const SizedBox(height: 12),
                   Text(
-                    'No hay operadores con este estado',
+                    activos ? 'No hay estudiantes activos' : 'No hay estudiantes inhabilitados',
                     style: GoogleFonts.outfit(
                       fontSize: 14,
                       color: const Color(0xFF999999),
@@ -463,167 +396,26 @@ class _AdminOperatorsViewState extends State<AdminOperatorsView> {
         return ListView.separated(
           shrinkWrap: true,
           physics: const BouncingScrollPhysics(),
-          itemCount: operadoresFiltrados.length,
-          separatorBuilder: (_, __) => const SizedBox(height: 16),
+          itemCount: estudiantesFiltrados.length,
+          separatorBuilder: (_, __) => const SizedBox(height: 12),
           itemBuilder: (context, index) {
-            final doc = operadoresFiltrados[index];
+            final doc = estudiantesFiltrados[index];
             final data = doc.data() as Map<String, dynamic>;
             
-            final operadorObj = Usuario.fromMap(doc.id, data);
             final nombre = data['nombre'] ?? 'Sin nombre';
-            final empresa = data['empresa'] ?? 'Sin empresa';
-            
-            // ✅ OBTENER EL ESTADO ACTIVO
-            final bool activo = data['activo'] as bool? ?? true;
+            final apellido = data['apellido'] ?? '';
+            final correo = data['correo'] ?? 'Sin correo';
+            final carnet = data['carnet'] ?? 'Sin carnet';
+            final activo = data['activo'] as bool? ?? true;
 
-            return Container(
-              padding: EdgeInsets.all(isMobile ? 12 : 16),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: const Color(0xFFE0E0E0), width: 1),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      Container(
-                        width: 45,
-                        height: 45,
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          color: const Color(0xFFFDDBB3),
-                        ),
-                        child: Center(
-                          child: Text(
-                            empresa.isNotEmpty ? empresa[0].toUpperCase() : '?',
-                            style: GoogleFonts.outfit(
-                              fontSize: 18,
-                              fontWeight: FontWeight.bold,
-                              color: const Color(0xFFFC6707),
-                            ),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              empresa,
-                              style: GoogleFonts.outfit(
-                                fontSize: isMobile ? 14 : 16,
-                                fontWeight: FontWeight.w600,
-                                color: const Color(0xFF333333),
-                              ),
-                            ),
-                            Text(
-                              'Representante: $nombre',
-                              style: GoogleFonts.outfit(
-                                fontSize: isMobile ? 11 : 12,
-                                color: const Color(0xFF666666),
-                              ),
-                            ),
-                            Text(
-                              data['correo'] ?? 'Sin correo',
-                              style: GoogleFonts.outfit(
-                                fontSize: isMobile ? 11 : 12,
-                                color: const Color(0xFF888888),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                      // ✅ ESTADO ACTIVO/INACTIVO CON BOTÓN
-                      if (_selectedTab == 1) ...[
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                          decoration: BoxDecoration(
-                            color: activo ? const Color(0xFF4CAF50).withValues(alpha: 0.1) : const Color(0xFFF44336).withValues(alpha: 0.1),
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          child: Text(
-                            activo ? 'Activo' : 'Inactivo',
-                            style: GoogleFonts.outfit(
-                              fontSize: 12,
-                              fontWeight: FontWeight.w600,
-                              color: activo ? const Color(0xFF4CAF50) : const Color(0xFFF44336),
-                            ),
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                        // ✅ BOTÓN INHABILITAR/HABILITAR
-                        IconButton(
-                          onPressed: () => _toggleOperatorStatus(operadorObj, nombre),
-                          icon: Icon(
-                            activo ? Icons.block : Icons.check_circle,
-                            color: activo ? const Color(0xFFF44336) : const Color(0xFF4CAF50),
-                            size: 24,
-                          ),
-                          tooltip: activo ? 'Inhabilitar' : 'Activar',
-                        ),
-                      ],
-                      // Botones para pendientes
-                      if (_selectedTab == 0) ...[
-                        IconButton(
-                          onPressed: () async {
-                            final error = await Provider.of<AuthController>(context, listen: false)
-                                .approveOperator(operadorObj);
-                            if (error != null) {
-                              _mostrarMensaje(error);
-                            } else {
-                              _mostrarMensaje('Operador aprobado correctamente');
-                            }
-                          },
-                          icon: const Icon(Icons.check_circle, color: Color(0xFF4CAF50), size: 24),
-                          tooltip: 'Aprobar',
-                        ),
-                        IconButton(
-                          onPressed: () async {
-                            final error = await Provider.of<AuthController>(context, listen: false)
-                                .rejectOperator(operadorObj);
-                            if (error != null) {
-                              _mostrarMensaje(error);
-                            } else {
-                              _mostrarMensaje('Operador rechazado');
-                            }
-                          },
-                          icon: const Icon(Icons.cancel, color: Color(0xFFF44336), size: 24),
-                          tooltip: 'Rechazar',
-                        ),
-                      ],
-                      // Rechazados solo muestra estado
-                      if (_selectedTab == 2) ...[
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                          decoration: BoxDecoration(
-                            color: const Color(0xFFF44336).withValues(alpha: 0.1),
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          child: Text(
-                            'Rechazado',
-                            style: GoogleFonts.outfit(
-                              fontSize: 12,
-                              fontWeight: FontWeight.w600,
-                              color: const Color(0xFFF44336),
-                            ),
-                          ),
-                        ),
-                      ],
-                    ],
-                  ),
-                  if (_selectedTab != 1) ...[
-                    const SizedBox(height: 12),
-                    const Divider(),
-                    const SizedBox(height: 8),
-                    _buildInfoRow('Teléfono:', data['telefono'] ?? 'Sin teléfono', isMobile),
-                    _buildInfoRow('RIF:', data['rif'] ?? 'Sin RIF', isMobile),
-                    _buildInfoRow('Descripción:', data['descripcion'] ?? 'Sin descripción', isMobile),
-                  ],
-                ],
-              ),
+            return _buildStudentCard(
+              id: doc.id,
+              nombre: nombre,
+              apellido: apellido,
+              correo: correo,
+              carnet: carnet,
+              activo: activo,
+              isMobile: isMobile,
             );
           },
         );
@@ -631,34 +423,206 @@ class _AdminOperatorsViewState extends State<AdminOperatorsView> {
     );
   }
 
-  Widget _buildInfoRow(String label, String value, bool isMobile) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 4),
+  Widget _buildStudentCard({
+    required String id,
+    required String nombre,
+    required String apellido,
+    required String correo,
+    required String carnet,
+    required bool activo,
+    required bool isMobile,
+  }) {
+    final nombreCompleto = '$nombre $apellido'.trim();
+
+    return Container(
+      padding: EdgeInsets.all(isMobile ? 12 : 16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: const Color(0xFFE0E0E0), width: 1),
+      ),
       child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          SizedBox(
-            width: isMobile ? 80 : 100,
-            child: Text(
-              label,
-              style: GoogleFonts.outfit(
-                fontSize: isMobile ? 11 : 12,
-                fontWeight: FontWeight.w600,
-                color: const Color(0xFF666666),
+          Container(
+            width: 45,
+            height: 45,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: const Color(0xFFFDDBB3),
+            ),
+            child: Center(
+              child: Text(
+                nombre.isNotEmpty ? nombre[0].toUpperCase() : '?',
+                style: GoogleFonts.outfit(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  color: const Color(0xFFFC6707),
+                ),
               ),
             ),
           ),
+          const SizedBox(width: 12),
           Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  nombreCompleto.isEmpty ? 'Sin nombre' : nombreCompleto,
+                  style: GoogleFonts.outfit(
+                    fontSize: isMobile ? 14 : 16,
+                    fontWeight: FontWeight.w600,
+                    color: const Color(0xFF333333),
+                  ),
+                ),
+                Text(
+                  correo,
+                  style: GoogleFonts.outfit(
+                    fontSize: isMobile ? 11 : 12,
+                    color: const Color(0xFF666666),
+                  ),
+                ),
+                Text(
+                  'Carnet: $carnet',
+                  style: GoogleFonts.outfit(
+                    fontSize: isMobile ? 11 : 12,
+                    color: const Color(0xFF888888),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+            decoration: BoxDecoration(
+              color: activo ? const Color(0xFF4CAF50).withValues(alpha: 0.1) : const Color(0xFFF44336).withValues(alpha: 0.1),
+              borderRadius: BorderRadius.circular(12),
+            ),
             child: Text(
-              value,
+              activo ? 'Activo' : 'Inhabilitado',
               style: GoogleFonts.outfit(
-                fontSize: isMobile ? 11 : 12,
-                color: const Color(0xFF333333),
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+                color: activo ? const Color(0xFF4CAF50) : const Color(0xFFF44336),
               ),
             ),
+          ),
+          const SizedBox(width: 8),
+          PopupMenuButton<String>(
+            icon: Icon(Icons.more_vert, color: const Color(0xFF666666), size: isMobile ? 20 : 24),
+            onSelected: (value) => _handleStudentAction(value, id, nombreCompleto),
+            itemBuilder: (context) => [
+              const PopupMenuItem(
+                value: 'toggle',
+                child: Row(
+                  children: [
+                    Icon(Icons.person_outline, color: Color(0xFFFC6707), size: 18),
+                    SizedBox(width: 8),
+                    Text('Inhabilitar/Activar cuenta'),
+                  ],
+                ),
+              ),
+              const PopupMenuItem(
+                value: 'delete',
+                child: Row(
+                  children: [
+                    Icon(Icons.delete_outline, color: Colors.red, size: 18),
+                    SizedBox(width: 8),
+                    Text('Eliminar cuenta', style: TextStyle(color: Colors.red)),
+                  ],
+                ),
+              ),
+            ],
           ),
         ],
       ),
     );
+  }
+
+  Future<void> _handleStudentAction(String action, String studentId, String nombre) async {
+    if (action == 'toggle') {
+      await _toggleStudentStatus(studentId, nombre);
+    } else if (action == 'delete') {
+      await _deleteStudent(studentId, nombre);
+    }
+  }
+
+  Future<void> _toggleStudentStatus(String studentId, String nombre) async {
+    try {
+      final doc = await FirebaseFirestore.instance
+          .collection('estudiantes')
+          .doc(studentId)
+          .get();
+      
+      if (!doc.exists) return;
+      
+      final data = doc.data() as Map<String, dynamic>;
+      final activo = data['activo'] as bool? ?? true;
+      final nuevoEstado = !activo;
+      
+      final actionText = nuevoEstado ? 'habilitar' : 'inhabilitar';
+      
+      final confirm = await CustomConfirmDialog.show(
+        context: context,
+        title: '${nuevoEstado ? 'Habilitar' : 'Inhabilitar'} cuenta',
+        message: '¿Estás seguro de que deseas $actionText la cuenta de "$nombre"?',
+        confirmText: 'Confirmar',
+        icon: nuevoEstado ? Icons.check_circle : Icons.block,
+      );
+      
+      if (confirm == true) {
+        await FirebaseFirestore.instance
+            .collection('estudiantes')
+            .doc(studentId)
+            .update({'activo': nuevoEstado});
+        
+        _mostrarMensaje('Cuenta ${nuevoEstado ? 'habilitada' : 'inhabilitada'} correctamente');
+        setState(() {});
+      }
+    } catch (e) {
+      _mostrarMensaje('Error al cambiar el estado: $e');
+    }
+  }
+
+  Future<void> _deleteStudent(String studentId, String nombre) async {
+    try {
+      final reservas = await FirebaseFirestore.instance
+          .collection('reservas')
+          .where('estudianteId', isEqualTo: studentId)
+          .get();
+      
+      final estadosActivos = ['solicitado', 'aceptado', 'verificandoPago', 'pagado'];
+      final tieneReservasActivas = reservas.docs.any((doc) {
+        final estado = doc.data()['estadoActual'] as String? ?? '';
+        return estadosActivos.contains(estado);
+      });
+      
+      if (tieneReservasActivas) {
+        _mostrarMensaje(
+          'No se puede eliminar al estudiante porque tiene reservas activas. '
+          'Espere a que finalicen sus viajes.'
+        );
+        return;
+      }
+      
+      final confirm = await CustomConfirmDialog.show(
+        context: context,
+        title: 'Eliminar cuenta',
+        message: '¿Estás seguro de que deseas eliminar permanentemente la cuenta de "$nombre"? Esta acción no se puede deshacer.',
+        confirmText: 'Eliminar',
+        icon: Icons.delete_forever,
+      );
+      
+      if (confirm == true) {
+        await FirebaseFirestore.instance
+            .collection('estudiantes')
+            .doc(studentId)
+            .delete();
+        
+        _mostrarMensaje('Cuenta eliminada correctamente');
+        setState(() {});
+      }
+    } catch (e) {
+      _mostrarMensaje('Error al eliminar la cuenta: $e');
+    }
   }
 }

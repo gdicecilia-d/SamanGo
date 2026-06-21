@@ -9,6 +9,8 @@ import '../../views/shared/widgets/custom_dialog.dart';
 import '../auth/login_view.dart';
 import 'admin_users_view.dart';
 import 'admin_edit_profile_view.dart';
+import 'admin_management_view.dart';  // ✅ AGREGAR IMPORT
+import 'admin_reports_view.dart';     // ✅ AGREGAR IMPORT
 
 class AdminHomeView extends StatefulWidget {
   const AdminHomeView({super.key});
@@ -145,16 +147,25 @@ class _AdminHomeViewState extends State<AdminHomeView> {
     }
   }
 
-  // Navegar
-
+  // ✅ NAVEGACIÓN CORRECTA
   void _handleMenuSelected(String menu) {
     if (menu == 'Usuarios') {
       Navigator.push(
-          context, MaterialPageRoute(builder: (_) => const AdminUsersView()));
+        context,
+        MaterialPageRoute(builder: (_) => const AdminUsersView()),
+      );
     } else if (menu == 'Gestión') {
-      _mostrarMensaje('Gestión - Próximamente');
+      // ✅ NAVEGAR A GESTIÓN DE TABLAS
+      Navigator.push(
+        context,
+        MaterialPageRoute(builder: (_) => const AdminManagementView()),
+      );
     } else if (menu == 'Reportes') {
-      _mostrarMensaje('Reportes - Próximamente');
+      // ✅ NAVEGAR A REPORTES
+      Navigator.push(
+        context,
+        MaterialPageRoute(builder: (_) => const AdminReportsView()),
+      );
     }
   }
 

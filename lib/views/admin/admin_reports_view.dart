@@ -2,11 +2,14 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../controllers/auth_controller.dart';
 import '../shared/app_header.dart';
 import '../../views/shared/widgets/custom_dialog.dart';
 import '../auth/login_view.dart';
 import 'admin_home_view.dart';
+import 'admin_management_view.dart';
+import 'admin_users_view.dart';
 
 class AdminReportsView extends StatefulWidget {
   const AdminReportsView({super.key});
@@ -26,17 +29,20 @@ class _AdminReportsViewState extends State<AdminReportsView> {
         context,
         MaterialPageRoute(builder: (_) => const AdminHomeView()),
       );
-    } else if (menu == 'Usuarios') {
-      // Volver a usuarios
     } else if (menu == 'Gestión') {
-      _mostrarMensaje('Gestión - Próximamente');
+      Navigator.push(
+        context,
+        MaterialPageRoute(builder: (_) => const AdminManagementView()),
+      );
+    } else if (menu == 'Usuarios') {
+      Navigator.push(
+        context,
+        MaterialPageRoute(builder: (_) => const AdminUsersView()),
+      );
     }
-    // Reportes no hace nada porque ya estamos aquí
   }
 
-  void _handleEditProfile() {
-    // Navegar a editar perfil del admin
-  }
+  void _handleEditProfile() {}
 
   void _handleLogout() {
     CustomConfirmDialog.show(
@@ -48,7 +54,7 @@ class _AdminReportsViewState extends State<AdminReportsView> {
     ).then((confirm) async {
       if (confirm == true) {
         await Provider.of<AuthController>(context, listen: false).logout();
-        if (!context.mounted) return;
+        if (!mounted) return;
         Navigator.pushReplacement(
           context,
           MaterialPageRoute(builder: (_) => const LoginView()),
@@ -71,6 +77,190 @@ class _AdminReportsViewState extends State<AdminReportsView> {
     _scaffoldKey.currentState?.openEndDrawer();
   }
 
+  void _volver() {
+    Navigator.pop(context);
+  }
+
+  Future<void> _actualizarEstadoReporte(String reporteId, String nuevoEstado) async {
+    try {
+      await FirebaseFirestore.instance
+          .collection('reportes')
+          .doc(reporteId)
+          .update({'estado': nuevoEstado});
+      
+      if (!mounted) return;
+      _mostrarMensaje('Estado actualizado a: ${_getEstadoLabel(nuevoEstado)}');
+    } catch (e) {
+      if (!mounted) return;
+      _mostrarMensaje('Error al actualizar el estado: $e');
+    }
+  }
+
+  String _getEstadoLabel(String estado) {
+    switch (estado) {
+      case 'verde': return 'Resuelto';
+      case 'amarillo': return 'En revisión';
+      case 'rojo': return 'Urgente';
+      default: return estado;
+    }
+  }
+
+  Color _getEstadoColor(String estado) {
+    switch (estado) {
+      case 'verde': return const Color(0xFF4CAF50);
+      case 'amarillo': return const Color(0xFFFF9800);
+      case 'rojo': return const Color(0xFFF44336);
+      default: return const Color(0xFF888888);
+    }
+  }
+
+  // ✅ MOSTRAR DETALLE DEL REPORTE EN UN DIÁLOGO
+  void _mostrarDetalleReporte(Map<String, dynamic> data) {
+    final mensaje = data['mensaje'] ?? 'Sin mensaje adicional';
+    final comentarios = data['comentarios'] ?? '';
+    final calificacion = data['calificacion'] ?? 0;
+    final correo = data['correo'] ?? 'No disponible';
+    final fecha = data['fecha'] != null 
+        ? (data['fecha'] as Timestamp).toDate()
+        : DateTime.now();
+    
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(20),
+        ),
+        title: Row(
+          children: [
+            Icon(
+              Icons.report_problem,
+              color: const Color(0xFFFC6707),
+            ),
+            const SizedBox(width: 10),
+            Text(
+              'Detalle del Reporte',
+              style: GoogleFonts.outfit(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ],
+        ),
+        content: SingleChildScrollView(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              _buildDetalleRow('Estudiante:', data['estudiante'] ?? 'Sin nombre'),
+              const SizedBox(height: 8),
+              _buildDetalleRow('Correo:', correo),
+              const SizedBox(height: 8),
+              _buildDetalleRow('Tour:', data['tour'] ?? 'Sin tour'),
+              const SizedBox(height: 8),
+              _buildDetalleRow('Tipo:', data['tipo_alerta'] ?? 'Sin tipo'),
+              const SizedBox(height: 8),
+              _buildDetalleRow('Calificación:', '$calificacion ⭐'),
+              const SizedBox(height: 8),
+              _buildDetalleRow('Fecha:', '${fecha.day}/${fecha.month}/${fecha.year} ${fecha.hour}:${fecha.minute.toString().padLeft(2, '0')}'),
+              const SizedBox(height: 12),
+              const Divider(),
+              const SizedBox(height: 8),
+              Text(
+                '📝 Mensaje del estudiante:',
+                style: GoogleFonts.outfit(
+                  fontSize: 14,
+                  fontWeight: FontWeight.bold,
+                  color: const Color(0xFF333333),
+                ),
+              ),
+              const SizedBox(height: 4),
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFF5F5F5),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Text(
+                  mensaje,
+                  style: GoogleFonts.outfit(
+                    fontSize: 14,
+                    color: const Color(0xFF333333),
+                  ),
+                ),
+              ),
+              if (comentarios.isNotEmpty) ...[
+                const SizedBox(height: 12),
+                Text(
+                  '💬 Comentarios adicionales:',
+                  style: GoogleFonts.outfit(
+                    fontSize: 14,
+                    fontWeight: FontWeight.bold,
+                    color: const Color(0xFF333333),
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFF5F5F5),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Text(
+                    comentarios,
+                    style: GoogleFonts.outfit(
+                      fontSize: 14,
+                      color: const Color(0xFF333333),
+                    ),
+                  ),
+                ),
+              ],
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: Text(
+              'Cerrar',
+              style: GoogleFonts.outfit(
+                color: const Color(0xFFFC6707),
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildDetalleRow(String label, String value) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        SizedBox(
+          width: 100,
+          child: Text(
+            label,
+            style: GoogleFonts.outfit(
+              fontSize: 13,
+              fontWeight: FontWeight.w600,
+              color: const Color(0xFF666666),
+            ),
+          ),
+        ),
+        Expanded(
+          child: Text(
+            value,
+            style: GoogleFonts.outfit(
+              fontSize: 13,
+              color: const Color(0xFF333333),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final screenWidth = MediaQuery.of(context).size.width;
@@ -80,19 +270,62 @@ class _AdminReportsViewState extends State<AdminReportsView> {
       key: _scaffoldKey,
       backgroundColor: Colors.white,
       endDrawer: isMobile ? _buildDrawer() : null,
-      body: Column(
+      body: Stack(
         children: [
-          AppHeader(
-            activeMenu: _activeMenu,
-            onMenuSelected: _handleMenuSelected,
-            onEditProfile: _handleEditProfile,
-            onLogout: _handleLogout,
-            menuItems: _menuItems,
-            isMobile: isMobile,
-            onMenuTap: isMobile ? _openDrawer : null,
+          Column(
+            children: [
+              AppHeader(
+                activeMenu: _activeMenu,
+                onMenuSelected: _handleMenuSelected,
+                onEditProfile: _handleEditProfile,
+                onLogout: _handleLogout,
+                menuItems: _menuItems,
+                isMobile: isMobile,
+                onMenuTap: isMobile ? _openDrawer : null,
+              ),
+              Expanded(
+                child: isMobile ? _buildMobileLayout() : _buildDesktopLayout(),
+              ),
+            ],
           ),
-          Expanded(
-            child: isMobile ? _buildMobileLayout() : _buildDesktopLayout(),
+          Positioned(
+            top: isMobile ? 80 : 100,
+            right: 24,
+            child: MouseRegion(
+              cursor: SystemMouseCursors.click,
+              child: GestureDetector(
+                onTap: _volver,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(30),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withValues(alpha: 0.1),
+                        blurRadius: 8,
+                        offset: const Offset(0, 2),
+                      ),
+                    ],
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Icons.arrow_back, color: const Color(0xFFFC6707), size: 16),
+                      const SizedBox(width: 4),
+                      Text(
+                        'Volver',
+                        style: GoogleFonts.outfit(
+                          fontSize: 16,
+                          color: const Color(0xFFFC6707),
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
           ),
         ],
       ),
@@ -193,135 +426,284 @@ class _AdminReportsViewState extends State<AdminReportsView> {
 
   Widget _buildMobileLayout() {
     return SingleChildScrollView(
-      child: Column(
-        children: [
-          const SizedBox(height: 16),
-          _buildReportsContent(isMobile: true),
-          _buildFooter(true),
-        ],
-      ),
+      padding: const EdgeInsets.all(16),
+      child: _buildContent(isMobile: true),
     );
   }
 
   Widget _buildDesktopLayout() {
-    return Row(
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+      child: _buildContent(isMobile: false),
+    );
+  }
+
+  Widget _buildContent({required bool isMobile}) {
+    return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Expanded(
-          flex: 7,
-          child: SingleChildScrollView(
-            child: Column(
-              children: [
-                const SizedBox(height: 16),
-                _buildReportsContent(isMobile: false),
-                _buildFooter(false),
-              ],
-            ),
+        const SizedBox(height: 16),
+        Text(
+          'Bandeja de Reportes',
+          style: GoogleFonts.outfit(
+            fontSize: isMobile ? 24 : 28,
+            fontWeight: FontWeight.bold,
+            color: const Color(0xFF333333),
           ),
         ),
-        Container(
-          width: 320,
-          decoration: BoxDecoration(
-            border: Border(
-              left: BorderSide(
-                color: Colors.grey.withOpacity(0.3),
-                width: 1.5,
-              ),
-            ),
-          ),
-          child: Image.asset(
-            'assets/images/campus_admin.png',
-            width: 320,
-            height: double.infinity,
-            fit: BoxFit.cover,
-            errorBuilder: (_, __, ___) => Container(
-              width: 320,
-              color: const Color(0xFFFDDBB3),
-              child: const Center(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(Icons.image, size: 48, color: Color(0xFFFC6707)),
-                    SizedBox(height: 8),
-                    Text('Imagen del Campus'),
-                  ],
-                ),
-              ),
-            ),
-          ),
-        ),
+        const SizedBox(height: 24),
+        _buildReportsList(isMobile),
       ],
     );
   }
 
-  Widget _buildReportsContent({required bool isMobile}) {
-    return Padding(
-      padding: EdgeInsets.symmetric(horizontal: isMobile ? 16 : 24),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            'Reportes y Análisis',
-            style: GoogleFonts.outfit(
-              fontSize: isMobile ? 24 : 28,
-              fontWeight: FontWeight.bold,
-              color: const Color(0xFF333333),
+  Widget _buildReportsList(bool isMobile) {
+    return StreamBuilder<QuerySnapshot>(
+      stream: FirebaseFirestore.instance
+          .collection('reportes')
+          .orderBy('fecha', descending: true)
+          .snapshots(),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Center(
+            child: Padding(
+              padding: EdgeInsets.all(32.0),
+              child: CircularProgressIndicator(color: Color(0xFFFC6707)),
             ),
-          ),
-          const SizedBox(height: 24),
-          Container(
-            width: double.infinity,
+          );
+        }
+
+        if (snapshot.hasError) {
+          return Center(child: Text('Error: ${snapshot.error}'));
+        }
+
+        final docs = snapshot.data?.docs ?? [];
+
+        if (docs.isEmpty) {
+          return Container(
             padding: const EdgeInsets.all(48),
             decoration: BoxDecoration(
               color: const Color(0xFFF8F8F8),
               borderRadius: BorderRadius.circular(16),
             ),
-            child: const Center(
+            child: Center(
               child: Column(
                 children: [
-                  Icon(Icons.pie_chart, size: 64, color: Color(0xFFCCCCCC)),
-                  SizedBox(height: 16),
-                  Text(
-                    'Próximamente',
-                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.w500, color: Color(0xFF999999)),
+                  Icon(
+                    Icons.inbox_outlined,
+                    size: 64,
+                    color: const Color(0xFFCCCCCC),
                   ),
-                  SizedBox(height: 8),
+                  const SizedBox(height: 16),
                   Text(
-                    'Reportes y análisis en desarrollo',
-                    style: TextStyle(fontSize: 14, color: Color(0xFFCCCCCC)),
+                    'No hay reportes registrados en este momento',
+                    style: GoogleFonts.outfit(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w500,
+                      color: const Color(0xFF999999),
+                    ),
                   ),
                 ],
               ),
             ),
-          ),
-        ],
-      ),
-    );
-  }
+          );
+        }
 
-  Widget _buildFooter(bool isMobile) {
-    return Container(
-      width: double.infinity,
-      padding: EdgeInsets.symmetric(vertical: isMobile ? 16 : 20),
-      margin: EdgeInsets.only(top: isMobile ? 0 : 32),
-      decoration: const BoxDecoration(
-        color: Color(0xFFFC6707),
-        borderRadius: BorderRadius.only(
-          topLeft: Radius.circular(16),
-          topRight: Radius.circular(16),
-        ),
-      ),
-      child: Center(
-        child: Text(
-          '© 2026 SamanGo. Todos los derechos reservados. Comunidad UNIMET.',
-          textAlign: TextAlign.center,
-          style: GoogleFonts.outfit(
-            fontSize: isMobile ? 10 : 12,
+        return Container(
+          decoration: BoxDecoration(
             color: Colors.white,
-            fontWeight: FontWeight.w500,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: const Color(0xFFE0E0E0), width: 1),
           ),
-        ),
-      ),
+          child: SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: DataTable(
+              columnSpacing: isMobile ? 12 : 20,
+              horizontalMargin: isMobile ? 12 : 16,
+              columns: [
+                DataColumn(
+                  label: Text(
+                    'ID',
+                    style: GoogleFonts.outfit(
+                      fontWeight: FontWeight.bold,
+                      color: const Color(0xFF333333),
+                    ),
+                  ),
+                ),
+                DataColumn(
+                  label: Text(
+                    'Estudiante',
+                    style: GoogleFonts.outfit(
+                      fontWeight: FontWeight.bold,
+                      color: const Color(0xFF333333),
+                    ),
+                  ),
+                ),
+                DataColumn(
+                  label: Text(
+                    'Tour',
+                    style: GoogleFonts.outfit(
+                      fontWeight: FontWeight.bold,
+                      color: const Color(0xFF333333),
+                    ),
+                  ),
+                ),
+                DataColumn(
+                  label: Text(
+                    'Tipo de Alerta',
+                    style: GoogleFonts.outfit(
+                      fontWeight: FontWeight.bold,
+                      color: const Color(0xFF333333),
+                    ),
+                  ),
+                ),
+                DataColumn(
+                  label: Text(
+                    'Estado',
+                    style: GoogleFonts.outfit(
+                      fontWeight: FontWeight.bold,
+                      color: const Color(0xFF333333),
+                    ),
+                  ),
+                ),
+                DataColumn(
+                  label: Text(
+                    'Acción',
+                    style: GoogleFonts.outfit(
+                      fontWeight: FontWeight.bold,
+                      color: const Color(0xFF333333),
+                    ),
+                  ),
+                ),
+              ],
+              rows: docs.asMap().entries.map((entry) {
+                final index = entry.key + 1;
+                final doc = entry.value;
+                final data = doc.data() as Map<String, dynamic>;
+                
+                final estudiante = data['estudiante'] ?? 'Sin nombre';
+                final tour = data['tour'] ?? 'Sin tour';
+                final tipoAlerta = data['tipo_alerta'] ?? 'Sin tipo';
+                final estado = data['estado'] ?? 'amarillo';
+                final mensaje = data['mensaje'] ?? '';
+
+                return DataRow(
+                  cells: [
+                    DataCell(
+                      Text(
+                        '$index',
+                        style: GoogleFonts.outfit(
+                          color: const Color(0xFF666666),
+                        ),
+                      ),
+                    ),
+                    DataCell(
+                      MouseRegion(
+                        cursor: SystemMouseCursors.click,
+                        child: GestureDetector(
+                          onTap: () => _mostrarDetalleReporte(data),
+                          child: Row(
+                            children: [
+                              Icon(
+                                Icons.info_outline,
+                                size: 14,
+                                color: const Color(0xFFFC6707),
+                              ),
+                              const SizedBox(width: 4),
+                              Text(
+                                estudiante,
+                                style: GoogleFonts.outfit(
+                                  fontWeight: FontWeight.w500,
+                                  color: const Color(0xFF333333),
+                                  decoration: TextDecoration.underline,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                    DataCell(
+                      Text(
+                        tour,
+                        style: GoogleFonts.outfit(
+                          color: const Color(0xFF666666),
+                        ),
+                      ),
+                    ),
+                    DataCell(
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: _getEstadoColor(estado).withValues(alpha: 0.1),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Text(
+                          tipoAlerta,
+                          style: GoogleFonts.outfit(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w500,
+                            color: _getEstadoColor(estado),
+                          ),
+                        ),
+                      ),
+                    ),
+                    DataCell(
+                      Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Container(
+                            width: 10,
+                            height: 10,
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              color: _getEstadoColor(estado),
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Text(
+                            _getEstadoLabel(estado),
+                            style: GoogleFonts.outfit(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w500,
+                              color: _getEstadoColor(estado),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    DataCell(
+                      DropdownButton<String>(
+                        value: estado,
+                        items: const [
+                          DropdownMenuItem(value: 'verde', child: Text('Resuelto')),
+                          DropdownMenuItem(value: 'amarillo', child: Text('En revisión')),
+                          DropdownMenuItem(value: 'rojo', child: Text('Urgente')),
+                        ],
+                        onChanged: (nuevoEstado) {
+                          if (nuevoEstado != null && nuevoEstado != estado) {
+                            _actualizarEstadoReporte(doc.id, nuevoEstado);
+                          }
+                        },
+                        underline: const SizedBox(),
+                        icon: Icon(
+                          Icons.arrow_drop_down,
+                          color: _getEstadoColor(estado),
+                        ),
+                        style: GoogleFonts.outfit(
+                          fontSize: 13,
+                          color: _getEstadoColor(estado),
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ),
+                  ],
+                );
+              }).toList(),
+            ),
+          ),
+        );
+      },
     );
   }
 }

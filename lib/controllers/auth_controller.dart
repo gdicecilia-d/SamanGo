@@ -26,15 +26,24 @@ class AuthController extends ChangeNotifier {
     _setLoading(false);
   }
 
-  // Login
+  // ✅ Login (CON CAPTURA DE ERROR DE CUENTA INHABILITADA)
   Future<bool> login(String email, String password) async {
     _setLoading(true);
-    _usuarioActual = await _authService.loginWithEmail(email, password);
-    if (_usuarioActual != null && _usuarioActual!.isEstudiante) {
-      TipsNotificacionService.enviarTipSiCorresponde(_usuarioActual!.id);
+    try {
+      _usuarioActual = await _authService.loginWithEmail(email, password);
+      if (_usuarioActual != null && _usuarioActual!.isEstudiante) {
+        TipsNotificacionService.enviarTipSiCorresponde(_usuarioActual!.id);
+      }
+      _setLoading(false);
+      return _usuarioActual != null;
+    } catch (e) {
+      _setLoading(false);
+      // ✅ Si el error es "cuenta inhabilitada", lanzarlo para mostrarlo en el login
+      if (e.toString().contains('inhabilitada')) {
+        rethrow;
+      }
+      return false;
     }
-    _setLoading(false);
-    return _usuarioActual != null;
   }
 
   // Login con Google

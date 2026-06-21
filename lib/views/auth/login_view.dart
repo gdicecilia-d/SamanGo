@@ -97,6 +97,7 @@ class _LoginViewState extends State<LoginView> {
     }
   }
 
+  // ✅ MÉTODO LOGIN CON DIÁLOGO DE CUENTA INHABILITADA
   Future<void> _handleLogin() async {
     if (_emailController.text.isEmpty || _passwordController.text.isEmpty) {
       setState(() {
@@ -111,46 +112,138 @@ class _LoginViewState extends State<LoginView> {
     });
 
     final authController = Provider.of<AuthController>(context, listen: false);
-    final success = await authController.login(
-      _emailController.text,
-      _passwordController.text,
-    );
+    
+    try {
+      final success = await authController.login(
+        _emailController.text,
+        _passwordController.text,
+      );
 
-    if (!mounted) return;
+      if (!mounted) return;
 
-    setState(() {
-      _isLoading = false;
-    });
-
-    if (success) {
-      final usuario = authController.usuarioActual!;
-      if (usuario.isEstudiante) {
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(builder: (_) => const StudentHomeView()),
-        );
-      } else if (usuario.isOperador) {
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(builder: (_) => const OperatorHomeView()),
-        );
-      } else if (usuario.isAdmin) {
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(builder: (_) => const AdminHomeView()),
-        );
-      } else {
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(builder: (_) => const StudentHomeView()),
-        );
-      }
-    } else {
       setState(() {
-        _errorMessage = 'Correo o contraseña incorrectos';
+        _isLoading = false;
       });
-      _mostrarMensaje('Correo o contraseña incorrectos', isError: true);
+
+      if (success) {
+        final usuario = authController.usuarioActual!;
+        if (usuario.isEstudiante) {
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(builder: (_) => const StudentHomeView()),
+          );
+        } else if (usuario.isOperador) {
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(builder: (_) => const OperatorHomeView()),
+          );
+        } else if (usuario.isAdmin) {
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(builder: (_) => const AdminHomeView()),
+          );
+        } else {
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(builder: (_) => const StudentHomeView()),
+          );
+        }
+      } else {
+        setState(() {
+          _errorMessage = 'Correo o contraseña incorrectos';
+        });
+        _mostrarMensaje('Correo o contraseña incorrectos', isError: true);
+      }
+    } catch (e) {
+      // ✅ Capturar error de cuenta inhabilitada
+      if (!mounted) return;
+      setState(() {
+        _isLoading = false;
+        _errorMessage = e.toString();
+      });
+      
+      if (e.toString().contains('inhabilitada')) {
+        // ✅ Mostrar diálogo de cuenta inhabilitada
+        _mostrarDialogoCuentaInhabilitada();
+      } else {
+        _mostrarMensaje(e.toString(), isError: true);
+      }
     }
+  }
+
+  // ✅ DIÁLOGO DE CUENTA INHABILITADA
+  void _mostrarDialogoCuentaInhabilitada() {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(20),
+        ),
+        elevation: 4,
+        backgroundColor: Colors.white,
+        contentPadding: const EdgeInsets.all(24),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              Icons.block,
+              color: const Color(0xFFF44336),
+              size: 60,
+            ),
+            const SizedBox(height: 16),
+            Text(
+              'Cuenta Inhabilitada',
+              style: GoogleFonts.outfit(
+                fontSize: 20,
+                fontWeight: FontWeight.bold,
+                color: const Color(0xFF333333),
+              ),
+            ),
+            const SizedBox(height: 12),
+            Text(
+              'Tu cuenta ha sido inhabilitada por un administrador.\nNo puedes acceder a la plataforma en este momento.',
+              textAlign: TextAlign.center,
+              style: GoogleFonts.outfit(
+                fontSize: 14,
+                color: const Color(0xFF666666),
+                height: 1.5,
+              ),
+            ),
+            const SizedBox(height: 24),
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton(
+                onPressed: () async {
+                  Navigator.pop(context);
+                  await Provider.of<AuthController>(context, listen: false).logout();
+                  if (!mounted) return;
+                  Navigator.pushReplacement(
+                    context,
+                    MaterialPageRoute(builder: (_) => const LoginView()),
+                  );
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFFFC6707),
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(vertical: 12),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(30),
+                  ),
+                ),
+                child: Text(
+                  'Entendido',
+                  style: GoogleFonts.outfit(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
   @override
@@ -158,7 +251,6 @@ class _LoginViewState extends State<LoginView> {
     final screenWidth = MediaQuery.of(context).size.width;
     final isMobile = screenWidth < 850;
 
-    // Cell 
     if (isMobile) {
       return AuthBaseView(
         bottomText: '¿No tienes cuenta? ',
@@ -342,7 +434,7 @@ class _LoginViewState extends State<LoginView> {
       );
     }
 
-    // Computadora 
+    // Computadora
     return AuthBaseView(
       bottomText: '¿No tienes cuenta? ',
       bottomLinkText: 'Regístrate Aquí',
