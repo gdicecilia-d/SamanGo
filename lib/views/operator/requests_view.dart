@@ -917,28 +917,6 @@ class _PaqueteDetailViewState extends State<PaqueteDetailView> {
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               SizedBox(
-                width: 110,
-                child: TextButton(
-                  onPressed: () => Navigator.pop(ctx, null),
-                  style: TextButton.styleFrom(
-                    backgroundColor: const Color(0xFFF5F5F5),
-                    foregroundColor: const Color(0xFF666666),
-                    padding: const EdgeInsets.symmetric(vertical: 10),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(30),
-                    ),
-                  ),
-                  child: Text(
-                    'Sin motivo',
-                    style: GoogleFonts.outfit(
-                      fontSize: 14,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ),
-              ),
-              const SizedBox(width: 12),
-              SizedBox(
                 width: 140,
                 child: ElevatedButton(
                   onPressed: () {
