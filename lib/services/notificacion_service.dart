@@ -96,7 +96,7 @@ class NotificacionService {
     await _crearNotificacion(
       coleccion: 'operadores',
       userId: operadorId,
-      titulo: '🆕 Nueva solicitud de cupo',
+      titulo: 'Nueva solicitud de cupo',
       mensaje: mensaje,
       tipo: 'nueva_solicitud',
       idPaquete: reservaId,
@@ -225,7 +225,7 @@ class NotificacionService {
     await _crearNotificacion(
       coleccion: 'estudiantes',
       userId: estudianteId,
-      titulo: '⚠️ Comprobante rechazado',
+      titulo: '❌ Comprobante rechazado',
       mensaje: mensaje,
       tipo: 'pago_rechazado',
     );

@@ -18,7 +18,6 @@ class PayPalService {
     required String estudianteId,
   }) async {
     try {
-      // PONER AQUÍ EL ENLACE QUE LES DÉ VERCEL (añadiendo /api/paypal al final)
       final String backendUrl = 'https://saman-go.vercel.app/api/paypal';
 
       final response = await http.post(

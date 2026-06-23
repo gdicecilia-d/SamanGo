@@ -9,7 +9,10 @@ class CustomConfirmDialog {
     required String message,
     required String confirmText,
     IconData icon = Icons.warning_amber_rounded,
+    Color? confirmColor,
   }) {
+    final color = confirmColor ?? const Color(0xFFFC6707);
+
     return showDialog<bool>(
       context: context,
       barrierDismissible: true,
@@ -25,7 +28,7 @@ class CustomConfirmDialog {
           children: [
             Icon(
               icon,
-              color: const Color(0xFFFC6707),
+              color: color,
               size: 45,
             ),
             const SizedBox(height: 12),
@@ -61,7 +64,7 @@ class CustomConfirmDialog {
                   child: ElevatedButton(
                     onPressed: () => Navigator.pop(context, true),
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFFFC6707),
+                      backgroundColor: color,
                       foregroundColor: Colors.white,
                       padding: const EdgeInsets.symmetric(vertical: 10),
                       shape: RoundedRectangleBorder(

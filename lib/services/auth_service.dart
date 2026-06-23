@@ -357,18 +357,21 @@ class AuthService {
         return Usuario.fromMap(operAuthQuery.docs.first.id, operAuthQuery.docs.first.data());
       }
 
-      var doc = await _db.collection('estudiantes').doc(uid).get();
-      if (doc.exists && doc.data() != null) {
-        return Usuario.fromMap(uid, doc.data()!);
+      var docOperador = await _db.collection('operadores').doc(uid).get();
+      if (docOperador.exists && docOperador.data() != null) {
+        return Usuario.fromMap(uid, docOperador.data()!);
       }
-      doc = await _db.collection('operadores').doc(uid).get();
-      if (doc.exists && doc.data() != null) {
-        return Usuario.fromMap(uid, doc.data()!);
+
+      var docAdmin = await _db.collection('administradores').doc(uid).get();
+      if (docAdmin.exists && docAdmin.data() != null) {
+        return Usuario.fromMap(uid, docAdmin.data()!);
       }
-      doc = await _db.collection('administradores').doc(uid).get();
-      if (doc.exists && doc.data() != null) {
-        return Usuario.fromMap(uid, doc.data()!);
+
+      var docEstudiante = await _db.collection('estudiantes').doc(uid).get();
+      if (docEstudiante.exists && docEstudiante.data() != null) {
+        return Usuario.fromMap(uid, docEstudiante.data()!);
       }
+      
       return null;
     } catch (e) {
       print('Error cargando usuario: $e');

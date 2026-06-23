@@ -228,10 +228,7 @@ class _PaymentViewState extends State<PaymentView> {
       if (confirm == true) {
         await Provider.of<AuthController>(context, listen: false).logout();
         if (!context.mounted) return;
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(builder: (_) => const LoginView()),
-        );
+        Navigator.pushAndRemoveUntil(context, MaterialPageRoute(builder: (_) => const LoginView()), (route) => false);
       }
     });
   }

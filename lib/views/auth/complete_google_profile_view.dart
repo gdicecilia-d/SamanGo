@@ -144,10 +144,7 @@ class _CompleteGoogleProfileViewState extends State<CompleteGoogleProfileView> {
     if (isMobile) {
       return AuthBaseView(
         onBackPressed: () {
-          Navigator.pushReplacement(
-            context,
-            MaterialPageRoute(builder: (_) => const LoginView()),
-          );
+          Navigator.pushAndRemoveUntil(context, MaterialPageRoute(builder: (_) => const LoginView()), (route) => false);
         },
         formContent: SingleChildScrollView(
           child: Column(
@@ -393,10 +390,7 @@ class _CompleteGoogleProfileViewState extends State<CompleteGoogleProfileView> {
     // Computadora
     return AuthBaseView(
       onBackPressed: () {
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(builder: (_) => const LoginView()),
-        );
+        Navigator.pushAndRemoveUntil(context, MaterialPageRoute(builder: (_) => const LoginView()), (route) => false);
       },
       formContent: SingleChildScrollView(
         child: Column(

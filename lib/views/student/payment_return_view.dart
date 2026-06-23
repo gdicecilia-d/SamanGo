@@ -5,6 +5,7 @@ import 'package:flutter/foundation.dart' show kIsWeb;
 import '../../controllers/auth_controller.dart';
 import '../../controllers/reserva_controller.dart';
 import '../../models/reserva.dart';
+import '../../services/notificacion_service.dart';
 import 'my_trips_view.dart';
 import 'dart:html' as html;
 
@@ -119,6 +120,27 @@ class _PaymentReturnViewState extends State<PaymentReturnView> {
       );
 
       if (subio) {
+        try {
+          final destinoDoc = await FirebaseFirestore.instance
+              .collection('destinos')
+              .doc(reserva.paqueteId)
+              .get();
+          final destino = destinoDoc.data();
+          final operadorId = destino?['operadorId'];
+
+          if (operadorId != null) {
+            await NotificacionService().notificarPagoRecibido(
+              operadorId: operadorId,
+              estudianteNombre: usuarioActual.nombre,
+              estudianteApellido: usuarioActual.apellido ?? '',
+              estudianteCarnet: usuarioActual.carnet ?? '',
+              nombrePaquete: destino?['nombre'] as String? ?? 'destino',
+            );
+          }
+        } catch (e) {
+          debugPrint('Error al notificar al operador del pago: $e');
+        }
+
         setState(() {
           _procesando = false;
           _exito = true;

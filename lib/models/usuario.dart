@@ -46,7 +46,7 @@ class Usuario {
       nombre: map['nombre'] as String? ?? '',
       apellido: map['apellido'] as String?,
       correo: map['correo'] as String? ?? '',
-      rol: map['rol'] as String? ?? 'estudiante',
+      rol: map['rol'] as String? ?? (map.containsKey('empresa') ? 'operador' : (map.containsKey('esAdmin') ? 'admin' : 'estudiante')),
       licenciaUrl: map['licenciaUrl'] as String?,
       carnet: map['carnet'] as String?,
       fotoBase64: map['fotoBase64'] as String?,
