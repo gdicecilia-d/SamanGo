@@ -19,6 +19,8 @@ class NotificacionController extends ChangeNotifier {
     _estudianteId = userId;
     _collectionName = collectionName;
     _subscription?.cancel();
+    _notificaciones.clear();
+    notifyListeners();
     
     // Limpiar tips que tengan más de 24 horas antes de suscribirse
     _service.limpiarTipsAntiguos(userId, collection: collectionName);

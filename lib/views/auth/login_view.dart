@@ -76,25 +76,13 @@ class _LoginViewState extends State<LoginView> {
       }
       
       if (usuario.isEstudiante) {
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(builder: (_) => const StudentHomeView()),
-        );
+        Navigator.pushAndRemoveUntil(context, MaterialPageRoute(builder: (_) => const StudentHomeView()), (route) => false);
       } else if (usuario.isOperador) {
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(builder: (_) => const OperatorHomeView()),
-        );
+        Navigator.pushAndRemoveUntil(context, MaterialPageRoute(builder: (_) => const OperatorHomeView()), (route) => false);
       } else if (usuario.isAdmin) {
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(builder: (_) => const AdminHomeView()),
-        );
+        Navigator.pushAndRemoveUntil(context, MaterialPageRoute(builder: (_) => const AdminHomeView()), (route) => false);
       } else {
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(builder: (_) => const StudentHomeView()),
-        );
+        Navigator.pushAndRemoveUntil(context, MaterialPageRoute(builder: (_) => const StudentHomeView()), (route) => false);
       }
     } else if (result is Map && result['isNewUser'] == true) {
       Navigator.push(
@@ -142,25 +130,13 @@ class _LoginViewState extends State<LoginView> {
       if (success) {
         final usuario = authController.usuarioActual!;
         if (usuario.isEstudiante) {
-          Navigator.pushReplacement(
-            context,
-            MaterialPageRoute(builder: (_) => const StudentHomeView()),
-          );
+          Navigator.pushAndRemoveUntil(context, MaterialPageRoute(builder: (_) => const StudentHomeView()), (route) => false);
         } else if (usuario.isOperador) {
-          Navigator.pushReplacement(
-            context,
-            MaterialPageRoute(builder: (_) => const OperatorHomeView()),
-          );
+          Navigator.pushAndRemoveUntil(context, MaterialPageRoute(builder: (_) => const OperatorHomeView()), (route) => false);
         } else if (usuario.isAdmin) {
-          Navigator.pushReplacement(
-            context,
-            MaterialPageRoute(builder: (_) => const AdminHomeView()),
-          );
+          Navigator.pushAndRemoveUntil(context, MaterialPageRoute(builder: (_) => const AdminHomeView()), (route) => false);
         } else {
-          Navigator.pushReplacement(
-            context,
-            MaterialPageRoute(builder: (_) => const StudentHomeView()),
-          );
+          Navigator.pushAndRemoveUntil(context, MaterialPageRoute(builder: (_) => const StudentHomeView()), (route) => false);
         }
       } else {
         setState(() {
@@ -265,10 +241,7 @@ class _LoginViewState extends State<LoginView> {
                   Navigator.pop(dialogContext);
                   await Provider.of<AuthController>(context, listen: false).logout();
                   if (!mounted) return;
-                  Navigator.pushReplacement(
-                    context,
-                    MaterialPageRoute(builder: (_) => const LoginView()),
-                  );
+                  Navigator.pushAndRemoveUntil(context, MaterialPageRoute(builder: (_) => const LoginView()), (route) => false);
                 },
                 style: OutlinedButton.styleFrom(
                   backgroundColor: Colors.white,
