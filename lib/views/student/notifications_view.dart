@@ -356,14 +356,6 @@ class _NotificationsViewState extends State<NotificationsView> {
             if (!leida) {
               controller.marcarComoLeida(notificacionId);
             }
-            if (idPaquete != null && idPaquete.isNotEmpty) {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (_) => DestinationDetailView(destinoId: idPaquete),
-                ),
-              );
-            }
           },
           borderRadius: BorderRadius.circular(16),
           child: Padding(
