@@ -18,8 +18,11 @@ class PayPalService {
     required String estudianteId,
   }) async {
     try {
+      // PONER AQUÍ EL ENLACE QUE LES DÉ VERCEL (añadiendo /api/paypal al final)
+      final String backendUrl = 'https://TU-PROYECTO-VERCEL.vercel.app/api/paypal';
+
       final response = await http.post(
-        Uri.parse('https://us-central1-samango.cloudfunctions.net/createPayPalOrder'),
+        Uri.parse(backendUrl),
         headers: {
           'Content-Type': 'application/json',
         },
