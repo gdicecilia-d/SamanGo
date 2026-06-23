@@ -727,6 +727,7 @@ class _PaqueteDetailViewState extends State<PaqueteDetailView> {
       message: '¿Confirmas que deseas aceptar la solicitud de ${reserva.nombreEstudiante} ${reserva.apellidoEstudiante} para ${reserva.numeroPersonas} persona${reserva.numeroPersonas > 1 ? 's' : ''}?',
       confirmText: 'Aceptar',
       icon: Icons.check_circle_outline,
+      confirmColor: _color,
     );
     if (confirm != true || !mounted) return;
 
@@ -761,38 +762,106 @@ class _PaqueteDetailViewState extends State<PaqueteDetailView> {
 
     final confirmar = await showDialog<bool>(
       context: context,
+      barrierDismissible: true,
       builder: (ctx) => AlertDialog(
-        title: const Text('Rechazar solicitud'),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(20),
+        ),
+        elevation: 4,
+        backgroundColor: Colors.white,
+        contentPadding: const EdgeInsets.all(24),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            Icon(
+              Icons.cancel,
+              color: _color,
+              size: 45,
+            ),
+            const SizedBox(height: 12),
+            Text(
+              'Rechazar solicitud',
+              style: GoogleFonts.outfit(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+                color: const Color(0xFF333333),
+              ),
+            ),
+            const SizedBox(height: 8),
             Text(
               'Vas a rechazar la solicitud de ${reserva.nombreEstudiante} ${reserva.apellidoEstudiante}.',
+              style: GoogleFonts.outfit(
+                fontSize: 14,
+                fontWeight: FontWeight.w400,
+                color: const Color(0xFF666666),
+              ),
             ),
             const SizedBox(height: 12),
             TextField(
               controller: motivoCtrl,
-              decoration: const InputDecoration(
+              decoration: InputDecoration(
                 labelText: 'Motivo (opcional)',
                 hintText: 'Ej: Cupos llenos para esa fecha.',
-                border: OutlineInputBorder(),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
               ),
               maxLines: 2,
             ),
+            const SizedBox(height: 20),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                SizedBox(
+                  width: 110,
+                  child: ElevatedButton(
+                    onPressed: () => Navigator.pop(ctx, true),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: _color,
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(vertical: 10),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(30),
+                      ),
+                    ),
+                    child: Text(
+                      'Rechazar',
+                      style: GoogleFonts.outfit(
+                        fontSize: 14,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                SizedBox(
+                  width: 110,
+                  child: OutlinedButton(
+                    onPressed: () => Navigator.pop(ctx, false),
+                    style: OutlinedButton.styleFrom(
+                      backgroundColor: const Color(0xFFF5F5F5),
+                      foregroundColor: const Color(0xFF666666),
+                      padding: const EdgeInsets.symmetric(vertical: 10),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(30),
+                      ),
+                      side: BorderSide.none,
+                    ),
+                    child: Text(
+                      'Cancelar',
+                      style: GoogleFonts.outfit(
+                        fontSize: 14,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
           ],
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('Cancelar'),
-          ),
-          ElevatedButton(
-            onPressed: () => Navigator.pop(ctx, true),
-            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
-            child: const Text('Rechazar', style: TextStyle(color: Colors.white)),
-          ),
-        ],
       ),
     );
 
@@ -826,6 +895,7 @@ class _PaqueteDetailViewState extends State<PaqueteDetailView> {
       message: '¿Confirmas que el comprobante de ${reserva.nombreEstudiante} es válido?',
       confirmText: 'Confirmar',
       icon: Icons.check_circle_outline,
+      confirmColor: _color,
     );
     if (confirm != true || !mounted) return;
 
@@ -857,6 +927,7 @@ class _PaqueteDetailViewState extends State<PaqueteDetailView> {
       message: '¿Estás seguro de que deseas rechazar el comprobante de ${reserva.nombreEstudiante} ${reserva.apellidoEstudiante}? El estudiante podrá volver a pagar.',
       confirmText: 'Rechazar',
       icon: Icons.cancel,
+      confirmColor: _color,
     );
 
     if (confirm != true || !mounted) return;
@@ -975,6 +1046,7 @@ class _PaqueteDetailViewState extends State<PaqueteDetailView> {
       message: '¿Confirmas que ${reserva.nombreEstudiante} ${reserva.apellidoEstudiante} ya realizó el viaje?',
       confirmText: 'Confirmar',
       icon: Icons.celebration_outlined,
+      confirmColor: _color,
     );
     if (confirm != true || !mounted) return;
 
@@ -1006,6 +1078,7 @@ class _PaqueteDetailViewState extends State<PaqueteDetailView> {
       message: '¿Estás seguro de que deseas quitar los ${reserva.numeroPersonas} cupo${reserva.numeroPersonas > 1 ? 's' : ''} reservados para ${reserva.nombreEstudiante} ${reserva.apellidoEstudiante}? Esta acción cancelará la reserva.',
       confirmText: 'Quitar cupos',
       icon: Icons.remove_circle_outline,
+      confirmColor: _color,
     );
 
     if (confirm != true || !mounted) return;
