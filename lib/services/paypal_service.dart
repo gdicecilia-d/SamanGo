@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'package:webview_flutter/webview_flutter.dart';
@@ -19,88 +18,31 @@ class PayPalService {
     required String estudianteId,
   }) async {
     try {
-      // Credenciales quemadas para Sandbox y ofuscadas para evadir GitHub Secret Scanner
-      final p1 = 'BAAMZ-ZEnLfWLO2yET';
-      final p2 = 'YC2x8mYuj98XnK_YhM';
-      final p3 = 'PHPyj96ZravvAVDNdR';
-      final p4 = '1g90n3vW3vhLaPKZ2SMm64KyPy_0';
-      final clientId = p1 + p2 + p3 + p4;
-      
-      final s1 = 'EKU2S6WiD3m87eGxh6';
-      final s2 = '3KYpz9s2F7uWvumlNZ';
-      final s3 = 'idthrZn8u78ACV5p_u';
-      final s4 = 'ddtLXV-XfiFsCEaovcb0vVVRGR';
-      final secretKey = s1 + s2 + s3 + s4;
-
-      final auth = base64Encode(utf8.encode('$clientId:$secretKey'));
-      
-      // En Web (Hosting), PayPal bloquea las peticiones por CORS. Usamos un proxy si es web.
-      final tokenUrl = kIsWeb 
-          ? 'https://corsproxy.io/?https://api-m.sandbox.paypal.com/v1/oauth2/token'
-          : 'https://api-m.sandbox.paypal.com/v1/oauth2/token';
-
-      final tokenResponse = await http.post(
-        Uri.parse(tokenUrl),
+      final response = await http.post(
+        Uri.parse('https://us-central1-samango.cloudfunctions.net/createPayPalOrder'),
         headers: {
-          'Authorization': 'Basic $auth',
-          'Content-Type': 'application/x-www-form-urlencoded',
-        },
-        body: 'grant_type=client_credentials',
-      );
-
-      if (tokenResponse.statusCode != 200) {
-        print('Error en token PayPal: \${tokenResponse.body}');
-        return false;
-      }
-
-      final tokenData = jsonDecode(tokenResponse.body);
-      final accessToken = tokenData['access_token'];
-
-      final orderUrl = kIsWeb
-          ? 'https://corsproxy.io/?https://api-m.sandbox.paypal.com/v2/checkout/orders'
-          : 'https://api-m.sandbox.paypal.com/v2/checkout/orders';
-
-      final orderResponse = await http.post(
-        Uri.parse(orderUrl),
-        headers: {
-          'Authorization': 'Bearer $accessToken',
           'Content-Type': 'application/json',
         },
         body: jsonEncode({
-          'intent': 'CAPTURE',
-          'purchase_units': [
-            {
-              'amount': {
-                'currency_code': currency,
-                'value': amount.toStringAsFixed(2),
-              },
-              'description': description,
-            }
-          ],
-          'application_context': {
-            'return_url': returnUrl,
-            'cancel_url': cancelUrl,
-          }
+          'amount': amount,
+          'currency': currency,
+          'description': description,
+          'returnUrl': returnUrl,
+          'cancelUrl': cancelUrl,
         }),
       );
 
-      if (orderResponse.statusCode != 201) {
-        print('Error en order PayPal: \${orderResponse.body}');
+      if (response.statusCode != 200) {
+        print('Error en Cloud Function PayPal: ${response.body}');
         return false;
       }
 
-      final orderData = jsonDecode(orderResponse.body);
-      final links = orderData['links'] as List;
-      final approveLink = links.firstWhere(
-        (link) => link['rel'] == 'approve',
-        orElse: () => null,
-      );
+      final responseData = jsonDecode(response.body);
+      final approveUrl = responseData['approveUrl'];
 
-      if (approveLink == null) {
+      if (approveUrl == null) {
         return false;
       }
-
-      final approveUrl = approveLink['href'];
 
       if (kIsWeb) {
         html.window.localStorage['paypal_pending'] = jsonEncode({
