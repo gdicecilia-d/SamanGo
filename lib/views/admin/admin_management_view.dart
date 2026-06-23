@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_storage/firebase_storage.dart';
 import '../../controllers/auth_controller.dart';
 import '../shared/app_header.dart';
 import '../../views/shared/widgets/custom_dialog.dart';
@@ -333,6 +334,22 @@ class _AdminManagementViewState extends State<AdminManagementView> {
 
     if (confirm == true) {
       try {
+        final docSnapshot = await FirebaseFirestore.instance
+            .collection('hospedajes')
+            .doc(id)
+            .get();
+        final data = docSnapshot.data();
+        if (data != null && data.containsKey('imagenUrl')) {
+          final imageUrl = data['imagenUrl'] as String?;
+          if (imageUrl != null && imageUrl.isNotEmpty) {
+            try {
+              await FirebaseStorage.instance.refFromURL(imageUrl).delete();
+            } catch (e) {
+              print('Error al eliminar imagen de Storage: $e');
+            }
+          }
+        }
+
         await FirebaseFirestore.instance
             .collection('hospedajes')
             .doc(id)
@@ -637,6 +654,22 @@ class _AdminManagementViewState extends State<AdminManagementView> {
 
     if (confirm == true) {
       try {
+        final docSnapshot = await FirebaseFirestore.instance
+            .collection('transportes')
+            .doc(id)
+            .get();
+        final data = docSnapshot.data();
+        if (data != null && data.containsKey('imagenUrl')) {
+          final imageUrl = data['imagenUrl'] as String?;
+          if (imageUrl != null && imageUrl.isNotEmpty) {
+            try {
+              await FirebaseStorage.instance.refFromURL(imageUrl).delete();
+            } catch (e) {
+              print('Error al eliminar imagen de Storage: $e');
+            }
+          }
+        }
+
         await FirebaseFirestore.instance
             .collection('transportes')
             .doc(id)
