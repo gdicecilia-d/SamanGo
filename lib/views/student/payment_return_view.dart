@@ -276,7 +276,7 @@ class _PaymentReturnViewState extends State<PaymentReturnView> {
                       ),
                     ),
                   ] else ...[
-                    const Icon(Icons.error, color: Colors.red, size: 80),
+                    const Icon(Icons.error, color:Color(0xFFFC6707), size: 80),
                     const SizedBox(height: 24),
                     Text(
                       _mensaje,

@@ -300,13 +300,11 @@ class _AdminEditProfileViewState extends State<AdminEditProfileView> {
       ),
       child: Column(
         children: [
-          _buildDisabledFieldMobile('Nombre Completo', value: user.nombre),
-          const SizedBox(height: 16),
           _buildDisabledFieldMobile('Rol', value: 'Administrador'),
           const SizedBox(height: 16),
           _buildDisabledFieldMobile('Correo Electrónico', value: user.correo),
           const SizedBox(height: 16),
-          _buildEditableFieldMobile('Nombre Completo (editable)', _nombreController),
+          _buildEditableFieldMobile('Nombre Completo', _nombreController),
         ],
       ),
     );
@@ -499,17 +497,17 @@ class _AdminEditProfileViewState extends State<AdminEditProfileView> {
       children: [
         Row(
           children: [
-            Expanded(child: _buildDisabledFieldDesktop('Nombre Completo', value: user.nombre)),
-            const SizedBox(width: 16),
             Expanded(child: _buildDisabledFieldDesktop('Rol', value: 'Administrador')),
+            const SizedBox(width: 16),
+            Expanded(child: _buildDisabledFieldDesktop('Correo Electrónico', value: user.correo)),
           ],
         ),
         const SizedBox(height: 16),
         Row(
           children: [
-            Expanded(child: _buildDisabledFieldDesktop('Correo Electrónico', value: user.correo)),
+            Expanded(child: _buildEditableFieldDesktop('Nombre Completo', _nombreController)),
             const SizedBox(width: 16),
-            Expanded(child: _buildEditableFieldDesktop('Nombre (editable)', _nombreController)),
+            Expanded(child: Container()),
           ],
         ),
       ],
