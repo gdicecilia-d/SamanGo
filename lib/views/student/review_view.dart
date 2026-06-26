@@ -415,11 +415,6 @@ class _ReviewViewState extends State<ReviewView> {
         total += (doc['calificacion'] as num?)?.toInt() ?? 0;
       }
       final promedio = total / resenas.docs.length;
-
-      await db.collection('usuarios').doc(operadorId).set({
-        'calificacionPromedio': double.parse(promedio.toStringAsFixed(1)),
-        'totalResenas': resenas.docs.length,
-      }, SetOptions(merge: true));
       
       final operadorDoc = await db.collection('operadores').doc(operadorId).get();
       if (operadorDoc.exists) {
