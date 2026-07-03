@@ -1,16 +1,197 @@
+import 'dart:convert';
+
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
+
 import '../../controllers/auth_controller.dart';
-import '../shared/app_header.dart';
-import '../../views/shared/widgets/custom_dialog.dart';
 import '../auth/login_view.dart';
+import '../shared/app_header.dart';
+import '../shared/widgets/custom_dialog.dart';
+import 'admin_edit_profile_view.dart';
 import 'admin_home_view.dart';
 import 'admin_management_view.dart';
 import 'admin_reports_view.dart';
-import 'admin_edit_profile_view.dart';
-import 'dart:convert';
+
+/// Paleta y estilos compartidos del módulo admin.
+/// (Repetida en los demás admin_*.dart — candidata a un archivo de tema
+/// compartido único cuando terminemos de pulir todas las vistas.)
+class _Palette {
+  static const primary = Color(0xFFFC6707);
+  static const primaryLight = Color(0xFFFDDBB3);
+  static const textDark = Color(0xFF333333);
+  static const textGrey = Color(0xFF666666);
+  static const textLight = Color(0xFF888888);
+  static const textFaint = Color(0xFF999999);
+  static const border = Color(0xFFE0E0E0);
+  static const green = Color(0xFF4CAF50);
+  static const red = Color(0xFFF44336);
+}
+
+class _Styles {
+  static TextStyle title(bool isMobile) => GoogleFonts.outfit(
+        fontSize: isMobile ? 24 : 28,
+        fontWeight: FontWeight.bold,
+        color: _Palette.textDark,
+      );
+
+  static final drawerName = GoogleFonts.outfit(
+    fontSize: 16,
+    fontWeight: FontWeight.bold,
+    color: _Palette.textDark,
+  );
+
+  static final drawerRole = GoogleFonts.outfit(fontSize: 12, color: _Palette.textGrey);
+
+  static TextStyle drawerItem(bool isActive) => GoogleFonts.outfit(
+        fontSize: 16,
+        fontWeight: isActive ? FontWeight.bold : FontWeight.w500,
+        color: isActive ? _Palette.primary : _Palette.textDark,
+      );
+}
+
+class _MenuEntry {
+  final String title;
+  final IconData icon;
+  final WidgetBuilder? viewBuilder;
+
+  const _MenuEntry(this.title, this.icon, [this.viewBuilder]);
+}
+
+/// Definición de cada pestaña: etiqueta, si filtra por activos o no, y
+/// los textos/íconos para el estado vacío.
+class _StudentTab {
+  final String label;
+  final bool activos;
+  final IconData emptyIcon;
+  final String emptyMessage;
+
+  const _StudentTab(this.label, this.activos, this.emptyIcon, this.emptyMessage);
+}
+
+// ===========================================================================
+// Widgets reutilizables
+// ===========================================================================
+
+class _StatusBadge extends StatelessWidget {
+  final String label;
+  final Color color;
+
+  const _StatusBadge({required this.label, required this.color});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+      decoration: BoxDecoration(color: color.withOpacity(0.1), borderRadius: BorderRadius.circular(12)),
+      child: Text(label, style: GoogleFonts.outfit(fontSize: 12, fontWeight: FontWeight.w600, color: color)),
+    );
+  }
+}
+
+/// Tarjeta con la info de un estudiante y su menú de acciones.
+class _StudentCard extends StatelessWidget {
+  final String nombreCompleto;
+  final String correo;
+  final String carnet;
+  final bool activo;
+  final bool isMobile;
+  final ValueChanged<String> onAction;
+
+  const _StudentCard({
+    required this.nombreCompleto,
+    required this.correo,
+    required this.carnet,
+    required this.activo,
+    required this.isMobile,
+    required this.onAction,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final inicial = nombreCompleto.isNotEmpty ? nombreCompleto[0].toUpperCase() : '?';
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: EdgeInsets.all(isMobile ? 12 : 16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: _Palette.border, width: 1),
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 45,
+            height: 45,
+            decoration: const BoxDecoration(shape: BoxShape.circle, color: _Palette.primaryLight),
+            child: Center(
+              child: Text(inicial,
+                  style: GoogleFonts.outfit(fontSize: 18, fontWeight: FontWeight.bold, color: _Palette.primary)),
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(nombreCompleto.isEmpty ? 'Sin nombre' : nombreCompleto,
+                    style: GoogleFonts.outfit(
+                        fontSize: isMobile ? 14 : 16, fontWeight: FontWeight.w600, color: _Palette.textDark)),
+                Text(correo, style: GoogleFonts.outfit(fontSize: isMobile ? 11 : 12, color: _Palette.textGrey)),
+                Text('Carnet: $carnet',
+                    style: GoogleFonts.outfit(fontSize: isMobile ? 11 : 12, color: _Palette.textLight)),
+              ],
+            ),
+          ),
+          _StatusBadge(
+            label: activo ? 'Activo' : 'Inhabilitado',
+            color: activo ? _Palette.green : _Palette.red,
+          ),
+          const SizedBox(width: 8),
+          _buildMenuButton(),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildMenuButton() {
+    return PopupMenuButton<String>(
+      icon: Icon(Icons.more_vert, color: _Palette.textGrey, size: isMobile ? 20 : 24),
+      color: Colors.white,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      elevation: 4,
+      onSelected: onAction,
+      itemBuilder: (context) => const [
+        PopupMenuItem(
+          value: 'toggle',
+          child: Row(
+            children: [
+              Icon(Icons.person_outline, color: _Palette.primary, size: 18),
+              SizedBox(width: 8),
+              Text('Inhabilitar/Activar cuenta'),
+            ],
+          ),
+        ),
+        PopupMenuItem(
+          value: 'delete',
+          child: Row(
+            children: [
+              Icon(Icons.delete_outline, color: _Palette.red, size: 18),
+              SizedBox(width: 8),
+              Text('Eliminar cuenta', style: TextStyle(color: _Palette.red)),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+// ===========================================================================
+// Vista principal
+// ===========================================================================
 
 class AdminStudentsView extends StatefulWidget {
   const AdminStudentsView({super.key});
@@ -21,34 +202,32 @@ class AdminStudentsView extends StatefulWidget {
 
 class _AdminStudentsViewState extends State<AdminStudentsView> {
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
-  final String _activeMenu = 'Usuarios';
-  final List<String> _menuItems = ['Dashboard', 'Gestión', 'Usuarios', 'Reportes'];
+  static const String _activeMenu = 'Usuarios';
   int _selectedTab = 0;
 
-  void _handleMenuSelected(String menu) {
-    if (menu == 'Dashboard') {
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(builder: (_) => const AdminHomeView()),
-      );
-    } else if (menu == 'Gestión') {
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(builder: (_) => const AdminManagementView()),
-      );
-    } else if (menu == 'Reportes') {
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(builder: (_) => const AdminReportsView()),
-      );
-    }
+  static const List<_StudentTab> _tabs = [
+    _StudentTab('Activos', true, Icons.people_outline, 'No hay estudiantes activos'),
+    _StudentTab('Inhabilitados', false, Icons.block, 'No hay estudiantes inhabilitados'),
+  ];
+
+  static final List<_MenuEntry> _menu = [
+    _MenuEntry('Dashboard', Icons.dashboard_outlined, (_) => const AdminHomeView()),
+    _MenuEntry('Gestión', Icons.settings_outlined, (_) => const AdminManagementView()),
+    const _MenuEntry(_activeMenu, Icons.people_outline), // vista actual
+    _MenuEntry('Reportes', Icons.bar_chart_outlined, (_) => const AdminReportsView()),
+  ];
+
+  // --- Navegación y acciones comunes ---
+
+  void _handleMenuSelected(String menuTitle) {
+    final entry = _menu.firstWhere((e) => e.title == menuTitle);
+    final builder = entry.viewBuilder;
+    if (builder == null) return; // ya estamos en esta vista
+    Navigator.pushReplacement(context, MaterialPageRoute(builder: builder));
   }
 
   void _handleEditProfile() {
-    Navigator.push(
-      context,
-      MaterialPageRoute(builder: (_) => const AdminEditProfileView()),
-    );
+    Navigator.push(context, MaterialPageRoute(builder: (_) => const AdminEditProfileView()));
   }
 
   void _handleLogout() {
@@ -59,39 +238,107 @@ class _AdminStudentsViewState extends State<AdminStudentsView> {
       confirmText: 'Salir',
       icon: Icons.logout,
     ).then((confirm) async {
-      if (confirm == true) {
-        await Provider.of<AuthController>(context, listen: false).logout();
-        if (!mounted) return;
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(builder: (_) => const LoginView()),
-        );
-      }
+      if (confirm != true) return;
+      await Provider.of<AuthController>(context, listen: false).logout();
+      if (!mounted) return;
+      Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => const LoginView()));
     });
   }
 
   void _mostrarMensaje(String mensaje) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(mensaje),
-        backgroundColor: const Color(0xFFFC6707),
-        duration: const Duration(seconds: 2),
-      ),
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+      content: Text(mensaje),
+      backgroundColor: _Palette.primary,
+      duration: const Duration(seconds: 2),
+    ));
+  }
+
+  void _openDrawer() => _scaffoldKey.currentState?.openEndDrawer();
+  void _volver() => Navigator.pop(context);
+
+  // --- Acciones sobre estudiantes ---
+
+  Future<void> _handleStudentAction(String action, String studentId, String nombre, bool activo) {
+    return switch (action) {
+      'toggle' => _toggleStudentStatus(studentId, nombre, activo),
+      'delete' => _deleteStudent(studentId, nombre),
+      _ => Future.value(),
+    };
+  }
+
+  /// Recibe [activoActual] directamente (ya disponible en la tarjeta) en
+  /// vez de volver a consultar Firestore solo para leerlo.
+  Future<void> _toggleStudentStatus(String studentId, String nombre, bool activoActual) async {
+    final nuevoEstado = !activoActual;
+    final accion = nuevoEstado ? 'habilitar' : 'inhabilitar';
+
+    final confirm = await CustomConfirmDialog.show(
+      context: context,
+      title: '${nuevoEstado ? 'Habilitar' : 'Inhabilitar'} cuenta',
+      message: '¿Estás seguro de que deseas $accion la cuenta de "$nombre"?',
+      confirmText: 'Confirmar',
+      icon: nuevoEstado ? Icons.check_circle : Icons.block,
     );
+    if (confirm != true) return;
+
+    try {
+      await FirebaseFirestore.instance
+          .collection('estudiantes')
+          .doc(studentId)
+          .update({'activo': nuevoEstado});
+      _mostrarMensaje('Cuenta ${nuevoEstado ? 'habilitada' : 'inhabilitada'} correctamente');
+      setState(() {});
+    } catch (e) {
+      _mostrarMensaje('Error al cambiar el estado: $e');
+    }
   }
 
-  void _openDrawer() {
-    _scaffoldKey.currentState?.openEndDrawer();
+  Future<void> _deleteStudent(String studentId, String nombre) async {
+    try {
+      final tieneReservasActivas = await _tieneReservasActivas(studentId);
+      if (tieneReservasActivas) {
+        _mostrarMensaje('No se puede eliminar al estudiante porque tiene reservas activas.');
+        return;
+      }
+
+      final confirm = await CustomConfirmDialog.show(
+        context: context,
+        title: 'Eliminar cuenta',
+        message: '¿Estás seguro de que deseas eliminar permanentemente la cuenta de "$nombre"?',
+        confirmText: 'Eliminar',
+        icon: Icons.delete_forever,
+      );
+      if (confirm != true) return;
+
+      await FirebaseFirestore.instance.collection('estudiantes').doc(studentId).delete();
+      _mostrarMensaje('Cuenta eliminada correctamente');
+      setState(() {});
+    } catch (e) {
+      _mostrarMensaje('Error al eliminar la cuenta: $e');
+    }
   }
 
-  void _volver() {
-    Navigator.pop(context);
+  static const _estadosReservaActiva = ['solicitado', 'aceptado', 'verificandoPago', 'pagado'];
+
+  Future<bool> _tieneReservasActivas(String studentId) async {
+    final reservas = await FirebaseFirestore.instance
+        .collection('reservas')
+        .where('estudianteId', isEqualTo: studentId)
+        .get();
+
+    return reservas.docs.any((doc) {
+      final estado = doc.data()['estadoActual'] as String? ?? '';
+      return _estadosReservaActiva.contains(estado);
+    });
   }
+
+  // ---------------------------------------------------------------------
+  // Build
+  // ---------------------------------------------------------------------
 
   @override
   Widget build(BuildContext context) {
-    final screenWidth = MediaQuery.of(context).size.width;
-    final isMobile = screenWidth < 850;
+    final isMobile = MediaQuery.of(context).size.width < 850;
 
     return Scaffold(
       key: _scaffoldKey,
@@ -106,63 +353,49 @@ class _AdminStudentsViewState extends State<AdminStudentsView> {
                 onMenuSelected: _handleMenuSelected,
                 onEditProfile: _handleEditProfile,
                 onLogout: _handleLogout,
-                menuItems: _menuItems,
+                menuItems: _menu.map((e) => e.title).toList(),
                 isMobile: isMobile,
                 onMenuTap: isMobile ? _openDrawer : null,
               ),
-              Expanded(
-                child: isMobile ? _buildMobileLayout() : _buildDesktopLayout(),
-              ),
+              Expanded(child: isMobile ? _buildMobileLayout() : _buildDesktopLayout()),
             ],
           ),
-          Positioned(
-            top: isMobile ? 130 : 100,
-            right: 16,
-            child: MouseRegion(
-              cursor: SystemMouseCursors.click,
-              child: GestureDetector(
-                onTap: _volver,
-                child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(30),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withOpacity(0.1),
-                        blurRadius: 8,
-                        offset: const Offset(0, 2),
-                      ),
-                    ],
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(Icons.arrow_back, color: const Color(0xFFFC6707), size: 16),
-                      const SizedBox(width: 4),
-                      Text(
-                        'Volver',
-                        style: GoogleFonts.outfit(
-                          fontSize: 16,
-                          color: const Color(0xFFFC6707),
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ),
-          ),
+          Positioned(top: isMobile ? 130 : 100, right: 16, child: _buildVolverButton()),
         ],
       ),
     );
   }
 
+  Widget _buildVolverButton() {
+    return MouseRegion(
+      cursor: SystemMouseCursors.click,
+      child: GestureDetector(
+        onTap: _volver,
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(30),
+            boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.1), blurRadius: 8, offset: const Offset(0, 2))],
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Icon(Icons.arrow_back, color: _Palette.primary, size: 16),
+              const SizedBox(width: 4),
+              Text('Volver',
+                  style: GoogleFonts.outfit(fontSize: 16, color: _Palette.primary, fontWeight: FontWeight.w500)),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
   Widget _buildDrawer() {
-    final auth = Provider.of<AuthController>(context);
-    final user = auth.usuarioActual;
-    
+    final user = Provider.of<AuthController>(context).usuarioActual;
+    final tieneFoto = user?.fotoBase64 != null && user!.fotoBase64!.isNotEmpty;
+
     return Drawer(
       backgroundColor: Colors.white,
       width: 280,
@@ -181,19 +414,15 @@ class _AdminStudentsViewState extends State<AdminStudentsView> {
                       height: 50,
                       decoration: BoxDecoration(
                         shape: BoxShape.circle,
-                        border: Border.all(color: const Color(0xFFFC6707), width: 2),
+                        border: Border.all(color: _Palette.primary, width: 2),
                       ),
                       child: ClipOval(
-                        child: user?.fotoBase64 != null && user!.fotoBase64!.isNotEmpty
-                            ? Image.memory(
-                                base64Decode(user.fotoBase64!),
-                                width: 50,
-                                height: 50,
-                                fit: BoxFit.cover,
-                              )
+                        child: tieneFoto
+                            ? Image.memory(base64Decode(user!.fotoBase64!),
+                                width: 50, height: 50, fit: BoxFit.cover)
                             : const CircleAvatar(
-                                backgroundColor: Color(0xFFFDDBB3),
-                                child: Icon(Icons.admin_panel_settings, color: Color(0xFFFC6707), size: 28),
+                                backgroundColor: _Palette.primaryLight,
+                                child: Icon(Icons.admin_panel_settings, color: _Palette.primary, size: 28),
                               ),
                       ),
                     ),
@@ -203,14 +432,8 @@ class _AdminStudentsViewState extends State<AdminStudentsView> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(
-                          user?.nombre ?? 'Administrador',
-                          style: GoogleFonts.outfit(fontSize: 16, fontWeight: FontWeight.bold, color: const Color(0xFF333333)),
-                        ),
-                        Text(
-                          'Administrador',
-                          style: GoogleFonts.outfit(fontSize: 12, color: const Color(0xFF666666)),
-                        ),
+                        Text(user?.nombre ?? 'Administrador', style: _Styles.drawerName),
+                        Text('Administrador', style: _Styles.drawerRole),
                       ],
                     ),
                   ),
@@ -218,24 +441,14 @@ class _AdminStudentsViewState extends State<AdminStudentsView> {
               ),
             ),
             const SizedBox(height: 16),
-            const Divider(height: 1, thickness: 1, color: Color(0xFFE0E0E0)),
-            _buildDrawerItem('Dashboard', Icons.dashboard_outlined, () {
-              Navigator.pop(context);
-              _handleMenuSelected('Dashboard');
-            }),
-            _buildDrawerItem('Gestión', Icons.settings_outlined, () {
-              Navigator.pop(context);
-              _handleMenuSelected('Gestión');
-            }),
-            _buildDrawerItem('Usuarios', Icons.people_outline, () {
-              Navigator.pop(context);
-            }),
-            _buildDrawerItem('Reportes', Icons.bar_chart_outlined, () {
-              Navigator.pop(context);
-              _handleMenuSelected('Reportes');
-            }),
+            const Divider(height: 1, color: _Palette.border),
+            for (final entry in _menu)
+              _buildDrawerItem(entry.title, entry.icon, () {
+                Navigator.pop(context);
+                if (entry.title != _activeMenu) _handleMenuSelected(entry.title);
+              }),
             const Spacer(),
-            const Divider(height: 1, thickness: 1, color: Color(0xFFE0E0E0)),
+            const Divider(height: 1, color: _Palette.border),
             _buildDrawerItem('Cerrar Sesión', Icons.logout_outlined, () {
               Navigator.pop(context);
               _handleLogout();
@@ -250,115 +463,56 @@ class _AdminStudentsViewState extends State<AdminStudentsView> {
   Widget _buildDrawerItem(String title, IconData icon, VoidCallback onTap) {
     final isActive = title == _activeMenu;
     return ListTile(
-      leading: Icon(icon, color: const Color(0xFFFC6707)),
-      title: Text(
-        title,
-        style: GoogleFonts.outfit(
-          fontSize: 16,
-          fontWeight: isActive ? FontWeight.bold : FontWeight.w500,
-          color: isActive ? const Color(0xFFFC6707) : const Color(0xFF333333),
-        ),
-      ),
+      leading: Icon(icon, color: _Palette.primary),
+      title: Text(title, style: _Styles.drawerItem(isActive)),
       onTap: onTap,
     );
   }
 
-  Widget _buildMobileLayout() {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const SizedBox(height: 8),
-          Text(
-            'Administrar Estudiantes',
-            style: GoogleFonts.outfit(
-              fontSize: 24,
-              fontWeight: FontWeight.bold,
-              color: const Color(0xFF333333),
-            ),
-          ),
-          const SizedBox(height: 16),
-          Container(
-            decoration: BoxDecoration(
-              color: const Color(0xFFF5F5F5),
-              borderRadius: BorderRadius.circular(30),
-            ),
-            child: Row(
-              children: [
-                _buildTab('Activos', 0, true),
-                _buildTab('Inhabilitados', 1, true),
-              ],
-            ),
-          ),
-          const SizedBox(height: 16),
-          Expanded(
-            child: _buildStudentsList(true),
-          ),
-        ],
-      ),
-    );
-  }
+  Widget _buildMobileLayout() => _buildLayout(isMobile: true);
+  Widget _buildDesktopLayout() => _buildLayout(isMobile: false);
 
-  Widget _buildDesktopLayout() {
+  Widget _buildLayout({required bool isMobile}) {
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+      padding: EdgeInsets.symmetric(horizontal: isMobile ? 16 : 24, vertical: 16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            'Administrar Estudiantes',
-            style: GoogleFonts.outfit(
-              fontSize: 28,
-              fontWeight: FontWeight.bold,
-              color: const Color(0xFF333333),
-            ),
-          ),
+          Text('Administrar Estudiantes', style: _Styles.title(isMobile)),
           const SizedBox(height: 16),
-          Container(
-            decoration: BoxDecoration(
-              color: const Color(0xFFF5F5F5),
-              borderRadius: BorderRadius.circular(30),
-            ),
-            child: Row(
-              children: [
-                _buildTab('Activos', 0, false),
-                _buildTab('Inhabilitados', 1, false),
-              ],
-            ),
-          ),
+          _buildTabBar(isMobile),
           const SizedBox(height: 16),
-          Expanded(
-            child: _buildStudentsList(false),
-          ),
+          Expanded(child: _buildStudentsList(isMobile)),
         ],
       ),
     );
   }
 
-  Widget _buildTab(String title, int index, bool isMobile) {
+  Widget _buildTabBar(bool isMobile) {
+    return Container(
+      decoration: BoxDecoration(color: const Color(0xFFF5F5F5), borderRadius: BorderRadius.circular(30)),
+      child: Row(children: [for (var i = 0; i < _tabs.length; i++) _buildTab(i, isMobile)]),
+    );
+  }
+
+  Widget _buildTab(int index, bool isMobile) {
     final isSelected = _selectedTab == index;
-    
     return Expanded(
       child: GestureDetector(
-        onTap: () {
-          setState(() {
-            _selectedTab = index;
-          });
-        },
+        onTap: () => setState(() => _selectedTab = index),
         child: Container(
           padding: EdgeInsets.symmetric(vertical: isMobile ? 10 : 12),
           decoration: BoxDecoration(
-            color: isSelected ? const Color(0xFFFC6707) : Colors.transparent,
+            color: isSelected ? _Palette.primary : Colors.transparent,
             borderRadius: BorderRadius.circular(30),
           ),
           child: Center(
             child: Text(
-              title,
+              _tabs[index].label,
               style: GoogleFonts.outfit(
                 fontSize: isMobile ? 14 : 16,
                 fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
-                color: isSelected ? Colors.white : const Color(0xFF666666),
+                color: isSelected ? Colors.white : _Palette.textGrey,
               ),
             ),
           ),
@@ -368,54 +522,30 @@ class _AdminStudentsViewState extends State<AdminStudentsView> {
   }
 
   Widget _buildStudentsList(bool isMobile) {
-    final bool activos = _selectedTab == 0;
+    final tab = _tabs[_selectedTab];
 
-    return StreamBuilder<QuerySnapshot>(
-      stream: FirebaseFirestore.instance
-          .collection('estudiantes')
-          .snapshots(),
+    return StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
+      stream: FirebaseFirestore.instance.collection('estudiantes').snapshots(),
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
-          return const Center(
-            child: CircularProgressIndicator(color: Color(0xFFFC6707)),
-          );
+          return const Center(child: CircularProgressIndicator(color: _Palette.primary));
         }
-
         if (snapshot.hasError) {
-          return Center(
-            child: Text(
-              'Error: ${snapshot.error}',
-              style: GoogleFonts.outfit(color: Colors.red),
-            ),
-          );
+          return Center(child: Text('Error: ${snapshot.error}', style: GoogleFonts.outfit(color: Colors.red)));
         }
 
-        final docs = snapshot.data?.docs ?? [];
-        
-        final estudiantesFiltrados = docs.where((doc) {
-          final data = doc.data() as Map<String, dynamic>;
-          final activo = data['activo'] as bool? ?? true;
-          return activo == activos;
-        }).toList();
+        final estudiantes = (snapshot.data?.docs ?? [])
+            .where((doc) => (doc.data()['activo'] as bool? ?? true) == tab.activos)
+            .toList();
 
-        if (estudiantesFiltrados.isEmpty) {
+        if (estudiantes.isEmpty) {
           return Center(
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Icon(
-                  activos ? Icons.people_outline : Icons.block,
-                  size: 48,
-                  color: const Color(0xFFCCCCCC),
-                ),
+                Icon(tab.emptyIcon, size: 48, color: const Color(0xFFCCCCCC)),
                 const SizedBox(height: 12),
-                Text(
-                  activos ? 'No hay estudiantes activos' : 'No hay estudiantes inhabilitados',
-                  style: GoogleFonts.outfit(
-                    fontSize: 14,
-                    color: const Color(0xFF999999),
-                  ),
-                ),
+                Text(tab.emptyMessage, style: GoogleFonts.outfit(fontSize: 14, color: _Palette.textFaint)),
               ],
             ),
           );
@@ -423,241 +553,24 @@ class _AdminStudentsViewState extends State<AdminStudentsView> {
 
         return ListView.builder(
           physics: const BouncingScrollPhysics(),
-          itemCount: estudiantesFiltrados.length,
+          itemCount: estudiantes.length,
           itemBuilder: (context, index) {
-            final doc = estudiantesFiltrados[index];
-            final data = doc.data() as Map<String, dynamic>;
-            
-            final nombre = data['nombre'] ?? 'Sin nombre';
-            final apellido = data['apellido'] ?? '';
-            final correo = data['correo'] ?? 'Sin correo';
-            final carnet = data['carnet'] ?? 'Sin carnet';
+            final doc = estudiantes[index];
+            final data = doc.data();
+            final nombreCompleto = '${data['nombre'] ?? ''} ${data['apellido'] ?? ''}'.trim();
             final activo = data['activo'] as bool? ?? true;
 
-            return _buildStudentCard(
-              id: doc.id,
-              nombre: nombre,
-              apellido: apellido,
-              correo: correo,
-              carnet: carnet,
+            return _StudentCard(
+              nombreCompleto: nombreCompleto,
+              correo: data['correo'] as String? ?? 'Sin correo',
+              carnet: data['carnet'] as String? ?? 'Sin carnet',
               activo: activo,
               isMobile: isMobile,
+              onAction: (action) => _handleStudentAction(action, doc.id, nombreCompleto, activo),
             );
           },
         );
       },
     );
-  }
-
-  Widget _buildStudentCard({
-    required String id,
-    required String nombre,
-    required String apellido,
-    required String correo,
-    required String carnet,
-    required bool activo,
-    required bool isMobile,
-  }) {
-    final nombreCompleto = '$nombre $apellido'.trim();
-
-    return Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      padding: EdgeInsets.all(isMobile ? 12 : 16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: const Color(0xFFE0E0E0), width: 1),
-      ),
-      child: Row(
-        children: [
-          Container(
-            width: 45,
-            height: 45,
-            decoration: const BoxDecoration(
-              shape: BoxShape.circle,
-              color: Color(0xFFFDDBB3),
-            ),
-            child: Center(
-              child: Text(
-                nombre.isNotEmpty ? nombre[0].toUpperCase() : '?',
-                style: GoogleFonts.outfit(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                  color: const Color(0xFFFC6707),
-                ),
-              ),
-            ),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  nombreCompleto.isEmpty ? 'Sin nombre' : nombreCompleto,
-                  style: GoogleFonts.outfit(
-                    fontSize: isMobile ? 14 : 16,
-                    fontWeight: FontWeight.w600,
-                    color: const Color(0xFF333333),
-                  ),
-                ),
-                Text(
-                  correo,
-                  style: GoogleFonts.outfit(
-                    fontSize: isMobile ? 11 : 12,
-                    color: const Color(0xFF666666),
-                  ),
-                ),
-                Text(
-                  'Carnet: $carnet',
-                  style: GoogleFonts.outfit(
-                    fontSize: isMobile ? 11 : 12,
-                    color: const Color(0xFF888888),
-                  ),
-                ),
-              ],
-            ),
-          ),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-            decoration: BoxDecoration(
-              color: activo ? const Color(0xFF4CAF50).withOpacity(0.1) : const Color(0xFFF44336).withOpacity(0.1),
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Text(
-              activo ? 'Activo' : 'Inhabilitado',
-              style: GoogleFonts.outfit(
-                fontSize: 12,
-                fontWeight: FontWeight.w600,
-                color: activo ? const Color(0xFF4CAF50) : const Color(0xFFF44336),
-              ),
-            ),
-          ),
-          const SizedBox(width: 8),
-          _buildPopupMenuButton(id, nombreCompleto, isMobile),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildPopupMenuButton(String studentId, String nombre, bool isMobile) {
-    return PopupMenuButton<String>(
-      icon: Icon(Icons.more_vert, color: const Color(0xFF666666), size: isMobile ? 20 : 24),
-      color: Colors.white,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
-      ),
-      elevation: 4,
-      onSelected: (value) => _handleStudentAction(value, studentId, nombre),
-      itemBuilder: (context) => [
-        const PopupMenuItem(
-          value: 'toggle',
-          child: Row(
-            children: [
-              Icon(Icons.person_outline, color: Color(0xFFFC6707), size: 18),
-              SizedBox(width: 8),
-              Text('Inhabilitar/Activar cuenta'),
-            ],
-          ),
-        ),
-        const PopupMenuItem(
-          value: 'delete',
-          child: Row(
-            children: [
-              Icon(Icons.delete_outline, color: Color(0xFFF44336), size: 18),
-              SizedBox(width: 8),
-              Text('Eliminar cuenta', style: TextStyle(color: Color(0xFFF44336))),
-            ],
-          ),
-        ),
-      ],
-    );
-  }
-
-  Future<void> _handleStudentAction(String action, String studentId, String nombre) async {
-    if (action == 'toggle') {
-      await _toggleStudentStatus(studentId, nombre);
-    } else if (action == 'delete') {
-      await _deleteStudent(studentId, nombre);
-    }
-  }
-
-  Future<void> _toggleStudentStatus(String studentId, String nombre) async {
-    try {
-      final doc = await FirebaseFirestore.instance
-          .collection('estudiantes')
-          .doc(studentId)
-          .get();
-      
-      if (!doc.exists) return;
-      
-      final data = doc.data() as Map<String, dynamic>;
-      final activo = data['activo'] as bool? ?? true;
-      final nuevoEstado = !activo;
-      
-      final actionText = nuevoEstado ? 'habilitar' : 'inhabilitar';
-      
-      final confirm = await CustomConfirmDialog.show(
-        context: context,
-        title: '${nuevoEstado ? 'Habilitar' : 'Inhabilitar'} cuenta',
-        message: '¿Estás seguro de que deseas $actionText la cuenta de "$nombre"?',
-        confirmText: 'Confirmar',
-        icon: nuevoEstado ? Icons.check_circle : Icons.block,
-      );
-      
-      if (confirm == true) {
-        await FirebaseFirestore.instance
-            .collection('estudiantes')
-            .doc(studentId)
-            .update({'activo': nuevoEstado});
-        
-        _mostrarMensaje('Cuenta ${nuevoEstado ? 'habilitada' : 'inhabilitada'} correctamente');
-        setState(() {});
-      }
-    } catch (e) {
-      _mostrarMensaje('Error al cambiar el estado: $e');
-    }
-  }
-
-  Future<void> _deleteStudent(String studentId, String nombre) async {
-    try {
-      final reservas = await FirebaseFirestore.instance
-          .collection('reservas')
-          .where('estudianteId', isEqualTo: studentId)
-          .get();
-      
-      final estadosActivos = ['solicitado', 'aceptado', 'verificandoPago', 'pagado'];
-      final tieneReservasActivas = reservas.docs.any((doc) {
-        final estado = doc.data()['estadoActual'] as String? ?? '';
-        return estadosActivos.contains(estado);
-      });
-      
-      if (tieneReservasActivas) {
-        _mostrarMensaje(
-          'No se puede eliminar al estudiante porque tiene reservas activas.'
-        );
-        return;
-      }
-      
-      final confirm = await CustomConfirmDialog.show(
-        context: context,
-        title: 'Eliminar cuenta',
-        message: '¿Estás seguro de que deseas eliminar permanentemente la cuenta de "$nombre"?',
-        confirmText: 'Eliminar',
-        icon: Icons.delete_forever,
-      );
-      
-      if (confirm == true) {
-        await FirebaseFirestore.instance
-            .collection('estudiantes')
-            .doc(studentId)
-            .delete();
-        
-        _mostrarMensaje('Cuenta eliminada correctamente');
-        setState(() {});
-      }
-    } catch (e) {
-      _mostrarMensaje('Error al eliminar la cuenta: $e');
-    }
   }
 }
