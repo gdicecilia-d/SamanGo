@@ -1,18 +1,203 @@
+import 'dart:convert';
+import 'dart:typed_data';
+
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
-import '../../models/usuario.dart';
+
 import '../../controllers/auth_controller.dart';
-import '../shared/app_header.dart';
-import '../../views/shared/widgets/custom_dialog.dart';
+import '../../models/usuario.dart';
 import '../auth/login_view.dart';
+import '../shared/app_header.dart';
+import '../shared/widgets/custom_dialog.dart';
+import 'admin_edit_profile_view.dart';
 import 'admin_home_view.dart';
-import 'admin_users_view.dart';
 import 'admin_management_view.dart';
 import 'admin_reports_view.dart';
-import 'admin_edit_profile_view.dart';
-import 'dart:convert';
+
+/// Paleta y estilos compartidos del módulo admin.
+/// (Igual que en los otros archivos admin_*.dart — candidata a moverse a
+/// un solo archivo de tema compartido cuando terminemos todos.)
+class _Palette {
+  static const primary = Color(0xFFFC6707);
+  static const primaryLight = Color(0xFFFDDBB3);
+  static const textDark = Color(0xFF333333);
+  static const textGrey = Color(0xFF666666);
+  static const textLight = Color(0xFF888888);
+  static const textFaint = Color(0xFF999999);
+  static const border = Color(0xFFE0E0E0);
+  static const green = Color(0xFF4CAF50);
+  static const red = Color(0xFFF44336);
+}
+
+class _Styles {
+  static TextStyle title(bool isMobile) => GoogleFonts.outfit(
+        fontSize: isMobile ? 24 : 28,
+        fontWeight: FontWeight.bold,
+        color: _Palette.textDark,
+      );
+
+  static final drawerName = GoogleFonts.outfit(
+    fontSize: 16,
+    fontWeight: FontWeight.bold,
+    color: _Palette.textDark,
+  );
+
+  static final drawerRole = GoogleFonts.outfit(fontSize: 12, color: _Palette.textGrey);
+
+  static TextStyle drawerItem(bool isActive) => GoogleFonts.outfit(
+        fontSize: 16,
+        fontWeight: isActive ? FontWeight.bold : FontWeight.w500,
+        color: isActive ? _Palette.primary : _Palette.textDark,
+      );
+
+  static TextStyle infoLabel(bool isMobile) => GoogleFonts.outfit(
+        fontSize: isMobile ? 11 : 12,
+        fontWeight: FontWeight.w600,
+        color: _Palette.textGrey,
+      );
+
+  static TextStyle infoValue(bool isMobile, {Color? color}) => GoogleFonts.outfit(
+        fontSize: isMobile ? 11 : 12,
+        color: color ?? _Palette.textDark,
+      );
+}
+
+class _MenuEntry {
+  final String title;
+  final IconData icon;
+  final WidgetBuilder? viewBuilder;
+
+  const _MenuEntry(this.title, this.icon, [this.viewBuilder]);
+}
+
+/// Definición de cada pestaña: etiqueta visible, valor de `estado` en
+/// Firestore, e ícono a mostrar cuando la lista está vacía.
+class _OperatorTab {
+  final String label;
+  final String estado;
+  final IconData emptyIcon;
+
+  const _OperatorTab(this.label, this.estado, this.emptyIcon);
+}
+
+// ===========================================================================
+// Widgets reutilizables
+// ===========================================================================
+
+/// Badge de estado (Activo / Inactivo / Rechazado, etc.).
+class _StatusBadge extends StatelessWidget {
+  final String label;
+  final Color color;
+
+  const _StatusBadge({required this.label, required this.color});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Text(
+        label,
+        style: GoogleFonts.outfit(fontSize: 12, fontWeight: FontWeight.w600, color: color),
+      ),
+    );
+  }
+}
+
+/// Fila "label: valor" reutilizada en toda la info expandida de la tarjeta.
+class _InfoRow extends StatelessWidget {
+  final String label;
+  final bool isMobile;
+  final Widget value;
+
+  const _InfoRow({required this.label, required this.isMobile, required this.value});
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 4),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SizedBox(width: isMobile ? 80 : 100, child: Text(label, style: _Styles.infoLabel(isMobile))),
+          Expanded(child: value),
+        ],
+      ),
+    );
+  }
+}
+
+/// Botones/estado que se muestran en cada tarjeta según la pestaña activa:
+/// Pendientes -> aprobar/rechazar; Aprobados -> badge + activar/inhabilitar;
+/// Rechazados -> solo badge.
+class _OperatorActions extends StatelessWidget {
+  final int tabIndex;
+  final bool activo;
+  final VoidCallback onToggleActivo;
+  final VoidCallback onApprove;
+  final VoidCallback onReject;
+
+  const _OperatorActions({
+    required this.tabIndex,
+    required this.activo,
+    required this.onToggleActivo,
+    required this.onApprove,
+    required this.onReject,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    switch (tabIndex) {
+      case 0: // Pendientes
+        return Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            IconButton(
+              onPressed: onApprove,
+              icon: const Icon(Icons.check_circle, color: _Palette.green, size: 24),
+              tooltip: 'Aprobar',
+              padding: EdgeInsets.zero,
+              constraints: const BoxConstraints(),
+            ),
+            IconButton(
+              onPressed: onReject,
+              icon: const Icon(Icons.cancel, color: _Palette.red, size: 24),
+              tooltip: 'Rechazar',
+              padding: EdgeInsets.zero,
+              constraints: const BoxConstraints(),
+            ),
+          ],
+        );
+      case 1: // Aprobados
+        return Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            _StatusBadge(label: activo ? 'Activo' : 'Inactivo', color: activo ? _Palette.green : _Palette.red),
+            const SizedBox(width: 8),
+            IconButton(
+              onPressed: onToggleActivo,
+              icon: Icon(activo ? Icons.block : Icons.check_circle,
+                  color: activo ? _Palette.red : _Palette.green, size: 24),
+              tooltip: activo ? 'Inhabilitar' : 'Activar',
+              padding: EdgeInsets.zero,
+              constraints: const BoxConstraints(),
+            ),
+          ],
+        );
+      default: // Rechazados
+        return const _StatusBadge(label: 'Rechazado', color: _Palette.red);
+    }
+  }
+}
+
+// ===========================================================================
+// Vista principal
+// ===========================================================================
 
 class AdminOperatorsView extends StatefulWidget {
   const AdminOperatorsView({super.key});
@@ -23,34 +208,33 @@ class AdminOperatorsView extends StatefulWidget {
 
 class _AdminOperatorsViewState extends State<AdminOperatorsView> {
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
-  final String _activeMenu = 'Usuarios';
-  final List<String> _menuItems = ['Dashboard', 'Gestión', 'Usuarios', 'Reportes'];
+  static const String _activeMenu = 'Usuarios';
   int _selectedTab = 0;
 
-  void _handleMenuSelected(String menu) {
-    if (menu == 'Dashboard') {
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(builder: (_) => const AdminHomeView()),
-      );
-    } else if (menu == 'Gestión') {
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(builder: (_) => const AdminManagementView()),
-      );
-    } else if (menu == 'Reportes') {
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(builder: (_) => const AdminReportsView()),
-      );
-    }
+  static const List<_OperatorTab> _tabs = [
+    _OperatorTab('Pendientes', 'pendiente', Icons.pending_actions),
+    _OperatorTab('Aprobados', 'aprobado', Icons.check_circle),
+    _OperatorTab('Rechazados', 'rechazado', Icons.cancel),
+  ];
+
+  static final List<_MenuEntry> _menu = [
+    _MenuEntry('Dashboard', Icons.dashboard_outlined, (_) => const AdminHomeView()),
+    _MenuEntry('Gestión', Icons.settings_outlined, (_) => const AdminManagementView()),
+    const _MenuEntry(_activeMenu, Icons.people_outline), // vista actual
+    _MenuEntry('Reportes', Icons.bar_chart_outlined, (_) => const AdminReportsView()),
+  ];
+
+  // --- Navegación y acciones comunes ---
+
+  void _handleMenuSelected(String menuTitle) {
+    final entry = _menu.firstWhere((e) => e.title == menuTitle);
+    final builder = entry.viewBuilder;
+    if (builder == null) return; // ya estamos en esta vista
+    Navigator.pushReplacement(context, MaterialPageRoute(builder: builder));
   }
 
   void _handleEditProfile() {
-    Navigator.push(
-      context,
-      MaterialPageRoute(builder: (_) => const AdminEditProfileView()),
-    );
+    Navigator.push(context, MaterialPageRoute(builder: (_) => const AdminEditProfileView()));
   }
 
   void _handleLogout() {
@@ -61,78 +245,94 @@ class _AdminOperatorsViewState extends State<AdminOperatorsView> {
       confirmText: 'Salir',
       icon: Icons.logout,
     ).then((confirm) async {
-      if (confirm == true) {
-        await Provider.of<AuthController>(context, listen: false).logout();
-        if (!mounted) return;
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(builder: (_) => const LoginView()),
-        );
-      }
+      if (confirm != true) return;
+      await Provider.of<AuthController>(context, listen: false).logout();
+      if (!mounted) return;
+      Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => const LoginView()));
     });
   }
 
   void _mostrarMensaje(String mensaje) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(mensaje),
-        backgroundColor: const Color(0xFFFC6707),
-        duration: const Duration(seconds: 2),
-      ),
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+      content: Text(mensaje),
+      backgroundColor: _Palette.primary,
+      duration: const Duration(seconds: 2),
+    ));
+  }
+
+  void _openDrawer() => _scaffoldKey.currentState?.openEndDrawer();
+
+  void _volver() => Navigator.pop(context);
+
+  // --- Acciones sobre operadores ---
+
+  /// Recibe [activoActual] directamente (ya lo tenemos disponible en la
+  /// tarjeta) en vez de volver a consultar Firestore solo para leerlo.
+  Future<void> _toggleOperatorStatus(String operadorId, String nombre, bool activoActual) async {
+    final nuevoEstado = !activoActual;
+    final accion = nuevoEstado ? 'habilitar' : 'inhabilitar';
+
+    final confirm = await CustomConfirmDialog.show(
+      context: context,
+      title: '${nuevoEstado ? 'Habilitar' : 'Inhabilitar'} operador',
+      message: '¿Estás seguro de que deseas $accion al operador "$nombre"?',
+      confirmText: 'Confirmar',
+      icon: nuevoEstado ? Icons.check_circle : Icons.block,
     );
-  }
+    if (confirm != true) return;
 
-  void _openDrawer() {
-    _scaffoldKey.currentState?.openEndDrawer();
-  }
-
-  void _volver() {
-    Navigator.pop(context);
-  }
-
-  Future<void> _toggleOperatorStatus(Usuario operador, String nombre) async {
     try {
-      final doc = await FirebaseFirestore.instance
+      await FirebaseFirestore.instance
           .collection('operadores')
-          .doc(operador.id)
-          .get();
-      
-      if (!doc.exists) return;
-      
-      final data = doc.data() as Map<String, dynamic>;
-      final activo = data['activo'] as bool? ?? true;
-      final nuevoEstado = !activo;
-      
-      final actionText = nuevoEstado ? 'habilitar' : 'inhabilitar';
-      
-      final confirm = await CustomConfirmDialog.show(
-        context: context,
-        title: '${nuevoEstado ? 'Habilitar' : 'Inhabilitar'} operador',
-        message: '¿Estás seguro de que deseas $actionText al operador "$nombre"?',
-        confirmText: 'Confirmar',
-        icon: nuevoEstado ? Icons.check_circle : Icons.block,
-      );
-      
-      if (confirm == true) {
-        await FirebaseFirestore.instance
-            .collection('operadores')
-            .doc(operador.id)
-            .update({'activo': nuevoEstado});
-        
-        if (!mounted) return;
-        _mostrarMensaje('Operador ${nuevoEstado ? 'habilitado' : 'inhabilitado'} correctamente');
-        setState(() {});
-      }
+          .doc(operadorId)
+          .update({'activo': nuevoEstado});
+      if (!mounted) return;
+      _mostrarMensaje('Operador ${nuevoEstado ? 'habilitado' : 'inhabilitado'} correctamente');
+      setState(() {});
     } catch (e) {
       if (!mounted) return;
       _mostrarMensaje('Error al cambiar el estado: $e');
     }
   }
 
+  Future<void> _aprobarOperador(Usuario operador) async {
+    final error = await Provider.of<AuthController>(context, listen: false).approveOperator(operador);
+    _mostrarMensaje(error ?? 'Operador aprobado correctamente');
+  }
+
+  Future<void> _rechazarOperador(Usuario operador) async {
+    final error = await Provider.of<AuthController>(context, listen: false).rejectOperator(operador);
+    _mostrarMensaje(error ?? 'Operador rechazado');
+  }
+
+  void _verLicencia(String url, bool isMobile) {
+    if (url.isEmpty) {
+      _mostrarMensaje('Este operador no tiene licencia cargada.');
+      return;
+    }
+    if (!url.startsWith('data:image')) {
+      _mostrarMensaje('Formato de licencia no soportado o inválido.');
+      return;
+    }
+
+    try {
+      final bytes = base64Decode(url.split(',').last);
+      showDialog(
+        context: context,
+        builder: (_) => _LicenciaPreviewDialog(bytes: bytes, isMobile: isMobile),
+      );
+    } catch (_) {
+      _mostrarMensaje('Error al abrir la licencia.');
+    }
+  }
+
+  // ---------------------------------------------------------------------
+  // Build
+  // ---------------------------------------------------------------------
+
   @override
   Widget build(BuildContext context) {
-    final screenWidth = MediaQuery.of(context).size.width;
-    final isMobile = screenWidth < 850;
+    final isMobile = MediaQuery.of(context).size.width < 850;
 
     return Scaffold(
       key: _scaffoldKey,
@@ -147,63 +347,55 @@ class _AdminOperatorsViewState extends State<AdminOperatorsView> {
                 onMenuSelected: _handleMenuSelected,
                 onEditProfile: _handleEditProfile,
                 onLogout: _handleLogout,
-                menuItems: _menuItems,
+                menuItems: _menu.map((e) => e.title).toList(),
                 isMobile: isMobile,
                 onMenuTap: isMobile ? _openDrawer : null,
               ),
-              Expanded(
-                child: isMobile ? _buildMobileLayout() : _buildDesktopLayout(),
-              ),
+              Expanded(child: isMobile ? _buildMobileLayout() : _buildDesktopLayout()),
             ],
           ),
           Positioned(
             top: isMobile ? 130 : 100,
             right: 16,
-            child: MouseRegion(
-              cursor: SystemMouseCursors.click,
-              child: GestureDetector(
-                onTap: _volver,
-                child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(30),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withOpacity(0.1),
-                        blurRadius: 8,
-                        offset: const Offset(0, 2),
-                      ),
-                    ],
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(Icons.arrow_back, color: const Color(0xFFFC6707), size: 16),
-                      const SizedBox(width: 4),
-                      Text(
-                        'Volver',
-                        style: GoogleFonts.outfit(
-                          fontSize: 16,
-                          color: const Color(0xFFFC6707),
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ),
+            child: _buildVolverButton(),
           ),
         ],
       ),
     );
   }
 
+  Widget _buildVolverButton() {
+    return MouseRegion(
+      cursor: SystemMouseCursors.click,
+      child: GestureDetector(
+        onTap: _volver,
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(30),
+            boxShadow: [
+              BoxShadow(color: Colors.black.withOpacity(0.1), blurRadius: 8, offset: const Offset(0, 2)),
+            ],
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Icon(Icons.arrow_back, color: _Palette.primary, size: 16),
+              const SizedBox(width: 4),
+              Text('Volver',
+                  style: GoogleFonts.outfit(fontSize: 16, color: _Palette.primary, fontWeight: FontWeight.w500)),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
   Widget _buildDrawer() {
-    final auth = Provider.of<AuthController>(context);
-    final user = auth.usuarioActual;
-    
+    final user = Provider.of<AuthController>(context).usuarioActual;
+    final tieneFoto = user?.fotoBase64 != null && user!.fotoBase64!.isNotEmpty;
+
     return Drawer(
       backgroundColor: Colors.white,
       width: 280,
@@ -222,19 +414,15 @@ class _AdminOperatorsViewState extends State<AdminOperatorsView> {
                       height: 50,
                       decoration: BoxDecoration(
                         shape: BoxShape.circle,
-                        border: Border.all(color: const Color(0xFFFC6707), width: 2),
+                        border: Border.all(color: _Palette.primary, width: 2),
                       ),
                       child: ClipOval(
-                        child: user?.fotoBase64 != null && user!.fotoBase64!.isNotEmpty
-                            ? Image.memory(
-                                base64Decode(user.fotoBase64!),
-                                width: 50,
-                                height: 50,
-                                fit: BoxFit.cover,
-                              )
+                        child: tieneFoto
+                            ? Image.memory(base64Decode(user!.fotoBase64!),
+                                width: 50, height: 50, fit: BoxFit.cover)
                             : const CircleAvatar(
-                                backgroundColor: Color(0xFFFDDBB3),
-                                child: Icon(Icons.admin_panel_settings, color: Color(0xFFFC6707), size: 28),
+                                backgroundColor: _Palette.primaryLight,
+                                child: Icon(Icons.admin_panel_settings, color: _Palette.primary, size: 28),
                               ),
                       ),
                     ),
@@ -244,14 +432,8 @@ class _AdminOperatorsViewState extends State<AdminOperatorsView> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(
-                          user?.nombre ?? 'Administrador',
-                          style: GoogleFonts.outfit(fontSize: 16, fontWeight: FontWeight.bold, color: const Color(0xFF333333)),
-                        ),
-                        Text(
-                          'Administrador',
-                          style: GoogleFonts.outfit(fontSize: 12, color: const Color(0xFF666666)),
-                        ),
+                        Text(user?.nombre ?? 'Administrador', style: _Styles.drawerName),
+                        Text('Administrador', style: _Styles.drawerRole),
                       ],
                     ),
                   ),
@@ -259,24 +441,14 @@ class _AdminOperatorsViewState extends State<AdminOperatorsView> {
               ),
             ),
             const SizedBox(height: 16),
-            const Divider(height: 1, thickness: 1, color: Color(0xFFE0E0E0)),
-            _buildDrawerItem('Dashboard', Icons.dashboard_outlined, () {
-              Navigator.pop(context);
-              _handleMenuSelected('Dashboard');
-            }),
-            _buildDrawerItem('Gestión', Icons.settings_outlined, () {
-              Navigator.pop(context);
-              _handleMenuSelected('Gestión');
-            }),
-            _buildDrawerItem('Usuarios', Icons.people_outline, () {
-              Navigator.pop(context);
-            }),
-            _buildDrawerItem('Reportes', Icons.bar_chart_outlined, () {
-              Navigator.pop(context);
-              _handleMenuSelected('Reportes');
-            }),
+            const Divider(height: 1, color: _Palette.border),
+            for (final entry in _menu)
+              _buildDrawerItem(entry.title, entry.icon, () {
+                Navigator.pop(context);
+                if (entry.title != _activeMenu) _handleMenuSelected(entry.title);
+              }),
             const Spacer(),
-            const Divider(height: 1, thickness: 1, color: Color(0xFFE0E0E0)),
+            const Divider(height: 1, color: _Palette.border),
             _buildDrawerItem('Cerrar Sesión', Icons.logout_outlined, () {
               Navigator.pop(context);
               _handleLogout();
@@ -291,117 +463,61 @@ class _AdminOperatorsViewState extends State<AdminOperatorsView> {
   Widget _buildDrawerItem(String title, IconData icon, VoidCallback onTap) {
     final isActive = title == _activeMenu;
     return ListTile(
-      leading: Icon(icon, color: const Color(0xFFFC6707)),
-      title: Text(
-        title,
-        style: GoogleFonts.outfit(
-          fontSize: 16,
-          fontWeight: isActive ? FontWeight.bold : FontWeight.w500,
-          color: isActive ? const Color(0xFFFC6707) : const Color(0xFF333333),
-        ),
-      ),
+      leading: Icon(icon, color: _Palette.primary),
+      title: Text(title, style: _Styles.drawerItem(isActive)),
       onTap: onTap,
     );
   }
 
-  Widget _buildMobileLayout() {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const SizedBox(height: 8),
-          Text(
-            'Administrar Operadores',
-            style: GoogleFonts.outfit(
-              fontSize: 24,
-              fontWeight: FontWeight.bold,
-              color: const Color(0xFF333333),
-            ),
-          ),
-          const SizedBox(height: 16),
-          Container(
-            decoration: BoxDecoration(
-              color: const Color(0xFFF5F5F5),
-              borderRadius: BorderRadius.circular(30),
-            ),
-            child: Row(
-              children: [
-                _buildTab('Pendientes', 0, true),
-                _buildTab('Aprobados', 1, true),
-                _buildTab('Rechazados', 2, true),
-              ],
-            ),
-          ),
-          const SizedBox(height: 16),
-          Expanded(
-            child: _buildOperatorsList(true),
-          ),
-        ],
-      ),
-    );
-  }
+  Widget _buildMobileLayout() => _buildLayout(isMobile: true);
+  Widget _buildDesktopLayout() => _buildLayout(isMobile: false);
 
-  Widget _buildDesktopLayout() {
+  Widget _buildLayout({required bool isMobile}) {
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+      padding: EdgeInsets.all(isMobile ? 16 : 24).copyWith(top: isMobile ? 16 : 16, bottom: isMobile ? 16 : 16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            'Administrar Operadores',
-            style: GoogleFonts.outfit(
-              fontSize: 28,
-              fontWeight: FontWeight.bold,
-              color: const Color(0xFF333333),
-            ),
-          ),
+          if (!isMobile) const SizedBox(height: 0),
+          Text('Administrar Operadores', style: _Styles.title(isMobile)),
           const SizedBox(height: 16),
-          Container(
-            decoration: BoxDecoration(
-              color: const Color(0xFFF5F5F5),
-              borderRadius: BorderRadius.circular(30),
-            ),
-            child: Row(
-              children: [
-                _buildTab('Pendientes', 0, false),
-                _buildTab('Aprobados', 1, false),
-                _buildTab('Rechazados', 2, false),
-              ],
-            ),
-          ),
+          _buildTabBar(isMobile),
           const SizedBox(height: 16),
-          Expanded(
-            child: _buildOperatorsList(false),
-          ),
+          Expanded(child: _buildOperatorsList(isMobile)),
         ],
       ),
     );
   }
 
-  Widget _buildTab(String title, int index, bool isMobile) {
+  Widget _buildTabBar(bool isMobile) {
+    return Container(
+      decoration: BoxDecoration(color: const Color(0xFFF5F5F5), borderRadius: BorderRadius.circular(30)),
+      child: Row(
+        children: [
+          for (var i = 0; i < _tabs.length; i++) _buildTab(i, isMobile),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildTab(int index, bool isMobile) {
     final isSelected = _selectedTab == index;
-    
     return Expanded(
       child: GestureDetector(
-        onTap: () {
-          setState(() {
-            _selectedTab = index;
-          });
-        },
+        onTap: () => setState(() => _selectedTab = index),
         child: Container(
           padding: EdgeInsets.symmetric(vertical: isMobile ? 10 : 12),
           decoration: BoxDecoration(
-            color: isSelected ? const Color(0xFFFC6707) : Colors.transparent,
+            color: isSelected ? _Palette.primary : Colors.transparent,
             borderRadius: BorderRadius.circular(30),
           ),
           child: Center(
             child: Text(
-              title,
+              _tabs[index].label,
               style: GoogleFonts.outfit(
                 fontSize: isMobile ? 12 : 14,
                 fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
-                color: isSelected ? Colors.white : const Color(0xFF666666),
+                color: isSelected ? Colors.white : _Palette.textGrey,
               ),
             ),
           ),
@@ -411,58 +527,32 @@ class _AdminOperatorsViewState extends State<AdminOperatorsView> {
   }
 
   Widget _buildOperatorsList(bool isMobile) {
-    String filtroEstado;
-    if (_selectedTab == 0) {
-      filtroEstado = 'pendiente';
-    } else if (_selectedTab == 1) {
-      filtroEstado = 'aprobado';
-    } else {
-      filtroEstado = 'rechazado';
-    }
+    final tab = _tabs[_selectedTab];
 
-    return StreamBuilder<QuerySnapshot>(
+    return StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
       stream: FirebaseFirestore.instance.collection('operadores').snapshots(),
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
-          return const Center(
-            child: CircularProgressIndicator(color: Color(0xFFFC6707)),
-          );
+          return const Center(child: CircularProgressIndicator(color: _Palette.primary));
         }
-
         if (snapshot.hasError) {
           return Center(
-            child: Text(
-              'Error: ${snapshot.error}',
-              style: GoogleFonts.outfit(color: Colors.red),
-            ),
+            child: Text('Error: ${snapshot.error}', style: GoogleFonts.outfit(color: Colors.red)),
           );
         }
 
-        final docs = snapshot.data?.docs ?? [];
-        
-        final operadoresFiltrados = docs.where((doc) {
-          final data = doc.data() as Map<String, dynamic>;
-          return data['estado'] == filtroEstado;
-        }).toList();
+        final operadores =
+            (snapshot.data?.docs ?? []).where((doc) => doc.data()['estado'] == tab.estado).toList();
 
-        if (operadoresFiltrados.isEmpty) {
+        if (operadores.isEmpty) {
           return Center(
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Icon(
-                  _selectedTab == 0 ? Icons.pending_actions : (_selectedTab == 1 ? Icons.check_circle : Icons.cancel),
-                  size: 48,
-                  color: const Color(0xFFCCCCCC),
-                ),
+                Icon(tab.emptyIcon, size: 48, color: const Color(0xFFCCCCCC)),
                 const SizedBox(height: 12),
-                Text(
-                  'No hay operadores con este estado',
-                  style: GoogleFonts.outfit(
-                    fontSize: 14,
-                    color: const Color(0xFF999999),
-                  ),
-                ),
+                Text('No hay operadores con este estado',
+                    style: GoogleFonts.outfit(fontSize: 14, color: _Palette.textFaint)),
               ],
             ),
           );
@@ -470,22 +560,13 @@ class _AdminOperatorsViewState extends State<AdminOperatorsView> {
 
         return ListView.builder(
           physics: const BouncingScrollPhysics(),
-          itemCount: operadoresFiltrados.length,
+          itemCount: operadores.length,
           itemBuilder: (context, index) {
-            final doc = operadoresFiltrados[index];
-            final data = doc.data() as Map<String, dynamic>;
-            
-            final operadorObj = Usuario.fromMap(doc.id, data);
-            final nombre = data['nombre'] ?? 'Sin nombre';
-            final empresa = data['empresa'] ?? 'Sin empresa';
-            final bool activo = data['activo'] as bool? ?? true;
-
+            final doc = operadores[index];
+            final data = doc.data();
             return _buildOperatorCard(
-              operadorObj: operadorObj,
+              operador: Usuario.fromMap(doc.id, data),
               data: data,
-              nombre: nombre,
-              empresa: empresa,
-              activo: activo,
               isMobile: isMobile,
             );
           },
@@ -495,20 +576,22 @@ class _AdminOperatorsViewState extends State<AdminOperatorsView> {
   }
 
   Widget _buildOperatorCard({
-    required Usuario operadorObj,
+    required Usuario operador,
     required Map<String, dynamic> data,
-    required String nombre,
-    required String empresa,
-    required bool activo,
     required bool isMobile,
   }) {
+    final nombre = data['nombre'] as String? ?? 'Sin nombre';
+    final empresa = data['empresa'] as String? ?? 'Sin empresa';
+    final activo = data['activo'] as bool? ?? true;
+    final licenciaUrl = data['licenciaUrl'] as String?;
+
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       padding: EdgeInsets.all(isMobile ? 12 : 16),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: const Color(0xFFE0E0E0), width: 1),
+        border: Border.all(color: _Palette.border, width: 1),
       ),
       child: ExpansionTile(
         tilePadding: EdgeInsets.zero,
@@ -518,18 +601,11 @@ class _AdminOperatorsViewState extends State<AdminOperatorsView> {
             Container(
               width: 45,
               height: 45,
-              decoration: const BoxDecoration(
-                shape: BoxShape.circle,
-                color: Color(0xFFFDDBB3),
-              ),
+              decoration: const BoxDecoration(shape: BoxShape.circle, color: _Palette.primaryLight),
               child: Center(
                 child: Text(
                   empresa.isNotEmpty ? empresa[0].toUpperCase() : '?',
-                  style: GoogleFonts.outfit(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                    color: const Color(0xFFFC6707),
-                  ),
+                  style: GoogleFonts.outfit(fontSize: 18, fontWeight: FontWeight.bold, color: _Palette.primary),
                 ),
               ),
             ),
@@ -538,272 +614,102 @@ class _AdminOperatorsViewState extends State<AdminOperatorsView> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    empresa,
-                    style: GoogleFonts.outfit(
-                      fontSize: isMobile ? 14 : 16,
-                      fontWeight: FontWeight.w600,
-                      color: const Color(0xFF333333),
-                    ),
-                  ),
-                  Text(
-                    'Representante: $nombre',
-                    style: GoogleFonts.outfit(
-                      fontSize: isMobile ? 11 : 12,
-                      color: const Color(0xFF666666),
-                    ),
-                  ),
-                  Text(
-                    data['correo'] ?? 'Sin correo',
-                    style: GoogleFonts.outfit(
-                      fontSize: isMobile ? 11 : 12,
-                      color: const Color(0xFF888888),
-                    ),
-                  ),
+                  Text(empresa,
+                      style: GoogleFonts.outfit(
+                          fontSize: isMobile ? 14 : 16, fontWeight: FontWeight.w600, color: _Palette.textDark)),
+                  Text('Representante: $nombre',
+                      style: GoogleFonts.outfit(fontSize: isMobile ? 11 : 12, color: _Palette.textGrey)),
+                  Text(data['correo'] as String? ?? 'Sin correo',
+                      style: GoogleFonts.outfit(fontSize: isMobile ? 11 : 12, color: _Palette.textLight)),
                 ],
               ),
             ),
-            if (_selectedTab == 1) ...[
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                decoration: BoxDecoration(
-                  color: activo ? const Color(0xFF4CAF50).withOpacity(0.1) : const Color(0xFFF44336).withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Text(
-                  activo ? 'Activo' : 'Inactivo',
-                  style: GoogleFonts.outfit(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w600,
-                    color: activo ? const Color(0xFF4CAF50) : const Color(0xFFF44336),
-                  ),
-                ),
-              ),
-              const SizedBox(width: 8),
-              IconButton(
-                onPressed: () => _toggleOperatorStatus(operadorObj, nombre),
-                icon: Icon(
-                  activo ? Icons.block : Icons.check_circle,
-                  color: activo ? const Color(0xFFF44336) : const Color(0xFF4CAF50),
-                  size: 24,
-                ),
-                tooltip: activo ? 'Inhabilitar' : 'Activar',
-                padding: EdgeInsets.zero,
-                constraints: const BoxConstraints(),
-              ),
-            ],
-            if (_selectedTab == 0) ...[
-              IconButton(
-                onPressed: () async {
-                  final error = await Provider.of<AuthController>(context, listen: false)
-                      .approveOperator(operadorObj);
-                  if (error != null) {
-                    _mostrarMensaje(error);
-                  } else {
-                    _mostrarMensaje('Operador aprobado correctamente');
-                  }
-                },
-                icon: const Icon(Icons.check_circle, color: Color(0xFF4CAF50), size: 24),
-                tooltip: 'Aprobar',
-                padding: EdgeInsets.zero,
-                constraints: const BoxConstraints(),
-              ),
-              IconButton(
-                onPressed: () async {
-                  final error = await Provider.of<AuthController>(context, listen: false)
-                      .rejectOperator(operadorObj);
-                  if (error != null) {
-                    _mostrarMensaje(error);
-                  } else {
-                    _mostrarMensaje('Operador rechazado');
-                  }
-                },
-                icon: const Icon(Icons.cancel, color: Color(0xFFF44336), size: 24),
-                tooltip: 'Rechazar',
-                padding: EdgeInsets.zero,
-                constraints: const BoxConstraints(),
-              ),
-            ],
-            if (_selectedTab == 2) ...[
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                decoration: BoxDecoration(
-                  color: const Color(0xFFF44336).withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Text(
-                  'Rechazado',
-                  style: GoogleFonts.outfit(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w600,
-                    color: const Color(0xFFF44336),
-                  ),
-                ),
-              ),
-            ],
+            _OperatorActions(
+              tabIndex: _selectedTab,
+              activo: activo,
+              onToggleActivo: () => _toggleOperatorStatus(operador.id, nombre, activo),
+              onApprove: () => _aprobarOperador(operador),
+              onReject: () => _rechazarOperador(operador),
+            ),
           ],
         ),
         children: [
           const Divider(),
           const SizedBox(height: 8),
-          _buildInfoRow('Teléfono:', data['telefono'] ?? 'Sin teléfono', isMobile),
-          _buildInfoRow('RIF:', data['rif'] ?? 'Sin RIF', isMobile),
-          _buildInfoRow('Descripción:', data['descripcion'] ?? 'Sin descripción', isMobile),
-          _buildLicenciaRow(data['licenciaUrl'], isMobile),
+          _InfoRow(
+            label: 'Teléfono:',
+            isMobile: isMobile,
+            value: Text(data['telefono'] as String? ?? 'Sin teléfono', style: _Styles.infoValue(isMobile)),
+          ),
+          _InfoRow(
+            label: 'RIF:',
+            isMobile: isMobile,
+            value: Text(data['rif'] as String? ?? 'Sin RIF', style: _Styles.infoValue(isMobile)),
+          ),
+          _InfoRow(
+            label: 'Descripción:',
+            isMobile: isMobile,
+            value: Text(data['descripcion'] as String? ?? 'Sin descripción', style: _Styles.infoValue(isMobile)),
+          ),
+          _InfoRow(
+            label: 'Licencia:',
+            isMobile: isMobile,
+            value: _buildLicenciaValue(licenciaUrl, isMobile),
+          ),
           const SizedBox(height: 8),
         ],
       ),
     );
   }
 
-  Widget _buildInfoRow(String label, String value, bool isMobile) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 4),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          SizedBox(
-            width: isMobile ? 80 : 100,
-            child: Text(
-              label,
-              style: GoogleFonts.outfit(
-                fontSize: isMobile ? 11 : 12,
-                fontWeight: FontWeight.w600,
-                color: const Color(0xFF666666),
-              ),
-            ),
-          ),
-          Expanded(
-            child: Text(
-              value,
-              style: GoogleFonts.outfit(
-                fontSize: isMobile ? 11 : 12,
-                color: const Color(0xFF333333),
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildLicenciaRow(String? url, bool isMobile) {
+  Widget _buildLicenciaValue(String? url, bool isMobile) {
     if (url == null || url.isEmpty) {
-      return Padding(
-        padding: const EdgeInsets.only(bottom: 4),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            SizedBox(
-              width: isMobile ? 80 : 100,
-              child: Text(
-                'Licencia:',
-                style: GoogleFonts.outfit(
-                  fontSize: isMobile ? 11 : 12,
-                  fontWeight: FontWeight.w600,
-                  color: const Color(0xFF666666),
-                ),
-              ),
-            ),
-            Expanded(
-              child: Text(
-                'No hay documento',
-                style: GoogleFonts.outfit(
-                  fontSize: isMobile ? 11 : 12,
-                  color: const Color(0xFF999999),
-                ),
-              ),
-            ),
-          ],
-        ),
-      );
+      return Text('No hay documento', style: _Styles.infoValue(isMobile, color: _Palette.textFaint));
     }
 
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 4),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
+    return MouseRegion(
+      cursor: SystemMouseCursors.click,
+      child: GestureDetector(
+        onTap: () => _verLicencia(url, isMobile),
+        child: Text(
+          'Ver documento cargado',
+          style: _Styles.infoValue(isMobile, color: _Palette.primary)
+              .copyWith(decoration: TextDecoration.underline),
+        ),
+      ),
+    );
+  }
+}
+
+/// Diálogo simple para previsualizar la imagen de la licencia de turismo.
+class _LicenciaPreviewDialog extends StatelessWidget {
+  final Uint8List bytes;
+  final bool isMobile;
+
+  const _LicenciaPreviewDialog({required this.bytes, required this.isMobile});
+
+  @override
+  Widget build(BuildContext context) {
+    return Dialog(
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
         children: [
-          SizedBox(
-            width: isMobile ? 80 : 100,
-            child: Text(
-              'Licencia:',
-              style: GoogleFonts.outfit(
-                fontSize: isMobile ? 11 : 12,
-                fontWeight: FontWeight.w600,
-                color: const Color(0xFF666666),
-              ),
-            ),
+          AppBar(
+            title: const Text('Licencia de Turismo'),
+            backgroundColor: _Palette.primary,
+            foregroundColor: Colors.white,
+            automaticallyImplyLeading: false,
+            actions: [
+              IconButton(icon: const Icon(Icons.close), onPressed: () => Navigator.pop(context)),
+            ],
           ),
-          Expanded(
-            child: MouseRegion(
-              cursor: SystemMouseCursors.click,
-              child: GestureDetector(
-                onTap: () => _verLicencia(url, isMobile),
-                child: Text(
-                  'Ver documento cargado',
-                  style: GoogleFonts.outfit(
-                    fontSize: isMobile ? 11 : 12,
-                    color: const Color(0xFFFC6707),
-                    decoration: TextDecoration.underline,
-                  ),
-                ),
-              ),
-            ),
+          Padding(
+            padding: const EdgeInsets.all(16),
+            child: Image.memory(bytes, fit: BoxFit.contain, height: isMobile ? 300 : 500, width: double.infinity),
           ),
         ],
       ),
     );
-  }
-
-  void _verLicencia(String url, bool isMobile) {
-    if (url.isEmpty) {
-      _mostrarMensaje('Este operador no tiene licencia cargada.');
-      return;
-    }
-    try {
-      if (url.startsWith('data:image')) {
-        final base64String = url.split(',').last;
-        final bytes = base64Decode(base64String);
-        showDialog(
-          context: context,
-          builder: (_) => Dialog(
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(16),
-            ),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                AppBar(
-                  title: const Text('Licencia de Turismo'),
-                  backgroundColor: const Color(0xFFFC6707),
-                  foregroundColor: Colors.white,
-                  automaticallyImplyLeading: false,
-                  actions: [
-                    IconButton(
-                      icon: const Icon(Icons.close),
-                      onPressed: () => Navigator.pop(context),
-                    ),
-                  ],
-                ),
-                Padding(
-                  padding: const EdgeInsets.all(16),
-                  child: Image.memory(
-                    bytes,
-                    fit: BoxFit.contain,
-                    height: isMobile ? 300 : 500,
-                    width: double.infinity,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        );
-      } else {
-        _mostrarMensaje('Formato de licencia no soportado o inválido.');
-      }
-    } catch (e) {
-      _mostrarMensaje('Error al abrir la licencia.');
-    }
   }
 }

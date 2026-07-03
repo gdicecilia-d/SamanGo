@@ -1,17 +1,130 @@
 // Dashboard del administrador con métricas reales traídas de Firestore
+import 'dart:convert';
+import 'dart:math' as math;
+
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
+
 import '../../controllers/auth_controller.dart';
-import '../shared/app_header.dart';
-import '../../views/shared/widgets/custom_dialog.dart';
 import '../auth/login_view.dart';
-import 'admin_users_view.dart';
+import '../shared/app_header.dart';
+import '../shared/widgets/custom_dialog.dart';
 import 'admin_edit_profile_view.dart';
 import 'admin_management_view.dart';
 import 'admin_reports_view.dart';
-import 'dart:convert';
+import 'admin_users_view.dart';
+
+/// Paleta de colores del módulo admin, centralizada para no repetir
+/// literales de color por todo el archivo.
+class _Palette {
+  static const primary = Color(0xFFFC6707);
+  static const primaryLight = Color(0xFFFDDBB3);
+  static const textDark = Color(0xFF333333);
+  static const textGrey = Color(0xFF666666);
+  static const textLight = Color(0xFF888888);
+  static const textFaint = Color(0xFF999999);
+  static const border = Color(0xFFE0E0E0);
+  static const cardBg = Color(0xFFF8F8F8);
+
+  static const categoryColors = [
+    Color(0xFFFC6707),
+    Color(0xFFFFB74D),
+    Color(0xFFFF8A65),
+    Color(0xFFFFAB91),
+  ];
+}
+
+/// Estilos de texto reutilizables (Google Fonts Outfit) para no repetir
+/// los mismos parámetros en cada Text().
+class _Styles {
+  static TextStyle title(bool isMobile) => GoogleFonts.outfit(
+        fontSize: isMobile ? 24 : 28,
+        fontWeight: FontWeight.bold,
+        color: _Palette.textDark,
+      );
+
+  static final subtitle = GoogleFonts.outfit(
+    fontSize: 14,
+    color: _Palette.textLight,
+  );
+
+  static final cardValue = GoogleFonts.outfit(
+    fontSize: 24,
+    fontWeight: FontWeight.bold,
+    color: _Palette.textDark,
+  );
+
+  static final cardLabel = GoogleFonts.outfit(
+    fontSize: 14,
+    color: _Palette.textLight,
+  );
+
+  static final sectionTitle = GoogleFonts.outfit(
+    fontSize: 16,
+    fontWeight: FontWeight.bold,
+    color: _Palette.textDark,
+  );
+
+  static final chartRowLabel = GoogleFonts.outfit(
+    fontSize: 13,
+    color: _Palette.textDark,
+  );
+
+  static final chartRowValue = GoogleFonts.outfit(
+    fontSize: 13,
+    fontWeight: FontWeight.bold,
+    color: _Palette.primary,
+  );
+
+  static final emptyState = GoogleFonts.outfit(
+    fontSize: 13,
+    color: _Palette.textFaint,
+  );
+
+  static final drawerName = GoogleFonts.outfit(
+    fontSize: 16,
+    fontWeight: FontWeight.bold,
+    color: _Palette.textDark,
+  );
+
+  static final drawerRole = GoogleFonts.outfit(
+    fontSize: 12,
+    color: _Palette.textGrey,
+  );
+
+  static TextStyle drawerItem(bool isActive) => GoogleFonts.outfit(
+        fontSize: 16,
+        fontWeight: isActive ? FontWeight.bold : FontWeight.w500,
+        color: isActive ? _Palette.primary : _Palette.textDark,
+      );
+
+  static TextStyle footer(bool isMobile) => GoogleFonts.outfit(
+        fontSize: isMobile ? 10 : 12,
+        color: Colors.white,
+        fontWeight: FontWeight.w500,
+      );
+}
+
+/// Entrada de menú: agrupa título, ícono y la vista a la que navega.
+/// Un solo lugar para definir el menú del AppBar + Drawer + navegación.
+class _MenuEntry {
+  final String title;
+  final IconData icon;
+  final WidgetBuilder? viewBuilder; // null => se queda en el Dashboard
+
+  const _MenuEntry(this.title, this.icon, [this.viewBuilder]);
+}
+
+/// Un item de métrica simple (tarjeta con ícono, valor y etiqueta).
+class _MetricItem {
+  final String label;
+  final String value;
+  final IconData icon;
+
+  const _MetricItem(this.label, this.value, this.icon);
+}
 
 class AdminHomeView extends StatefulWidget {
   const AdminHomeView({super.key});
@@ -22,13 +135,8 @@ class AdminHomeView extends StatefulWidget {
 
 class _AdminHomeViewState extends State<AdminHomeView> {
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
-  String _activeMenu = 'Dashboard';
-  final List<String> _menuItems = [
-    'Dashboard',
-    'Gestión',
-    'Usuarios',
-    'Reportes'
-  ];
+  static const String _dashboardTitle = 'Dashboard';
+  String _activeMenu = _dashboardTitle;
 
   static const List<String> _categoriasValidas = [
     'Playas / Cayos',
@@ -37,13 +145,17 @@ class _AdminHomeViewState extends State<AdminHomeView> {
     'Cultura / Ciudades',
   ];
 
-  static const List<Color> _coloresCategorias = [
-    Color(0xFFFC6707),
-    Color(0xFFFFB74D),
-    Color(0xFFFF8A65),
-    Color(0xFFFFAB91),
+  static final List<_MenuEntry> _menu = [
+    const _MenuEntry(_dashboardTitle, Icons.dashboard_outlined),
+    _MenuEntry('Gestión', Icons.settings_outlined,
+        (_) => const AdminManagementView()),
+    _MenuEntry('Usuarios', Icons.people_outline,
+        (_) => const AdminUsersView()),
+    _MenuEntry('Reportes', Icons.bar_chart_outlined,
+        (_) => const AdminReportsView()),
   ];
 
+  // --- Estado de métricas ---
   int _totalOperadores = 0;
   int _totalEstudiantes = 0;
   int _totalDestinos = 0;
@@ -52,7 +164,6 @@ class _AdminHomeViewState extends State<AdminHomeView> {
   bool _cargando = true;
 
   List<MapEntry<String, int>> _topDestinos = [];
-
   Map<String, int> _destinosPorCategoria = {
     for (final cat in _categoriasValidas) cat: 0,
   };
@@ -62,6 +173,10 @@ class _AdminHomeViewState extends State<AdminHomeView> {
     super.initState();
     _cargarMetricas();
   }
+
+  // ---------------------------------------------------------------------
+  // Carga de datos
+  // ---------------------------------------------------------------------
 
   Future<void> _cargarMetricas() async {
     try {
@@ -79,122 +194,130 @@ class _AdminHomeViewState extends State<AdminHomeView> {
       final destinosSnap = results[2];
       final reservasSnap = results[3];
 
-      final Map<String, String> nombrePorDestino = {};
-      int destinosActivos = 0;
-      final Map<String, int> conteoCategoria = {
-        for (final cat in _categoriasValidas) cat: 0,
-      };
+      final destinosInfo = _procesarDestinos(db, destinosSnap.docs);
+      final reservasInfo = _procesarReservas(reservasSnap.docs, destinosInfo.nombrePorDestino);
 
-      final now = DateTime.now();
-      final targetDate = now.add(const Duration(days: 7));
-
-      for (final doc in destinosSnap.docs) {
-        final data = doc.data();
-        final activo = data['activo'] as bool? ?? false;
-        final nombre = data['nombre'] as String? ?? 'Sin nombre';
-        final categoria = data['categoria'] as String? ?? '';
-
-        bool needsUpdate = false;
-        Map<String, dynamic> updates = {};
-
-        if (data.containsKey('fechaPublicacion') && data['fechaPublicacion'] != null) {
-          try {
-            final fp = DateTime.parse(data['fechaPublicacion'].toString());
-            if (fp.isBefore(now)) {
-              updates['fechaPublicacion'] = targetDate.toIso8601String();
-              needsUpdate = true;
-            }
-          } catch (e) {}
-        }
-
-        if (data.containsKey('fechaInicio') && data['fechaInicio'] != null) {
-          try {
-            final fi = DateTime.parse(data['fechaInicio'].toString());
-            if (fi.isBefore(now)) {
-              updates['fechaInicio'] = targetDate.toIso8601String();
-              needsUpdate = true;
-            }
-          } catch (e) {}
-        }
-
-        if (needsUpdate) {
-          db.collection('destinos').doc(doc.id).update(updates);
-        }
-
-        nombrePorDestino[doc.id] = nombre;
-
-        if (activo) destinosActivos++;
-
-        if (conteoCategoria.containsKey(categoria)) {
-          conteoCategoria[categoria] = conteoCategoria[categoria]! + 1;
-        }
-      }
-
-      double ingresos = 0;
-      final Map<String, int> reservasPorDestino = {};
-
-      for (final doc in reservasSnap.docs) {
-        final data = doc.data();
-        final estado = data['estadoActual'] as String? ?? '';
-        final paqueteId = data['paqueteId'] as String? ?? '';
-
-        if (estado == 'pagado' || estado == 'disfrutado') {
-          ingresos += (data['totalGeneral'] as num? ?? 0).toDouble();
-        }
-
-        if (paqueteId.isNotEmpty) {
-          reservasPorDestino[paqueteId] =
-              (reservasPorDestino[paqueteId] ?? 0) + 1;
-        }
-      }
-
-      final destinosOrdenados = reservasPorDestino.entries.toList()
-        ..sort((a, b) => b.value.compareTo(a.value));
-
-      final top5 = destinosOrdenados.take(5).map((entry) {
-        final nombre = nombrePorDestino[entry.key] ?? 'Destino eliminado';
-        return MapEntry(nombre, entry.value);
-      }).toList();
-
-      if (mounted) {
-        setState(() {
-          _totalEstudiantes = estudiantesSnap.docs.length;
-          _totalOperadores = operadoresSnap.docs.length;
-          _totalDestinos = destinosActivos;
-          _totalReservas = reservasSnap.docs.length;
-          _totalIngresos = ingresos;
-          _topDestinos = top5;
-          _destinosPorCategoria = conteoCategoria;
-          _cargando = false;
-        });
-      }
-    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _totalEstudiantes = estudiantesSnap.docs.length;
+        _totalOperadores = operadoresSnap.docs.length;
+        _totalDestinos = destinosInfo.destinosActivos;
+        _totalReservas = reservasSnap.docs.length;
+        _totalIngresos = reservasInfo.ingresos;
+        _topDestinos = reservasInfo.top5;
+        _destinosPorCategoria = destinosInfo.conteoCategoria;
+        _cargando = false;
+      });
+    } catch (_) {
       if (mounted) setState(() => _cargando = false);
     }
   }
 
-  void _handleMenuSelected(String menu) {
-    if (menu == 'Usuarios') {
-      Navigator.push(
-        context,
-        MaterialPageRoute(builder: (_) => const AdminUsersView()),
-      );
-    } else if (menu == 'Gestión') {
-      Navigator.push(
-        context,
-        MaterialPageRoute(builder: (_) => const AdminManagementView()),
-      );
-    } else if (menu == 'Reportes') {
-      Navigator.push(
-        context,
-        MaterialPageRoute(builder: (_) => const AdminReportsView()),
-      );
+  /// Recorre los destinos: cuenta activos, agrupa por categoría y
+  /// renueva automáticamente las fechas de publicación/inicio vencidas.
+  _DestinosInfo _procesarDestinos(
+    FirebaseFirestore db,
+    List<QueryDocumentSnapshot<Map<String, dynamic>>> docs,
+  ) {
+    final nombrePorDestino = <String, String>{};
+    final conteoCategoria = {for (final cat in _categoriasValidas) cat: 0};
+    int destinosActivos = 0;
+
+    final now = DateTime.now();
+    final nuevaFecha = now.add(const Duration(days: 7));
+
+    for (final doc in docs) {
+      final data = doc.data();
+      final activo = data['activo'] as bool? ?? false;
+      final nombre = data['nombre'] as String? ?? 'Sin nombre';
+      final categoria = data['categoria'] as String? ?? '';
+
+      nombrePorDestino[doc.id] = nombre;
+      if (activo) destinosActivos++;
+      if (conteoCategoria.containsKey(categoria)) {
+        conteoCategoria[categoria] = conteoCategoria[categoria]! + 1;
+      }
+
+      final updates = _fechasVencidasAActualizar(data, now, nuevaFecha);
+      if (updates.isNotEmpty) {
+        db.collection('destinos').doc(doc.id).update(updates);
+      }
     }
+
+    return _DestinosInfo(nombrePorDestino, conteoCategoria, destinosActivos);
+  }
+
+  /// Revisa `fechaPublicacion` y `fechaInicio`; si ya vencieron, arma un
+  /// mapa de campos a actualizar con la nueva fecha.
+  Map<String, dynamic> _fechasVencidasAActualizar(
+    Map<String, dynamic> data,
+    DateTime now,
+    DateTime nuevaFecha,
+  ) {
+    final updates = <String, dynamic>{};
+
+    for (final campo in ['fechaPublicacion', 'fechaInicio']) {
+      final raw = data[campo];
+      if (raw == null) continue;
+      final fecha = DateTime.tryParse(raw.toString());
+      if (fecha != null && fecha.isBefore(now)) {
+        updates[campo] = nuevaFecha.toIso8601String();
+      }
+    }
+
+    return updates;
+  }
+
+  /// Suma ingresos confirmados y calcula el top 5 de destinos con más
+  /// reservas.
+  _ReservasInfo _procesarReservas(
+    List<QueryDocumentSnapshot<Map<String, dynamic>>> docs,
+    Map<String, String> nombrePorDestino,
+  ) {
+    double ingresos = 0;
+    final reservasPorDestino = <String, int>{};
+
+    for (final doc in docs) {
+      final data = doc.data();
+      final estado = data['estadoActual'] as String? ?? '';
+      final paqueteId = data['paqueteId'] as String? ?? '';
+
+      if (estado == 'pagado' || estado == 'disfrutado') {
+        ingresos += (data['totalGeneral'] as num? ?? 0).toDouble();
+      }
+      if (paqueteId.isNotEmpty) {
+        reservasPorDestino[paqueteId] = (reservasPorDestino[paqueteId] ?? 0) + 1;
+      }
+    }
+
+    final ordenados = reservasPorDestino.entries.toList()
+      ..sort((a, b) => b.value.compareTo(a.value));
+
+    final top5 = ordenados.take(5).map((entry) {
+      final nombre = nombrePorDestino[entry.key] ?? 'Destino eliminado';
+      return MapEntry(nombre, entry.value);
+    }).toList();
+
+    return _ReservasInfo(ingresos, top5);
+  }
+
+  // ---------------------------------------------------------------------
+  // Acciones
+  // ---------------------------------------------------------------------
+
+  void _handleMenuSelected(String menuTitle) {
+    final entry = _menu.firstWhere((e) => e.title == menuTitle);
+    final builder = entry.viewBuilder;
+    if (builder == null) return; // Dashboard: no navega a ningún lado
+
+    Navigator.push(context, MaterialPageRoute(builder: builder));
   }
 
   void _handleEditProfile() {
-    Navigator.push(context,
-        MaterialPageRoute(builder: (_) => const AdminEditProfileView()));
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (_) => const AdminEditProfileView()),
+    );
   }
 
   void _handleLogout() {
@@ -205,29 +328,26 @@ class _AdminHomeViewState extends State<AdminHomeView> {
       confirmText: 'Salir',
       icon: Icons.logout,
     ).then((confirm) async {
-      if (confirm == true) {
-        await Provider.of<AuthController>(context, listen: false).logout();
-        if (!context.mounted) return;
-        Navigator.pushReplacement(context,
-            MaterialPageRoute(builder: (_) => const LoginView()));
-      }
-    });
-  }
+      if (confirm != true) return;
 
-  void _mostrarMensaje(String mensaje) {
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-      content: Text(mensaje),
-      backgroundColor: const Color(0xFFFC6707),
-      duration: const Duration(seconds: 2),
-    ));
+      await Provider.of<AuthController>(context, listen: false).logout();
+      if (!context.mounted) return;
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (_) => const LoginView()),
+      );
+    });
   }
 
   void _openDrawer() => _scaffoldKey.currentState?.openEndDrawer();
 
+  // ---------------------------------------------------------------------
+  // Build
+  // ---------------------------------------------------------------------
+
   @override
   Widget build(BuildContext context) {
-    final screenWidth = MediaQuery.of(context).size.width;
-    final isMobile = screenWidth < 850;
+    final isMobile = MediaQuery.of(context).size.width < 850;
 
     return Scaffold(
       key: _scaffoldKey,
@@ -240,7 +360,7 @@ class _AdminHomeViewState extends State<AdminHomeView> {
             onMenuSelected: _handleMenuSelected,
             onEditProfile: _handleEditProfile,
             onLogout: _handleLogout,
-            menuItems: _menuItems,
+            menuItems: _menu.map((e) => e.title).toList(),
             isMobile: isMobile,
             onMenuTap: isMobile ? _openDrawer : null,
           ),
@@ -252,8 +372,11 @@ class _AdminHomeViewState extends State<AdminHomeView> {
     );
   }
 
+  // --- Drawer (menú lateral en móvil) ---
+
   Widget _buildDrawer() {
     final user = Provider.of<AuthController>(context).usuarioActual;
+    final tieneFoto = user?.fotoBase64 != null && user!.fotoBase64!.isNotEmpty;
 
     return Drawer(
       backgroundColor: Colors.white,
@@ -273,21 +396,20 @@ class _AdminHomeViewState extends State<AdminHomeView> {
                       height: 50,
                       decoration: BoxDecoration(
                         shape: BoxShape.circle,
-                        border:
-                            Border.all(color: const Color(0xFFFC6707), width: 2),
+                        border: Border.all(color: _Palette.primary, width: 2),
                       ),
                       child: ClipOval(
-                        child: user?.fotoBase64 != null && user!.fotoBase64!.isNotEmpty
+                        child: tieneFoto
                             ? Image.memory(
-                                base64Decode(user.fotoBase64!),
+                                base64Decode(user!.fotoBase64!),
                                 width: 50,
                                 height: 50,
                                 fit: BoxFit.cover,
                               )
                             : const CircleAvatar(
-                                backgroundColor: Color(0xFFFDDBB3),
+                                backgroundColor: _Palette.primaryLight,
                                 child: Icon(Icons.admin_panel_settings,
-                                    color: Color(0xFFFC6707), size: 28),
+                                    color: _Palette.primary, size: 28),
                               ),
                       ),
                     ),
@@ -297,16 +419,9 @@ class _AdminHomeViewState extends State<AdminHomeView> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(
-                          user?.nombre ?? 'Administrador',
-                          style: GoogleFonts.outfit(
-                              fontSize: 16,
-                              fontWeight: FontWeight.bold,
-                              color: const Color(0xFF333333)),
-                        ),
-                        Text('Administrador',
-                            style: GoogleFonts.outfit(
-                                fontSize: 12, color: const Color(0xFF666666))),
+                        Text(user?.nombre ?? 'Administrador',
+                            style: _Styles.drawerName),
+                        Text('Administrador', style: _Styles.drawerRole),
                       ],
                     ),
                   ),
@@ -314,24 +429,16 @@ class _AdminHomeViewState extends State<AdminHomeView> {
               ),
             ),
             const SizedBox(height: 16),
-            const Divider(height: 1, color: Color(0xFFE0E0E0)),
-            _buildDrawerItem('Dashboard', Icons.dashboard_outlined, () {
-              Navigator.pop(context);
-            }),
-            _buildDrawerItem('Gestión', Icons.settings_outlined, () {
-              Navigator.pop(context);
-              _handleMenuSelected('Gestión');
-            }),
-            _buildDrawerItem('Usuarios', Icons.people_outline, () {
-              Navigator.pop(context);
-              _handleMenuSelected('Usuarios');
-            }),
-            _buildDrawerItem('Reportes', Icons.bar_chart_outlined, () {
-              Navigator.pop(context);
-              _handleMenuSelected('Reportes');
-            }),
+            const Divider(height: 1, color: _Palette.border),
+            for (final entry in _menu)
+              _buildDrawerItem(entry.title, entry.icon, () {
+                Navigator.pop(context);
+                if (entry.title != _dashboardTitle) {
+                  _handleMenuSelected(entry.title);
+                }
+              }),
             const Spacer(),
-            const Divider(height: 1, color: Color(0xFFE0E0E0)),
+            const Divider(height: 1, color: _Palette.border),
             _buildDrawerItem('Cerrar Sesión', Icons.logout_outlined, () {
               Navigator.pop(context);
               _handleLogout();
@@ -346,24 +453,17 @@ class _AdminHomeViewState extends State<AdminHomeView> {
   Widget _buildDrawerItem(String title, IconData icon, VoidCallback onTap) {
     final isActive = title == _activeMenu;
     return ListTile(
-      leading: Icon(icon, color: const Color(0xFFFC6707)),
-      title: Text(
-        title,
-        style: GoogleFonts.outfit(
-          fontSize: 16,
-          fontWeight: isActive ? FontWeight.bold : FontWeight.w500,
-          color: isActive ? const Color(0xFFFC6707) : const Color(0xFF333333),
-        ),
-      ),
+      leading: Icon(icon, color: _Palette.primary),
+      title: Text(title, style: _Styles.drawerItem(isActive)),
       onTap: onTap,
     );
   }
 
-  // Layout para móvil con CustomScrollView
+  // --- Layouts ---
+
   Widget _buildMobileLayout() {
     return CustomScrollView(
       slivers: [
-        // Contenido principal
         SliverToBoxAdapter(
           child: Column(
             children: [
@@ -372,13 +472,12 @@ class _AdminHomeViewState extends State<AdminHomeView> {
             ],
           ),
         ),
-        // SliverFillRemaining con Column + Spacer para mantener el footer compacto
         SliverFillRemaining(
           hasScrollBody: false,
           child: Column(
             children: [
-              const Spacer(), // Espacio blanco que se estira
-              _buildFooter(true), // Footer mantiene su tamaño original
+              const Spacer(),
+              _buildFooter(true),
             ],
           ),
         ),
@@ -386,7 +485,6 @@ class _AdminHomeViewState extends State<AdminHomeView> {
     );
   }
 
-  // Layout para desktop con CustomScrollView
   Widget _buildDesktopLayout() {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -401,7 +499,6 @@ class _AdminHomeViewState extends State<AdminHomeView> {
             ),
             child: CustomScrollView(
               slivers: [
-                // Contenido principal
                 SliverToBoxAdapter(
                   child: Column(
                     children: [
@@ -410,13 +507,12 @@ class _AdminHomeViewState extends State<AdminHomeView> {
                     ],
                   ),
                 ),
-                // SliverFillRemaining con Column + Spacer para mantener el footer compacto
                 SliverFillRemaining(
                   hasScrollBody: false,
                   child: Column(
                     children: [
-                      const Spacer(), // Espacio blanco que se estira
-                      _buildFooter(false), // Footer mantiene su tamaño original
+                      const Spacer(),
+                      _buildFooter(false),
                     ],
                   ),
                 ),
@@ -424,40 +520,58 @@ class _AdminHomeViewState extends State<AdminHomeView> {
             ),
           ),
         ),
-        // Panel derecho con imagen del campus
-        Container(
-          width: 320,
-          decoration: BoxDecoration(
-            border: Border(
-              left: BorderSide(color: Colors.grey.withOpacity(0.3), width: 1.5),
-            ),
-          ),
-          child: Image.asset(
-            'assets/images/campus_admin.png',
-            width: 320,
-            height: double.infinity,
-            fit: BoxFit.cover,
-            errorBuilder: (_, __, ___) => Container(
-              color: const Color(0xFFFDDBB3),
-              child: const Center(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(Icons.image, size: 48, color: Color(0xFFFC6707)),
-                    SizedBox(height: 8),
-                    Text('Imagen del Campus'),
-                  ],
-                ),
-              ),
-            ),
-          ),
-        ),
+        _buildCampusPanel(),
       ],
     );
   }
 
+  Widget _buildCampusPanel() {
+    return Container(
+      width: 320,
+      decoration: BoxDecoration(
+        border: Border(
+          left: BorderSide(color: Colors.grey.withOpacity(0.3), width: 1.5),
+        ),
+      ),
+      child: Image.asset(
+        'assets/images/campus_admin.png',
+        width: 320,
+        height: double.infinity,
+        fit: BoxFit.cover,
+        errorBuilder: (_, __, ___) => Container(
+          color: _Palette.primaryLight,
+          child: const Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(Icons.image, size: 48, color: _Palette.primary),
+                SizedBox(height: 8),
+                Text('Imagen del Campus'),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  // --- Contenido de métricas ---
+
   Widget _buildMetricsContent({required bool isMobile}) {
     final totalUsuarios = _totalEstudiantes + _totalOperadores;
+
+    final metricItems = [
+      _MetricItem('Total Usuarios', '$totalUsuarios', Icons.people),
+      _MetricItem('Operadores', '$_totalOperadores', Icons.business),
+      _MetricItem('Estudiantes', '$_totalEstudiantes', Icons.school),
+      _MetricItem('Destinos Activos', '$_totalDestinos', Icons.tour),
+      _MetricItem('Reservas', '$_totalReservas', Icons.receipt),
+      _MetricItem(
+        'Ingresos Confirmados',
+        '\$${_totalIngresos.toStringAsFixed(2)}',
+        Icons.attach_money,
+      ),
+    ];
 
     return Padding(
       padding: EdgeInsets.symmetric(horizontal: isMobile ? 16 : 24),
@@ -467,114 +581,29 @@ class _AdminHomeViewState extends State<AdminHomeView> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text(
-                'Dashboard de Métricas',
-                style: GoogleFonts.outfit(
-                  fontSize: isMobile ? 24 : 28,
-                  fontWeight: FontWeight.bold,
-                  color: const Color(0xFF333333),
-                ),
-              ),
+              Text('Dashboard de Métricas', style: _Styles.title(isMobile)),
               IconButton(
                 onPressed: () {
                   setState(() => _cargando = true);
                   _cargarMetricas();
                 },
-                icon: const Icon(Icons.refresh, color: Color(0xFFFC6707)),
+                icon: const Icon(Icons.refresh, color: _Palette.primary),
                 tooltip: 'Actualizar métricas',
               ),
             ],
           ),
           const SizedBox(height: 8),
-          Text(
-            'Datos en tiempo real de la plataforma SamanGo',
-            style:
-                GoogleFonts.outfit(fontSize: 14, color: const Color(0xFF888888)),
-          ),
+          Text('Datos en tiempo real de la plataforma SamanGo',
+              style: _Styles.subtitle),
           const SizedBox(height: 24),
-
-          if (isMobile) ...[
-            Row(
-              children: [
-                Expanded(
-                    child: _buildMetricCard('Total Usuarios',
-                        '$totalUsuarios', Icons.people)),
-                const SizedBox(width: 12),
-                Expanded(
-                    child: _buildMetricCard('Operadores',
-                        '$_totalOperadores', Icons.business)),
-              ],
-            ),
-            const SizedBox(height: 12),
-            Row(
-              children: [
-                Expanded(
-                    child: _buildMetricCard('Estudiantes',
-                        '$_totalEstudiantes', Icons.school)),
-                const SizedBox(width: 12),
-                Expanded(
-                    child: _buildMetricCard('Destinos Activos',
-                        '$_totalDestinos', Icons.tour)),
-              ],
-            ),
-            const SizedBox(height: 12),
-            Row(
-              children: [
-                Expanded(
-                    child: _buildMetricCard(
-                        'Reservas', '$_totalReservas', Icons.receipt)),
-                const SizedBox(width: 12),
-                Expanded(
-                    child: _buildMetricCard(
-                        'Ingresos Confirmados',
-                        '\$${_totalIngresos.toStringAsFixed(2)}',
-                        Icons.attach_money)),
-              ],
-            ),
-          ] else ...[
-            Row(
-              children: [
-                Expanded(
-                    child: _buildMetricCard('Total Usuarios',
-                        '$totalUsuarios', Icons.people)),
-                const SizedBox(width: 16),
-                Expanded(
-                    child: _buildMetricCard('Operadores',
-                        '$_totalOperadores', Icons.business)),
-                const SizedBox(width: 16),
-                Expanded(
-                    child: _buildMetricCard('Estudiantes',
-                        '$_totalEstudiantes', Icons.school)),
-              ],
-            ),
-            const SizedBox(height: 16),
-            Row(
-              children: [
-                Expanded(
-                    child: _buildMetricCard('Destinos Activos',
-                        '$_totalDestinos', Icons.tour)),
-                const SizedBox(width: 16),
-                Expanded(
-                    child: _buildMetricCard(
-                        'Reservas', '$_totalReservas', Icons.receipt)),
-                const SizedBox(width: 16),
-                Expanded(
-                    child: _buildMetricCard(
-                        'Ingresos Confirmados',
-                        '\$${_totalIngresos.toStringAsFixed(2)}',
-                        Icons.attach_money)),
-              ],
-            ),
-          ],
-
+          _buildMetricsGrid(metricItems, perRow: isMobile ? 2 : 3),
           const SizedBox(height: 32),
-
           if (isMobile) ...[
             _buildTopDestinosChart(),
             const SizedBox(height: 24),
             _buildCategoriaChart(),
             const SizedBox(height: 16),
-          ] else ...[
+          ] else
             Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -583,19 +612,42 @@ class _AdminHomeViewState extends State<AdminHomeView> {
                 Expanded(child: _buildCategoriaChart()),
               ],
             ),
-          ],
         ],
       ),
     );
   }
 
-  Widget _buildMetricCard(String title, String value, IconData icon) {
+  /// Arma una grilla de tarjetas de métricas agrupadas en filas de
+  /// [perRow] elementos, evitando repetir el layout para mobile/desktop.
+  Widget _buildMetricsGrid(List<_MetricItem> items, {required int perRow}) {
+    final spacing = perRow == 2 ? 12.0 : 16.0;
+    final rows = <Widget>[];
+
+    for (var i = 0; i < items.length; i += perRow) {
+      final rowItems = items.skip(i).take(perRow).toList();
+      rows.add(
+        Row(
+          children: [
+            for (var j = 0; j < rowItems.length; j++) ...[
+              if (j > 0) SizedBox(width: spacing),
+              Expanded(child: _buildMetricCard(rowItems[j])),
+            ],
+          ],
+        ),
+      );
+      if (i + perRow < items.length) rows.add(SizedBox(height: spacing));
+    }
+
+    return Column(children: rows);
+  }
+
+  Widget _buildMetricCard(_MetricItem item) {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: const Color(0xFFE0E0E0), width: 1),
+        border: Border.all(color: _Palette.border, width: 1),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withOpacity(0.03),
@@ -610,10 +662,10 @@ class _AdminHomeViewState extends State<AdminHomeView> {
           Container(
             padding: const EdgeInsets.all(8),
             decoration: BoxDecoration(
-              color: const Color(0xFFFC6707).withOpacity(0.1),
+              color: _Palette.primary.withOpacity(0.1),
               borderRadius: BorderRadius.circular(12),
             ),
-            child: Icon(icon, color: const Color(0xFFFC6707), size: 24),
+            child: Icon(item.icon, color: _Palette.primary, size: 24),
           ),
           const SizedBox(height: 12),
           _cargando
@@ -621,71 +673,30 @@ class _AdminHomeViewState extends State<AdminHomeView> {
                   height: 28,
                   width: 28,
                   child: CircularProgressIndicator(
-                      strokeWidth: 2, color: Color(0xFFFC6707)),
+                      strokeWidth: 2, color: _Palette.primary),
                 )
-              : Text(
-                  value,
-                  style: GoogleFonts.outfit(
-                    fontSize: 24,
-                    fontWeight: FontWeight.bold,
-                    color: const Color(0xFF333333),
-                  ),
-                ),
+              : Text(item.value, style: _Styles.cardValue),
           const SizedBox(height: 4),
-          Text(
-            title,
-            style:
-                GoogleFonts.outfit(fontSize: 14, color: const Color(0xFF888888)),
-          ),
+          Text(item.label, style: _Styles.cardLabel),
         ],
       ),
     );
   }
 
+  // --- Gráficos ---
+
   Widget _buildTopDestinosChart() {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: const Color(0xFFF8F8F8),
-        borderRadius: BorderRadius.circular(16),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            'Destinos más populares',
-            style: GoogleFonts.outfit(
-              fontSize: 16,
-              fontWeight: FontWeight.bold,
-              color: const Color(0xFF333333),
-            ),
-          ),
-          const SizedBox(height: 16),
-          if (_cargando)
-            const Center(
-              child: Padding(
-                padding: EdgeInsets.symmetric(vertical: 24),
-                child: CircularProgressIndicator(color: Color(0xFFFC6707)),
-              ),
-            )
-          else if (_topDestinos.isEmpty)
-            Padding(
-              padding: const EdgeInsets.symmetric(vertical: 24),
-              child: Text(
-                'Aún no hay reservas registradas',
-                style: GoogleFonts.outfit(
-                    fontSize: 13, color: const Color(0xFF999999)),
-              ),
-            )
-          else
-            ..._buildBarrasDestinos(),
-        ],
-      ),
+    return _ChartCard(
+      title: 'Destinos más populares',
+      isLoading: _cargando,
+      isEmpty: _topDestinos.isEmpty,
+      emptyMessage: 'Aún no hay reservas registradas',
+      child: Column(children: _buildBarrasDestinos()),
     );
   }
 
   List<Widget> _buildBarrasDestinos() {
+    if (_topDestinos.isEmpty) return [];
     final maxCantidad = _topDestinos.first.value;
 
     return _topDestinos.map((entry) {
@@ -702,18 +713,10 @@ class _AdminHomeViewState extends State<AdminHomeView> {
                   child: Text(
                     entry.key,
                     overflow: TextOverflow.ellipsis,
-                    style: GoogleFonts.outfit(
-                        fontSize: 13, color: const Color(0xFF333333)),
+                    style: _Styles.chartRowLabel,
                   ),
                 ),
-                Text(
-                  '${entry.value}',
-                  style: GoogleFonts.outfit(
-                    fontSize: 13,
-                    fontWeight: FontWeight.bold,
-                    color: const Color(0xFFFC6707),
-                  ),
-                ),
+                Text('${entry.value}', style: _Styles.chartRowValue),
               ],
             ),
             const SizedBox(height: 6),
@@ -722,8 +725,8 @@ class _AdminHomeViewState extends State<AdminHomeView> {
               child: LinearProgressIndicator(
                 value: proporcion,
                 minHeight: 10,
-                backgroundColor: const Color(0xFFE0E0E0),
-                color: const Color(0xFFFC6707),
+                backgroundColor: _Palette.border,
+                color: _Palette.primary,
               ),
             ),
           ],
@@ -734,96 +737,50 @@ class _AdminHomeViewState extends State<AdminHomeView> {
 
   Widget _buildCategoriaChart() {
     final total = _destinosPorCategoria.values.fold<int>(0, (a, b) => a + b);
+    final entries = _destinosPorCategoria.entries.toList();
 
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: const Color(0xFFF8F8F8),
-        borderRadius: BorderRadius.circular(16),
-      ),
+    return _ChartCard(
+      title: 'Destinos por categoría',
+      isLoading: _cargando,
+      isEmpty: total == 0,
+      emptyMessage: 'Aún no hay destinos registrados',
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            'Destinos por categoría',
-            style: GoogleFonts.outfit(
-              fontSize: 16,
-              fontWeight: FontWeight.bold,
-              color: const Color(0xFF333333),
+          SizedBox(
+            height: 160,
+            width: 160,
+            child: CustomPaint(
+              painter: _PieChartPainter(
+                valores: _destinosPorCategoria.values.toList(),
+                colores: _Palette.categoryColors,
+              ),
             ),
           ),
-          const SizedBox(height: 16),
-          if (_cargando)
-            const Center(
-              child: Padding(
-                padding: EdgeInsets.symmetric(vertical: 24),
-                child: CircularProgressIndicator(color: Color(0xFFFC6707)),
-              ),
-            )
-          else if (total == 0)
+          const SizedBox(height: 20),
+          for (var i = 0; i < entries.length; i++)
             Padding(
-              padding: const EdgeInsets.symmetric(vertical: 24),
-              child: Text(
-                'Aún no hay destinos registrados',
-                style: GoogleFonts.outfit(
-                    fontSize: 13, color: const Color(0xFF999999)),
-              ),
-            )
-          else
-            Column(
-              children: [
-                SizedBox(
-                  height: 160,
-                  width: 160,
-                  child: CustomPaint(
-                    painter: _PieChartPainter(
-                      valores: _destinosPorCategoria.values.toList(),
-                      colores: _coloresCategorias,
+              padding: const EdgeInsets.only(bottom: 10),
+              child: Row(
+                children: [
+                  Container(
+                    width: 12,
+                    height: 12,
+                    decoration: BoxDecoration(
+                      color: _Palette.categoryColors[i % _Palette.categoryColors.length],
+                      shape: BoxShape.circle,
                     ),
                   ),
-                ),
-                const SizedBox(height: 20),
-                ..._destinosPorCategoria.entries.toList().asMap().entries.map(
-                  (item) {
-                    final index = item.key;
-                    final entry = item.value;
-                    return Padding(
-                      padding: const EdgeInsets.only(bottom: 10),
-                      child: Row(
-                        children: [
-                          Container(
-                            width: 12,
-                            height: 12,
-                            decoration: BoxDecoration(
-                              color: _coloresCategorias[index],
-                              shape: BoxShape.circle,
-                            ),
-                          ),
-                          const SizedBox(width: 8),
-                          Expanded(
-                            child: Text(
-                              entry.key,
-                              overflow: TextOverflow.ellipsis,
-                              style: GoogleFonts.outfit(
-                                  fontSize: 13,
-                                  color: const Color(0xFF333333)),
-                            ),
-                          ),
-                          Text(
-                            '${entry.value}',
-                            style: GoogleFonts.outfit(
-                              fontSize: 13,
-                              fontWeight: FontWeight.bold,
-                              color: const Color(0xFFFC6707),
-                            ),
-                          ),
-                        ],
-                      ),
-                    );
-                  },
-                ),
-              ],
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      entries[i].key,
+                      overflow: TextOverflow.ellipsis,
+                      style: _Styles.chartRowLabel,
+                    ),
+                  ),
+                  Text('${entries[i].value}', style: _Styles.chartRowValue),
+                ],
+              ),
             ),
         ],
       ),
@@ -835,7 +792,7 @@ class _AdminHomeViewState extends State<AdminHomeView> {
       width: double.infinity,
       padding: EdgeInsets.symmetric(vertical: isMobile ? 12 : 16),
       decoration: const BoxDecoration(
-        color: Color(0xFFFC6707),
+        color: _Palette.primary,
         borderRadius: BorderRadius.only(
           topLeft: Radius.circular(16),
           topRight: Radius.circular(16),
@@ -845,15 +802,79 @@ class _AdminHomeViewState extends State<AdminHomeView> {
         child: Text(
           '© 2026 SamanGo. Todos los derechos reservados. Comunidad UNIMET.',
           textAlign: TextAlign.center,
-          style: GoogleFonts.outfit(
-            fontSize: isMobile ? 10 : 12,
-            color: Colors.white,
-            fontWeight: FontWeight.w500,
-          ),
+          style: _Styles.footer(isMobile),
         ),
       ),
     );
   }
+}
+
+/// Contenedor genérico para las tarjetas de gráficos: maneja los 3 estados
+/// (cargando / vacío / con datos) para no repetirlos en cada gráfico.
+class _ChartCard extends StatelessWidget {
+  final String title;
+  final bool isLoading;
+  final bool isEmpty;
+  final String emptyMessage;
+  final Widget child;
+
+  const _ChartCard({
+    required this.title,
+    required this.isLoading,
+    required this.isEmpty,
+    required this.emptyMessage,
+    required this.child,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: _Palette.cardBg,
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(title, style: _Styles.sectionTitle),
+          const SizedBox(height: 16),
+          if (isLoading)
+            const Center(
+              child: Padding(
+                padding: EdgeInsets.symmetric(vertical: 24),
+                child: CircularProgressIndicator(color: _Palette.primary),
+              ),
+            )
+          else if (isEmpty)
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 24),
+              child: Text(emptyMessage, style: _Styles.emptyState),
+            )
+          else
+            child,
+        ],
+      ),
+    );
+  }
+}
+
+/// Resultado intermedio del procesamiento de destinos.
+class _DestinosInfo {
+  final Map<String, String> nombrePorDestino;
+  final Map<String, int> conteoCategoria;
+  final int destinosActivos;
+
+  const _DestinosInfo(this.nombrePorDestino, this.conteoCategoria, this.destinosActivos);
+}
+
+/// Resultado intermedio del procesamiento de reservas.
+class _ReservasInfo {
+  final double ingresos;
+  final List<MapEntry<String, int>> top5;
+
+  const _ReservasInfo(this.ingresos, this.top5);
 }
 
 class _PieChartPainter extends CustomPainter {
@@ -868,14 +889,14 @@ class _PieChartPainter extends CustomPainter {
     if (total == 0) return;
 
     final rect = Rect.fromLTWH(0, 0, size.width, size.height);
-    double anguloInicial = -90 * (3.141592653589793 / 180);
+    double anguloInicial = -90 * (math.pi / 180);
 
     for (int i = 0; i < valores.length; i++) {
       final valor = valores[i];
       if (valor == 0) continue;
 
       final porcentaje = valor / total;
-      final anguloBarrido = porcentaje * 2 * 3.141592653589793;
+      final anguloBarrido = porcentaje * 2 * math.pi;
 
       final paint = Paint()
         ..color = colores[i % colores.length]
