@@ -1,5 +1,4 @@
 // Dashboard del administrador con métricas reales traídas de Firestore
-import 'dart:convert';
 import 'dart:math' as math;
 
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -8,114 +7,14 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 
 import '../../controllers/auth_controller.dart';
-import '../auth/login_view.dart';
+import 'admin_theme.dart';
 import '../shared/app_header.dart';
 import '../shared/widgets/custom_dialog.dart';
+import '../auth/login_view.dart';
 import 'admin_edit_profile_view.dart';
 import 'admin_management_view.dart';
 import 'admin_reports_view.dart';
 import 'admin_users_view.dart';
-
-/// Paleta de colores del módulo admin, centralizada para no repetir
-/// literales de color por todo el archivo.
-class _Palette {
-  static const primary = Color(0xFFFC6707);
-  static const primaryLight = Color(0xFFFDDBB3);
-  static const textDark = Color(0xFF333333);
-  static const textGrey = Color(0xFF666666);
-  static const textLight = Color(0xFF888888);
-  static const textFaint = Color(0xFF999999);
-  static const border = Color(0xFFE0E0E0);
-  static const cardBg = Color(0xFFF8F8F8);
-
-  static const categoryColors = [
-    Color(0xFFFC6707),
-    Color(0xFFFFB74D),
-    Color(0xFFFF8A65),
-    Color(0xFFFFAB91),
-  ];
-}
-
-/// Estilos de texto reutilizables (Google Fonts Outfit) para no repetir
-/// los mismos parámetros en cada Text().
-class _Styles {
-  static TextStyle title(bool isMobile) => GoogleFonts.outfit(
-        fontSize: isMobile ? 24 : 28,
-        fontWeight: FontWeight.bold,
-        color: _Palette.textDark,
-      );
-
-  static final subtitle = GoogleFonts.outfit(
-    fontSize: 14,
-    color: _Palette.textLight,
-  );
-
-  static final cardValue = GoogleFonts.outfit(
-    fontSize: 24,
-    fontWeight: FontWeight.bold,
-    color: _Palette.textDark,
-  );
-
-  static final cardLabel = GoogleFonts.outfit(
-    fontSize: 14,
-    color: _Palette.textLight,
-  );
-
-  static final sectionTitle = GoogleFonts.outfit(
-    fontSize: 16,
-    fontWeight: FontWeight.bold,
-    color: _Palette.textDark,
-  );
-
-  static final chartRowLabel = GoogleFonts.outfit(
-    fontSize: 13,
-    color: _Palette.textDark,
-  );
-
-  static final chartRowValue = GoogleFonts.outfit(
-    fontSize: 13,
-    fontWeight: FontWeight.bold,
-    color: _Palette.primary,
-  );
-
-  static final emptyState = GoogleFonts.outfit(
-    fontSize: 13,
-    color: _Palette.textFaint,
-  );
-
-  static final drawerName = GoogleFonts.outfit(
-    fontSize: 16,
-    fontWeight: FontWeight.bold,
-    color: _Palette.textDark,
-  );
-
-  static final drawerRole = GoogleFonts.outfit(
-    fontSize: 12,
-    color: _Palette.textGrey,
-  );
-
-  static TextStyle drawerItem(bool isActive) => GoogleFonts.outfit(
-        fontSize: 16,
-        fontWeight: isActive ? FontWeight.bold : FontWeight.w500,
-        color: isActive ? _Palette.primary : _Palette.textDark,
-      );
-
-  static TextStyle footer(bool isMobile) => GoogleFonts.outfit(
-        fontSize: isMobile ? 10 : 12,
-        color: Colors.white,
-        fontWeight: FontWeight.w500,
-      );
-}
-
-/// Entrada de menú: agrupa título, ícono y la vista a la que navega.
-/// Un solo lugar para definir el menú del AppBar + Drawer + navegación.
-class _MenuEntry {
-  final String title;
-  final IconData icon;
-  final WidgetBuilder? viewBuilder; // null => se queda en el Dashboard
-
-  const _MenuEntry(this.title, this.icon, [this.viewBuilder]);
-}
 
 /// Un item de métrica simple (tarjeta con ícono, valor y etiqueta).
 class _MetricItem {
@@ -145,14 +44,11 @@ class _AdminHomeViewState extends State<AdminHomeView> {
     'Cultura / Ciudades',
   ];
 
-  static final List<_MenuEntry> _menu = [
-    const _MenuEntry(_dashboardTitle, Icons.dashboard_outlined),
-    _MenuEntry('Gestión', Icons.settings_outlined,
-        (_) => const AdminManagementView()),
-    _MenuEntry('Usuarios', Icons.people_outline,
-        (_) => const AdminUsersView()),
-    _MenuEntry('Reportes', Icons.bar_chart_outlined,
-        (_) => const AdminReportsView()),
+  static final List<AdminMenuEntry> _menu = [
+    const AdminMenuEntry(_dashboardTitle, Icons.dashboard_outlined),
+    AdminMenuEntry('Gestión', Icons.settings_outlined, (_) => const AdminManagementView()),
+    AdminMenuEntry('Usuarios', Icons.people_outline, (_) => const AdminUsersView()),
+    AdminMenuEntry('Reportes', Icons.bar_chart_outlined, (_) => const AdminReportsView()),
   ];
 
   // --- Estado de métricas ---
@@ -309,15 +205,11 @@ class _AdminHomeViewState extends State<AdminHomeView> {
     final entry = _menu.firstWhere((e) => e.title == menuTitle);
     final builder = entry.viewBuilder;
     if (builder == null) return; // Dashboard: no navega a ningún lado
-
     Navigator.push(context, MaterialPageRoute(builder: builder));
   }
 
   void _handleEditProfile() {
-    Navigator.push(
-      context,
-      MaterialPageRoute(builder: (_) => const AdminEditProfileView()),
-    );
+    Navigator.push(context, MaterialPageRoute(builder: (_) => const AdminEditProfileView()));
   }
 
   void _handleLogout() {
@@ -329,13 +221,9 @@ class _AdminHomeViewState extends State<AdminHomeView> {
       icon: Icons.logout,
     ).then((confirm) async {
       if (confirm != true) return;
-
       await Provider.of<AuthController>(context, listen: false).logout();
       if (!context.mounted) return;
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(builder: (_) => const LoginView()),
-      );
+      Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => const LoginView()));
     });
   }
 
@@ -348,11 +236,22 @@ class _AdminHomeViewState extends State<AdminHomeView> {
   @override
   Widget build(BuildContext context) {
     final isMobile = MediaQuery.of(context).size.width < 850;
+    final user = Provider.of<AuthController>(context).usuarioActual;
 
     return Scaffold(
       key: _scaffoldKey,
       backgroundColor: Colors.white,
-      endDrawer: isMobile ? _buildDrawer() : null,
+      endDrawer: isMobile
+          ? AdminDrawer(
+              menu: _menu,
+              activeMenu: _activeMenu,
+              userName: user?.nombre,
+              userFotoBase64: user?.fotoBase64,
+              onEditProfile: _handleEditProfile,
+              onLogout: _handleLogout,
+              onMenuSelected: _handleMenuSelected,
+            )
+          : null,
       body: Column(
         children: [
           AppHeader(
@@ -364,122 +263,21 @@ class _AdminHomeViewState extends State<AdminHomeView> {
             isMobile: isMobile,
             onMenuTap: isMobile ? _openDrawer : null,
           ),
-          Expanded(
-            child: isMobile ? _buildMobileLayout() : _buildDesktopLayout(),
-          ),
+          Expanded(child: isMobile ? _buildMobileLayout() : _buildDesktopLayout()),
         ],
       ),
     );
   }
 
-  // --- Drawer (menú lateral en móvil) ---
-
-  Widget _buildDrawer() {
-    final user = Provider.of<AuthController>(context).usuarioActual;
-    final tieneFoto = user?.fotoBase64 != null && user!.fotoBase64!.isNotEmpty;
-
-    return Drawer(
-      backgroundColor: Colors.white,
-      width: 280,
-      child: SafeArea(
-        child: Column(
-          children: [
-            const SizedBox(height: 24),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 24),
-              child: Row(
-                children: [
-                  GestureDetector(
-                    onTap: _handleEditProfile,
-                    child: Container(
-                      width: 50,
-                      height: 50,
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        border: Border.all(color: _Palette.primary, width: 2),
-                      ),
-                      child: ClipOval(
-                        child: tieneFoto
-                            ? Image.memory(
-                                base64Decode(user!.fotoBase64!),
-                                width: 50,
-                                height: 50,
-                                fit: BoxFit.cover,
-                              )
-                            : const CircleAvatar(
-                                backgroundColor: _Palette.primaryLight,
-                                child: Icon(Icons.admin_panel_settings,
-                                    color: _Palette.primary, size: 28),
-                              ),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(user?.nombre ?? 'Administrador',
-                            style: _Styles.drawerName),
-                        Text('Administrador', style: _Styles.drawerRole),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 16),
-            const Divider(height: 1, color: _Palette.border),
-            for (final entry in _menu)
-              _buildDrawerItem(entry.title, entry.icon, () {
-                Navigator.pop(context);
-                if (entry.title != _dashboardTitle) {
-                  _handleMenuSelected(entry.title);
-                }
-              }),
-            const Spacer(),
-            const Divider(height: 1, color: _Palette.border),
-            _buildDrawerItem('Cerrar Sesión', Icons.logout_outlined, () {
-              Navigator.pop(context);
-              _handleLogout();
-            }),
-            const SizedBox(height: 24),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildDrawerItem(String title, IconData icon, VoidCallback onTap) {
-    final isActive = title == _activeMenu;
-    return ListTile(
-      leading: Icon(icon, color: _Palette.primary),
-      title: Text(title, style: _Styles.drawerItem(isActive)),
-      onTap: onTap,
-    );
-  }
-
-  // --- Layouts ---
-
   Widget _buildMobileLayout() {
     return CustomScrollView(
       slivers: [
         SliverToBoxAdapter(
-          child: Column(
-            children: [
-              const SizedBox(height: 16),
-              _buildMetricsContent(isMobile: true),
-            ],
-          ),
+          child: Column(children: [const SizedBox(height: 16), _buildMetricsContent(isMobile: true)]),
         ),
         SliverFillRemaining(
           hasScrollBody: false,
-          child: Column(
-            children: [
-              const Spacer(),
-              _buildFooter(true),
-            ],
-          ),
+          child: Column(children: [const Spacer(), _buildFooter(true)]),
         ),
       ],
     );
@@ -493,28 +291,16 @@ class _AdminHomeViewState extends State<AdminHomeView> {
           flex: 7,
           child: Container(
             decoration: BoxDecoration(
-              border: Border(
-                right: BorderSide(color: Colors.grey.withOpacity(0.3), width: 1.5),
-              ),
+              border: Border(right: BorderSide(color: Colors.grey.withOpacity(0.3), width: 1.5)),
             ),
             child: CustomScrollView(
               slivers: [
                 SliverToBoxAdapter(
-                  child: Column(
-                    children: [
-                      const SizedBox(height: 16),
-                      _buildMetricsContent(isMobile: false),
-                    ],
-                  ),
+                  child: Column(children: [const SizedBox(height: 16), _buildMetricsContent(isMobile: false)]),
                 ),
                 SliverFillRemaining(
                   hasScrollBody: false,
-                  child: Column(
-                    children: [
-                      const Spacer(),
-                      _buildFooter(false),
-                    ],
-                  ),
+                  child: Column(children: [const Spacer(), _buildFooter(false)]),
                 ),
               ],
             ),
@@ -529,9 +315,7 @@ class _AdminHomeViewState extends State<AdminHomeView> {
     return Container(
       width: 320,
       decoration: BoxDecoration(
-        border: Border(
-          left: BorderSide(color: Colors.grey.withOpacity(0.3), width: 1.5),
-        ),
+        border: Border(left: BorderSide(color: Colors.grey.withOpacity(0.3), width: 1.5)),
       ),
       child: Image.asset(
         'assets/images/campus_admin.png',
@@ -539,12 +323,12 @@ class _AdminHomeViewState extends State<AdminHomeView> {
         height: double.infinity,
         fit: BoxFit.cover,
         errorBuilder: (_, __, ___) => Container(
-          color: _Palette.primaryLight,
+          color: AdminPalette.primaryLight,
           child: const Center(
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Icon(Icons.image, size: 48, color: _Palette.primary),
+                Icon(Icons.image, size: 48, color: AdminPalette.primary),
                 SizedBox(height: 8),
                 Text('Imagen del Campus'),
               ],
@@ -566,11 +350,7 @@ class _AdminHomeViewState extends State<AdminHomeView> {
       _MetricItem('Estudiantes', '$_totalEstudiantes', Icons.school),
       _MetricItem('Destinos Activos', '$_totalDestinos', Icons.tour),
       _MetricItem('Reservas', '$_totalReservas', Icons.receipt),
-      _MetricItem(
-        'Ingresos Confirmados',
-        '\$${_totalIngresos.toStringAsFixed(2)}',
-        Icons.attach_money,
-      ),
+      _MetricItem('Ingresos Confirmados', '\$${_totalIngresos.toStringAsFixed(2)}', Icons.attach_money),
     ];
 
     return Padding(
@@ -578,23 +358,13 @@ class _AdminHomeViewState extends State<AdminHomeView> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text('Dashboard de Métricas', style: _Styles.title(isMobile)),
-              IconButton(
-                onPressed: () {
-                  setState(() => _cargando = true);
-                  _cargarMetricas();
-                },
-                icon: const Icon(Icons.refresh, color: _Palette.primary),
-                tooltip: 'Actualizar métricas',
-              ),
-            ],
+          AdminSectionHeader(
+            title: 'Dashboard de Métricas',
+            isMobile: isMobile,
+            trailing: _buildRefreshButton(),
           ),
           const SizedBox(height: 8),
-          Text('Datos en tiempo real de la plataforma SamanGo',
-              style: _Styles.subtitle),
+          Text('Datos en tiempo real de la plataforma SamanGo', style: AdminStyles.subtitle),
           const SizedBox(height: 24),
           _buildMetricsGrid(metricItems, perRow: isMobile ? 2 : 3),
           const SizedBox(height: 32),
@@ -604,15 +374,35 @@ class _AdminHomeViewState extends State<AdminHomeView> {
             _buildCategoriaChart(),
             const SizedBox(height: 16),
           ] else
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Expanded(child: _buildTopDestinosChart()),
-                const SizedBox(width: 16),
-                Expanded(child: _buildCategoriaChart()),
-              ],
+            IntrinsicHeight(
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Expanded(child: _buildTopDestinosChart()),
+                  const SizedBox(width: 16),
+                  Expanded(child: _buildCategoriaChart()),
+                ],
+              ),
             ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildRefreshButton() {
+    return Material(
+      color: AdminPalette.cloud,
+      shape: const CircleBorder(),
+      child: InkWell(
+        customBorder: const CircleBorder(),
+        onTap: () {
+          setState(() => _cargando = true);
+          _cargarMetricas();
+        },
+        child: const Padding(
+          padding: EdgeInsets.all(10),
+          child: Icon(Icons.refresh_rounded, color: AdminPalette.primary, size: 20),
+        ),
       ),
     );
   }
@@ -630,7 +420,7 @@ class _AdminHomeViewState extends State<AdminHomeView> {
           children: [
             for (var j = 0; j < rowItems.length; j++) ...[
               if (j > 0) SizedBox(width: spacing),
-              Expanded(child: _buildMetricCard(rowItems[j])),
+              Expanded(child: _buildMetricCard(rowItems[j], colorIndex: i + j)),
             ],
           ],
         ),
@@ -641,43 +431,45 @@ class _AdminHomeViewState extends State<AdminHomeView> {
     return Column(children: rows);
   }
 
-  Widget _buildMetricCard(_MetricItem item) {
+  Widget _buildMetricCard(_MetricItem item, {required int colorIndex}) {
+    final accent = AdminPalette.chartColors[colorIndex % AdminPalette.chartColors.length];
+
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.fromLTRB(16, 16, 16, 14),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: _Palette.border, width: 1),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.03),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
-          ),
-        ],
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: AdminPalette.line, width: 1),
+        boxShadow: [AdminPalette.softShadow()],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Container(
-            padding: const EdgeInsets.all(8),
-            decoration: BoxDecoration(
-              color: _Palette.primary.withOpacity(0.1),
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Icon(item.icon, color: _Palette.primary, size: 24),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Container(
+                padding: const EdgeInsets.all(9),
+                decoration: BoxDecoration(color: accent.withOpacity(0.12), shape: BoxShape.circle),
+                child: Icon(item.icon, color: accent, size: 20),
+              ),
+            ],
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 14),
           _cargando
-              ? const SizedBox(
-                  height: 28,
-                  width: 28,
-                  child: CircularProgressIndicator(
-                      strokeWidth: 2, color: _Palette.primary),
+              ? SizedBox(
+                  height: 26,
+                  width: 26,
+                  child: CircularProgressIndicator(strokeWidth: 2, color: accent),
                 )
-              : Text(item.value, style: _Styles.cardValue),
+              : Text(item.value, style: AdminStyles.cardValue),
           const SizedBox(height: 4),
-          Text(item.label, style: _Styles.cardLabel),
+          Text(item.label, style: AdminStyles.cardLabel),
+          const SizedBox(height: 10),
+          ClipRRect(
+            borderRadius: BorderRadius.circular(4),
+            child: Container(height: 3, color: accent.withOpacity(0.85)),
+          ),
         ],
       ),
     );
@@ -690,100 +482,22 @@ class _AdminHomeViewState extends State<AdminHomeView> {
       title: 'Destinos más populares',
       isLoading: _cargando,
       isEmpty: _topDestinos.isEmpty,
+      emptyIcon: Icons.map_outlined,
       emptyMessage: 'Aún no hay reservas registradas',
-      child: Column(children: _buildBarrasDestinos()),
+      child: _TopDestinosRanking(destinos: _topDestinos),
     );
-  }
-
-  List<Widget> _buildBarrasDestinos() {
-    if (_topDestinos.isEmpty) return [];
-    final maxCantidad = _topDestinos.first.value;
-
-    return _topDestinos.map((entry) {
-      final proporcion = maxCantidad == 0 ? 0.0 : entry.value / maxCantidad;
-      return Padding(
-        padding: const EdgeInsets.only(bottom: 14),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Expanded(
-                  child: Text(
-                    entry.key,
-                    overflow: TextOverflow.ellipsis,
-                    style: _Styles.chartRowLabel,
-                  ),
-                ),
-                Text('${entry.value}', style: _Styles.chartRowValue),
-              ],
-            ),
-            const SizedBox(height: 6),
-            ClipRRect(
-              borderRadius: BorderRadius.circular(8),
-              child: LinearProgressIndicator(
-                value: proporcion,
-                minHeight: 10,
-                backgroundColor: _Palette.border,
-                color: _Palette.primary,
-              ),
-            ),
-          ],
-        ),
-      );
-    }).toList();
   }
 
   Widget _buildCategoriaChart() {
     final total = _destinosPorCategoria.values.fold<int>(0, (a, b) => a + b);
-    final entries = _destinosPorCategoria.entries.toList();
 
     return _ChartCard(
       title: 'Destinos por categoría',
       isLoading: _cargando,
       isEmpty: total == 0,
+      emptyIcon: Icons.donut_large_outlined,
       emptyMessage: 'Aún no hay destinos registrados',
-      child: Column(
-        children: [
-          SizedBox(
-            height: 160,
-            width: 160,
-            child: CustomPaint(
-              painter: _PieChartPainter(
-                valores: _destinosPorCategoria.values.toList(),
-                colores: _Palette.categoryColors,
-              ),
-            ),
-          ),
-          const SizedBox(height: 20),
-          for (var i = 0; i < entries.length; i++)
-            Padding(
-              padding: const EdgeInsets.only(bottom: 10),
-              child: Row(
-                children: [
-                  Container(
-                    width: 12,
-                    height: 12,
-                    decoration: BoxDecoration(
-                      color: _Palette.categoryColors[i % _Palette.categoryColors.length],
-                      shape: BoxShape.circle,
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: Text(
-                      entries[i].key,
-                      overflow: TextOverflow.ellipsis,
-                      style: _Styles.chartRowLabel,
-                    ),
-                  ),
-                  Text('${entries[i].value}', style: _Styles.chartRowValue),
-                ],
-              ),
-            ),
-        ],
-      ),
+      child: _CategoryDonut(data: _destinosPorCategoria),
     );
   }
 
@@ -792,22 +506,23 @@ class _AdminHomeViewState extends State<AdminHomeView> {
       width: double.infinity,
       padding: EdgeInsets.symmetric(vertical: isMobile ? 12 : 16),
       decoration: const BoxDecoration(
-        color: _Palette.primary,
-        borderRadius: BorderRadius.only(
-          topLeft: Radius.circular(16),
-          topRight: Radius.circular(16),
-        ),
+        gradient: AdminPalette.gradient,
+        borderRadius: BorderRadius.only(topLeft: Radius.circular(20), topRight: Radius.circular(20)),
       ),
       child: Center(
         child: Text(
           '© 2026 SamanGo. Todos los derechos reservados. Comunidad UNIMET.',
           textAlign: TextAlign.center,
-          style: _Styles.footer(isMobile),
+          style: AdminStyles.footer(isMobile),
         ),
       ),
     );
   }
 }
+
+// ===========================================================================
+// Widgets de soporte (gráficos y contenedores)
+// ===========================================================================
 
 /// Contenedor genérico para las tarjetas de gráficos: maneja los 3 estados
 /// (cargando / vacío / con datos) para no repetirlos en cada gráfico.
@@ -815,6 +530,7 @@ class _ChartCard extends StatelessWidget {
   final String title;
   final bool isLoading;
   final bool isEmpty;
+  final IconData emptyIcon;
   final String emptyMessage;
   final Widget child;
 
@@ -822,6 +538,7 @@ class _ChartCard extends StatelessWidget {
     required this.title,
     required this.isLoading,
     required this.isEmpty,
+    required this.emptyIcon,
     required this.emptyMessage,
     required this.child,
   });
@@ -831,32 +548,276 @@ class _ChartCard extends StatelessWidget {
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: _Palette.cardBg,
-        borderRadius: BorderRadius.circular(16),
-      ),
+      decoration: BoxDecoration(color: AdminPalette.cloud, borderRadius: BorderRadius.circular(20)),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(title, style: _Styles.sectionTitle),
+          Text(title, style: AdminStyles.cardTitle),
           const SizedBox(height: 16),
           if (isLoading)
             const Center(
               child: Padding(
                 padding: EdgeInsets.symmetric(vertical: 24),
-                child: CircularProgressIndicator(color: _Palette.primary),
+                child: CircularProgressIndicator(color: AdminPalette.primary),
               ),
             )
           else if (isEmpty)
-            Padding(
-              padding: const EdgeInsets.symmetric(vertical: 24),
-              child: Text(emptyMessage, style: _Styles.emptyState),
-            )
+            AdminEmptyState(icon: emptyIcon, message: emptyMessage, padding: const EdgeInsets.symmetric(vertical: 16))
           else
             child,
         ],
       ),
     );
+  }
+}
+
+/// Ranking de los 5 destinos con más reservas. En vez de solo una medalla
+/// numerada, el top 3 ahora luce un ícono de trofeo/podio y cada barra
+/// muestra también el porcentaje relativo frente al destino líder.
+class _TopDestinosRanking extends StatelessWidget {
+  final List<MapEntry<String, int>> destinos;
+
+  const _TopDestinosRanking({required this.destinos});
+
+  @override
+  Widget build(BuildContext context) {
+    if (destinos.isEmpty) return const SizedBox.shrink();
+    final maxCantidad = destinos.first.value;
+
+    return Column(
+      children: [
+        for (var i = 0; i < destinos.length; i++)
+          Padding(
+            padding: EdgeInsets.only(bottom: i == destinos.length - 1 ? 0 : 16),
+            child: _DestinoRow(
+              rank: i + 1,
+              nombre: destinos[i].key,
+              cantidad: destinos[i].value,
+              proporcion: maxCantidad == 0 ? 0.0 : destinos[i].value / maxCantidad,
+            ),
+          ),
+      ],
+    );
+  }
+}
+
+class _DestinoRow extends StatelessWidget {
+  final int rank;
+  final String nombre;
+  final int cantidad;
+  final double proporcion;
+
+  const _DestinoRow({required this.rank, required this.nombre, required this.cantidad, required this.proporcion});
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.center,
+      children: [
+        _RankMedal(rank: rank),
+        const SizedBox(width: 12),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Expanded(
+                    child: Text(nombre, overflow: TextOverflow.ellipsis, style: AdminStyles.chartRowLabel),
+                  ),
+                  Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text('$cantidad', style: AdminStyles.chartRowValue),
+                      const SizedBox(width: 4),
+                      Text('(${(proporcion * 100).round()}%)',
+                          style: GoogleFonts.outfit(fontSize: 11, color: AdminPalette.mist)),
+                    ],
+                  ),
+                ],
+              ),
+              const SizedBox(height: 6),
+              ClipRRect(
+                borderRadius: BorderRadius.circular(8),
+                child: Stack(
+                  children: [
+                    Container(height: 10, color: Colors.white),
+                    FractionallySizedBox(
+                      widthFactor: proporcion.clamp(0.04, 1.0),
+                      child: Container(height: 10, decoration: const BoxDecoration(gradient: AdminPalette.gradient)),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+/// Medalla/insignia de posición: el top 3 ahora muestra un ícono de
+/// trofeo sobre un fondo en degradado con el color correspondiente
+/// (oro/plata/bronce), en vez de solo un número dentro de un círculo.
+class _RankMedal extends StatelessWidget {
+  final int rank;
+
+  const _RankMedal({required this.rank});
+
+  static const _medals = {
+    1: Color(0xFFF3B23B),
+    2: Color(0xFFAEB6C2),
+    3: Color(0xFFC98A54),
+  };
+
+  @override
+  Widget build(BuildContext context) {
+    final color = _medals[rank];
+
+    if (color == null) {
+      return Container(
+        width: 28,
+        height: 28,
+        decoration: const BoxDecoration(shape: BoxShape.circle, color: Colors.white),
+        child: Center(
+          child: Text('$rank',
+              style: GoogleFonts.outfit(fontSize: 12, fontWeight: FontWeight.bold, color: AdminPalette.slate)),
+        ),
+      );
+    }
+
+    return Container(
+      width: 28,
+      height: 28,
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        gradient: LinearGradient(colors: [color, color.withOpacity(0.7)]),
+        boxShadow: [BoxShadow(color: color.withOpacity(0.4), blurRadius: 6, offset: const Offset(0, 2))],
+      ),
+      child: const Center(
+        child: Icon(Icons.emoji_events, size: 15, color: Colors.white),
+      ),
+    );
+  }
+}
+
+/// Resumen de categorías: el total ahora se muestra como cifra
+/// protagonista arriba, seguido de un medidor en forma de arco (media
+/// luna) con un segmento por categoría, en vez del donut completo de
+/// antes. La leyenda en píldoras se mantiene debajo.
+class _CategoryDonut extends StatelessWidget {
+  final Map<String, int> data;
+
+  const _CategoryDonut({required this.data});
+
+  @override
+  Widget build(BuildContext context) {
+    final total = data.values.fold<int>(0, (a, b) => a + b);
+    final entries = data.entries.toList();
+
+    return Column(
+      children: [
+        Text('$total', style: GoogleFonts.outfit(fontSize: 34, fontWeight: FontWeight.bold, color: AdminPalette.ink)),
+        Text('destinos registrados', style: GoogleFonts.outfit(fontSize: 12, color: AdminPalette.mist)),
+        const SizedBox(height: 14),
+        SizedBox(
+          height: 108,
+          width: 230,
+          child: CustomPaint(
+            size: const Size(230, 108),
+            painter: _CategoryGaugePainter(valores: data.values.toList(), colores: AdminPalette.chartColors),
+          ),
+        ),
+        const SizedBox(height: 12),
+        Wrap(
+          spacing: 8,
+          runSpacing: 8,
+          alignment: WrapAlignment.center,
+          children: [
+            for (var i = 0; i < entries.length; i++)
+              _LegendChip(
+                color: AdminPalette.chartColors[i % AdminPalette.chartColors.length],
+                label: entries[i].key,
+                value: entries[i].value,
+              ),
+          ],
+        ),
+      ],
+    );
+  }
+}
+
+class _LegendChip extends StatelessWidget {
+  final Color color;
+  final String label;
+  final int value;
+
+  const _LegendChip({required this.color, required this.label, required this.value});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      decoration: BoxDecoration(color: color.withOpacity(0.12), borderRadius: BorderRadius.circular(20)),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(width: 8, height: 8, decoration: BoxDecoration(shape: BoxShape.circle, color: color)),
+          const SizedBox(width: 6),
+          Text('$label ($value)', style: GoogleFonts.outfit(fontSize: 12, fontWeight: FontWeight.w600, color: AdminPalette.ink)),
+        ],
+      ),
+    );
+  }
+}
+
+/// Pinta un medidor en forma de media luna (arco de 180°): cada categoría
+/// es un segmento con un pequeño espacio respecto al siguiente y puntas
+/// redondeadas, igual que el donut anterior pero abierto en vez de
+/// cerrado en círculo completo.
+class _CategoryGaugePainter extends CustomPainter {
+  final List<int> valores;
+  final List<Color> colores;
+
+  _CategoryGaugePainter({required this.valores, required this.colores});
+
+  static const _gap = 0.05; // radianes de separación entre segmentos
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final total = valores.fold<int>(0, (a, b) => a + b);
+    if (total == 0) return;
+
+    final strokeWidth = size.width * 0.13;
+    final radius = (size.width - strokeWidth) / 2;
+    final center = Offset(size.width / 2, strokeWidth / 2 + radius * 0.02);
+    final rect = Rect.fromCircle(center: center, radius: radius);
+
+    // Arco de 180°: arranca apuntando a la izquierda (9 en punto) y
+    // recorre por abajo hasta apuntar a la derecha (3 en punto).
+    double anguloInicial = math.pi;
+
+    for (var i = 0; i < valores.length; i++) {
+      final valor = valores[i];
+      final anguloCompleto = (valor / total) * math.pi;
+      if (valor > 0) {
+        final sweep = math.max(anguloCompleto - _gap, 0.0);
+        final paint = Paint()
+          ..color = colores[i % colores.length]
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = strokeWidth
+          ..strokeCap = StrokeCap.round;
+        canvas.drawArc(rect, anguloInicial, sweep, false, paint);
+      }
+      anguloInicial += anguloCompleto;
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant _CategoryGaugePainter oldDelegate) {
+    return oldDelegate.valores != valores || oldDelegate.colores != colores;
   }
 }
 
@@ -875,44 +836,4 @@ class _ReservasInfo {
   final List<MapEntry<String, int>> top5;
 
   const _ReservasInfo(this.ingresos, this.top5);
-}
-
-class _PieChartPainter extends CustomPainter {
-  final List<int> valores;
-  final List<Color> colores;
-
-  _PieChartPainter({required this.valores, required this.colores});
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final total = valores.fold<int>(0, (a, b) => a + b);
-    if (total == 0) return;
-
-    final rect = Rect.fromLTWH(0, 0, size.width, size.height);
-    double anguloInicial = -90 * (math.pi / 180);
-
-    for (int i = 0; i < valores.length; i++) {
-      final valor = valores[i];
-      if (valor == 0) continue;
-
-      final porcentaje = valor / total;
-      final anguloBarrido = porcentaje * 2 * math.pi;
-
-      final paint = Paint()
-        ..color = colores[i % colores.length]
-        ..style = PaintingStyle.fill;
-
-      canvas.drawArc(rect, anguloInicial, anguloBarrido, true, paint);
-      anguloInicial += anguloBarrido;
-    }
-
-    final centro = Offset(size.width / 2, size.height / 2);
-    final radioInterno = size.width * 0.28;
-    canvas.drawCircle(centro, radioInterno, Paint()..color = Colors.white);
-  }
-
-  @override
-  bool shouldRepaint(covariant _PieChartPainter oldDelegate) {
-    return oldDelegate.valores != valores || oldDelegate.colores != colores;
-  }
 }

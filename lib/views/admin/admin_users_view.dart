@@ -1,12 +1,11 @@
 // Pantalla de gestión de usuarios (Administrador)
-import 'dart:convert';
-
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 
 import '../../controllers/auth_controller.dart';
 import '../auth/login_view.dart';
+import 'admin_theme.dart';
 import '../shared/app_header.dart';
 import '../shared/widgets/custom_dialog.dart';
 import 'admin_edit_profile_view.dart';
@@ -16,97 +15,146 @@ import 'admin_operators_view.dart';
 import 'admin_reports_view.dart';
 import 'admin_students_view.dart';
 
-/// Paleta y estilos compartidos del módulo admin.
-/// (Repetida en los demás admin_*.dart — candidata a un archivo de tema
-/// compartido único cuando terminemos de pulir todas las vistas.)
-class _Palette {
-  static const primary = Color(0xFFFC6707);
-  static const primaryLight = Color(0xFFFDDBB3);
-  static const textDark = Color(0xFF333333);
-  static const textGrey = Color(0xFF666666);
-  static const textLight = Color(0xFF888888);
-  static const border = Color(0xFFE0E0E0);
-}
-
-class _Styles {
-  static TextStyle title(bool isMobile) => GoogleFonts.outfit(
-        fontSize: isMobile ? 24 : 28,
-        fontWeight: FontWeight.bold,
-        color: _Palette.textDark,
-      );
-
-  static final drawerName = GoogleFonts.outfit(
-    fontSize: 16,
-    fontWeight: FontWeight.bold,
-    color: _Palette.textDark,
-  );
-
-  static final drawerRole = GoogleFonts.outfit(fontSize: 14, color: _Palette.textGrey);
-
-  static TextStyle drawerItem(bool isActive) => GoogleFonts.outfit(
-        fontSize: 16,
-        fontWeight: isActive ? FontWeight.bold : FontWeight.w500,
-        color: isActive ? _Palette.primary : _Palette.textDark,
-      );
-}
-
-class _MenuEntry {
-  final String title;
-  final IconData icon;
-  final WidgetBuilder? viewBuilder;
-
-  const _MenuEntry(this.title, this.icon, [this.viewBuilder]);
-}
-
 /// Cada tipo de usuario administrable: título de la tarjeta, ícono,
-/// subtítulo y la vista a la que navega al tocarla.
+/// subtítulo, degradado propio y la vista a la que navega al tocarla.
 class _UserTypeOption {
   final String title;
   final IconData icon;
   final String subtitle;
+  final String stat;
+  final IconData statIcon;
+  final Gradient gradient;
   final WidgetBuilder viewBuilder;
 
-  const _UserTypeOption(this.title, this.icon, this.subtitle, this.viewBuilder);
+  const _UserTypeOption({
+    required this.title,
+    required this.icon,
+    required this.subtitle,
+    required this.stat,
+    required this.statIcon,
+    required this.gradient,
+    required this.viewBuilder,
+  });
 }
 
 /// Tarjeta grande y clickeable para un tipo de usuario (Estudiantes,
-/// Operadores...).
-class _UserTypeCard extends StatelessWidget {
+/// Operadores...). Cada una lleva su propio degradado de cabecera con
+/// un ícono decorativo de fondo, para que se distingan entre sí de un
+/// vistazo en vez de ser dos bloques idénticos con solo el ícono chico
+/// cambiando.
+class _UserTypeCard extends StatefulWidget {
   final _UserTypeOption option;
   final bool isMobile;
 
   const _UserTypeCard({required this.option, required this.isMobile});
 
   @override
+  State<_UserTypeCard> createState() => _UserTypeCardState();
+}
+
+class _UserTypeCardState extends State<_UserTypeCard> {
+  bool _hover = false;
+
+  @override
   Widget build(BuildContext context) {
+    final option = widget.option;
+    final isMobile = widget.isMobile;
+
     return MouseRegion(
       cursor: SystemMouseCursors.click,
+      onEnter: (_) => setState(() => _hover = true),
+      onExit: (_) => setState(() => _hover = false),
       child: GestureDetector(
         onTap: () => Navigator.push(context, MaterialPageRoute(builder: option.viewBuilder)),
-        child: Container(
-          padding: EdgeInsets.all(isMobile ? 20 : 32),
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 180),
+          transform: Matrix4.translationValues(0, _hover ? -4 : 0, 0),
           decoration: BoxDecoration(
             color: Colors.white,
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: _Palette.border, width: 1),
-            boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 8, offset: const Offset(0, 2))],
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(color: AdminPalette.line),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(_hover ? 0.10 : 0.05),
+                blurRadius: _hover ? 20 : 14,
+                offset: const Offset(0, 8),
+              ),
+            ],
           ),
           child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              Container(
-                padding: const EdgeInsets.all(16),
-                decoration: const BoxDecoration(color: _Palette.primaryLight, shape: BoxShape.circle),
-                child: Icon(option.icon, color: _Palette.primary, size: isMobile ? 40 : 56),
+              // Cabecera con degradado propio + ícono decorativo de fondo.
+              ClipRRect(
+                borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+                child: Container(
+                  height: isMobile ? 100 : 130,
+                  decoration: BoxDecoration(gradient: option.gradient),
+                  child: Stack(
+                    clipBehavior: Clip.none,
+                    children: [
+                      Positioned(
+                        right: -10,
+                        top: -18,
+                        child: Icon(option.icon, size: isMobile ? 110 : 140, color: Colors.white.withOpacity(0.16)),
+                      ),
+                      Positioned(
+                        left: 20,
+                        bottom: -26,
+                        child: Container(
+                          width: 52,
+                          height: 52,
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            shape: BoxShape.circle,
+                            boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.12), blurRadius: 10)],
+                          ),
+                          child: Icon(option.icon, color: AdminPalette.ink, size: 26),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
               ),
-              const SizedBox(height: 16),
-              Text(
-                option.title,
-                textAlign: TextAlign.center,
-                style: GoogleFonts.outfit(
-                    fontSize: isMobile ? 16 : 18, fontWeight: FontWeight.w600, color: _Palette.textDark),
+              Padding(
+                padding: EdgeInsets.fromLTRB(20, isMobile ? 20 : 30, 20, 20),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(option.title,
+                        style: GoogleFonts.outfit(
+                            fontSize: isMobile ? 16 : 19, fontWeight: FontWeight.bold, color: AdminPalette.ink)),
+                    const SizedBox(height: 4),
+                    Text(option.subtitle, style: AdminStyles.subtitle),
+                    const SizedBox(height: 16),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(option.statIcon, size: 14, color: AdminPalette.slate),
+                            const SizedBox(width: 6),
+                            Text(option.stat, style: GoogleFonts.outfit(fontSize: 12, color: AdminPalette.slate)),
+                          ],
+                        ),
+                        AnimatedContainer(
+                          duration: const Duration(milliseconds: 180),
+                          padding: const EdgeInsets.all(8),
+                          decoration: BoxDecoration(
+                            gradient: option.gradient,
+                            shape: BoxShape.circle,
+                            boxShadow: _hover
+                                ? [BoxShadow(color: Colors.black.withOpacity(0.18), blurRadius: 10)]
+                                : null,
+                          ),
+                          child: const Icon(Icons.arrow_forward_rounded, color: Colors.white, size: 16),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
               ),
-              const SizedBox(height: 8),
-              Text(option.subtitle, style: GoogleFonts.outfit(fontSize: isMobile ? 12 : 14, color: _Palette.textLight)),
             ],
           ),
         ),
@@ -130,17 +178,38 @@ class _AdminUsersViewState extends State<AdminUsersView> {
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
   static const String _activeMenu = 'Usuarios';
 
+  static const _operatorsGradient = LinearGradient(
+    begin: Alignment.topLeft,
+    end: Alignment.bottomRight,
+    colors: [AdminPalette.secondary, Color(0xFF1FA093)],
+  );
+
   static final List<_UserTypeOption> _userTypes = [
-    _UserTypeOption('Administrar Estudiantes', Icons.school, 'Gestionar estudiantes', (_) => const AdminStudentsView()),
     _UserTypeOption(
-        'Administrar Operadores', Icons.business_center, 'Gestionar operadores', (_) => const AdminOperatorsView()),
+      title: 'Administrar Estudiantes',
+      icon: Icons.school_rounded,
+      subtitle: 'Cuentas, estados y accesos de los estudiantes',
+      stat: 'Activos e inhabilitados',
+      statIcon: Icons.people_alt_outlined,
+      gradient: AdminPalette.gradient,
+      viewBuilder: (_) => const AdminStudentsView(),
+    ),
+    _UserTypeOption(
+      title: 'Administrar Operadores',
+      icon: Icons.business_center_rounded,
+      subtitle: 'Tours, disponibilidad y cuentas de operadores',
+      stat: 'Verificados y pendientes',
+      statIcon: Icons.verified_outlined,
+      gradient: _operatorsGradient,
+      viewBuilder: (_) => const AdminOperatorsView(),
+    ),
   ];
 
-  static final List<_MenuEntry> _menu = [
-    _MenuEntry('Dashboard', Icons.dashboard_outlined, (_) => const AdminHomeView()),
-    _MenuEntry('Gestión', Icons.settings_outlined, (_) => const AdminManagementView()),
-    const _MenuEntry(_activeMenu, Icons.people_outline), // vista actual
-    _MenuEntry('Reportes', Icons.bar_chart_outlined, (_) => const AdminReportsView()),
+  static final List<AdminMenuEntry> _menu = [
+    AdminMenuEntry('Dashboard', Icons.dashboard_outlined, (_) => const AdminHomeView()),
+    AdminMenuEntry('Gestión', Icons.settings_outlined, (_) => const AdminManagementView()),
+    const AdminMenuEntry(_activeMenu, Icons.people_outline), // vista actual
+    AdminMenuEntry('Reportes', Icons.bar_chart_outlined, (_) => const AdminReportsView()),
   ];
 
   // --- Navegación y acciones comunes ---
@@ -183,7 +252,7 @@ class _AdminUsersViewState extends State<AdminUsersView> {
 
     return Scaffold(
       key: _scaffoldKey,
-      backgroundColor: Colors.white,
+      backgroundColor: AdminPalette.cloud,
       endDrawer: isMobile ? _buildDrawer() : null,
       body: Column(
         children: [
@@ -204,123 +273,90 @@ class _AdminUsersViewState extends State<AdminUsersView> {
 
   Widget _buildDrawer() {
     final user = Provider.of<AuthController>(context).usuarioActual;
-    final tieneFoto = user?.fotoBase64 != null && user!.fotoBase64!.isNotEmpty;
-
-    return Drawer(
-      backgroundColor: Colors.white,
-      width: 280,
-      child: SafeArea(
-        child: Column(
-          children: [
-            const SizedBox(height: 24),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 24),
-              child: Row(
-                children: [
-                  GestureDetector(
-                    onTap: _handleEditProfile,
-                    child: Container(
-                      width: 50,
-                      height: 50,
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        border: Border.all(color: _Palette.primary, width: 2),
-                      ),
-                      child: ClipOval(
-                        child: tieneFoto
-                            ? Image.memory(base64Decode(user!.fotoBase64!),
-                                width: 50, height: 50, fit: BoxFit.cover)
-                            : const CircleAvatar(
-                                backgroundColor: _Palette.primaryLight,
-                                child: Icon(Icons.admin_panel_settings, color: _Palette.primary, size: 28),
-                              ),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(user?.nombre ?? 'Administrador', style: _Styles.drawerName),
-                        Text('Administrador', style: _Styles.drawerRole),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 16),
-            const Divider(height: 1, color: _Palette.border),
-            for (final entry in _menu)
-              _buildDrawerItem(entry.title, entry.icon, () {
-                Navigator.pop(context);
-                if (entry.title != _activeMenu) _handleMenuSelected(entry.title);
-              }),
-            const Spacer(),
-            const Divider(height: 1, color: _Palette.border),
-            _buildDrawerItem('Cerrar Sesión', Icons.logout_outlined, () {
-              Navigator.pop(context);
-              _handleLogout();
-            }),
-            const SizedBox(height: 24),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildDrawerItem(String title, IconData icon, VoidCallback onTap) {
-    final isActive = title == _activeMenu;
-    return ListTile(
-      leading: Icon(icon, color: _Palette.primary),
-      title: Text(title, style: _Styles.drawerItem(isActive)),
-      onTap: onTap,
+    return AdminDrawer(
+      menu: _menu,
+      activeMenu: _activeMenu,
+      userName: user?.nombre,
+      userFotoBase64: user?.fotoBase64,
+      onEditProfile: _handleEditProfile,
+      onLogout: _handleLogout,
+      onMenuSelected: _handleMenuSelected,
     );
   }
 
   Widget _buildMobileLayout() {
-    return SingleChildScrollView(
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Align(
-              alignment: Alignment.centerLeft,
-              child: Text('Administrar Usuarios', style: _Styles.title(true)),
+    return Column(
+      children: [
+        Expanded(
+          child: SingleChildScrollView(
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  AdminSectionHeader(title: 'Administrar Usuarios', isMobile: true),
+                  const SizedBox(height: 24),
+                  for (var i = 0; i < _userTypes.length; i++) ...[
+                    if (i > 0) const SizedBox(height: 16),
+                    _UserTypeCard(option: _userTypes[i], isMobile: true),
+                  ],
+                  const SizedBox(height: 24),
+                ],
+              ),
             ),
-            const SizedBox(height: 24),
-            for (var i = 0; i < _userTypes.length; i++) ...[
-              if (i > 0) const SizedBox(height: 16),
-              _UserTypeCard(option: _userTypes[i], isMobile: true),
-            ],
-            const SizedBox(height: 32),
-          ],
+          ),
         ),
-      ),
+        AdminFooter(isMobile: true),
+      ],
     );
   }
 
+  /// En desktop se agrega el mismo panel con la imagen del campus que usa
+  /// el Dashboard, para que la vista no se sienta "pelada" al lado de las
+  /// dos tarjetas grandes, y el mismo footer legal al pie del contenido.
   Widget _buildDesktopLayout() {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text('Administrar Usuarios', style: _Styles.title(false)),
-          const SizedBox(height: 24),
-          Row(
-            children: [
-              for (var i = 0; i < _userTypes.length; i++) ...[
-                if (i > 0) const SizedBox(width: 24),
-                Expanded(child: _UserTypeCard(option: _userTypes[i], isMobile: false)),
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Expanded(
+          flex: 7,
+          child: Container(
+            decoration: BoxDecoration(
+              border: Border(right: BorderSide(color: Colors.grey.withOpacity(0.3), width: 1.5)),
+            ),
+            child: Column(
+              children: [
+                Expanded(
+                  child: SingleChildScrollView(
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          AdminSectionHeader(title: 'Administrar Usuarios', isMobile: false),
+                          const SizedBox(height: 24),
+                          Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              for (var i = 0; i < _userTypes.length; i++) ...[
+                                if (i > 0) const SizedBox(width: 24),
+                                Expanded(child: _UserTypeCard(option: _userTypes[i], isMobile: false)),
+                              ],
+                            ],
+                          ),
+                          const SizedBox(height: 24),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+                AdminFooter(isMobile: false),
               ],
-            ],
+            ),
           ),
-          const SizedBox(height: 32),
-        ],
-      ),
+        ),
+        const AdminCampusPanel(),
+      ],
     );
   }
 }
